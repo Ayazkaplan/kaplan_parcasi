@@ -1,40 +1,59 @@
 import streamlit as st
-import google.generativeai as genai
+import requests
 import os
 
-# Widget görünümü
-st.set_page_config(page_title="Aslan Parçası", page_icon="🦁")
-st.title("🦁 ASLAN PARÇASI V8.9")
+# AYARLAR
+API_KEY = "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"
+MODEL = "meta-llama/llama-3.3-70b-instruct"
+KURUCU_SIFRESI = "KAPLAN_REIS_74"
 
-# Secrets'tan anahtarı al
-api_key = st.secrets["GOOGLE_API_KEY"]
+st.set_page_config(page_title="Aslan Parçası V9.4", page_icon="🤖")
 
-# Service Account (AQ) anahtarı için yapılandırma
-try:
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-except Exception as e:
-    st.error(f"Başlatma Hatası: {e}")
+st.title("🤖 Aslan Parçası V9.4")
 
-# Sohbet geçmişini tut
+# Şifre Kontrolü (Sidebar)
+with st.sidebar:
+    sifre = st.text_input("🔑 Şifre (Kurucuysan gir):", type="password")
+    mod = "Kurucu" if sifre == KURUCU_SIFRESI else "Misafir"
+    st.write(f"Mod: **{mod}**")
+
+# Sohbet Geçmişi
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Geçmişi ekrana bas
+# Geçmişi Ekrana Yaz
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Kullanıcı girişi
-if prompt := st.chat_input("Reis bir şey de..."):
+# Yapay Zeka Cevap Fonksiyonu
+def ai_cevap(kullanici_mesaj):
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "HTTP-Referer": "https://localhost",
+        "X-Title": "Aslan Parcasi",
+    }
+    payload = {
+        "model": MODEL,
+        "messages": [
+            {"role": "system", "content": "Sen Ayaz Reis'in asistanısın. Sadece Türkçe konuş. Doğal ve günlük konuş."},
+            {"role": "user", "content": kullanici_mesaj}
+        ]
+    }
+    try:
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+        data = response.json()
+        return data['choices'][0]['message']['content'].strip()
+    except:
+        return "Bağlantı hatası oluştu."
+
+# Mesaj alma
+if prompt := st.chat_input("Mesajını yaz..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        try:
-            response = model.generate_content(prompt)
-            st.markdown(response.text)
-            st.session_state.messages.append({"role": "assistant", "content": response.text})
-        except Exception as e:
-            st.error(f"Hata: {e}")
+        cevap = ai_cevap(prompt)
+        st.markdown(cevap)
+    st.session_state.messages.append({"role": "assistant", "content": cevap})
