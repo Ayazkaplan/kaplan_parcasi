@@ -4,7 +4,6 @@ import os
 
 # Ayarlar
 API_KEY = os.environ.get("API_KEY")
-# Model Claude Haiku olarak güncellendi
 MODEL = "anthropic/claude-3-haiku"
 KURUCU_SIFRESI = "KAPLAN_REIS_74"
 
@@ -29,38 +28,33 @@ def get_theme_data(mod):
 with st.sidebar:
     sifre = st.text_input("🔑 Şifre:", type="password")
     mod = "Kurucu" if sifre == KURUCU_SIFRESI else "Misafir"
-    
     if st.button("🔄 Sohbeti Temizle"):
         st.session_state.messages = []
         st.rerun()
-
     user_bg, assistant_bg, theme_map = get_theme_data(mod)
     tema_secimi = st.selectbox("Arka Plan Seç:", list(theme_map.keys()))
     bg_color, text_color = theme_map[tema_secimi]
 
-# CSS & JS
+# CSS - Butonu ve inputu en alta sabitledik
 st.markdown(f"""
     <style>
     .stApp {{ background: {bg_color}; color: {text_color} !important; }}
-    .stMarkdown, .stText, h1 {{ color: {text_color} !important; }}
-    .stChatMessage[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarUser"]) {{ background-color: {user_bg} !important; color: {text_color} !important; }}
-    .stChatMessage[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarAssistant"]) {{ background-color: {assistant_bg} !important; border-left: 5px solid gold; color: {text_color} !important; }}
+    .stChatMessage[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarUser"]) {{ background-color: {user_bg} !important; }}
+    .stChatMessage[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarAssistant"]) {{ background-color: {assistant_bg} !important; border-left: 5px solid gold; }}
+    
+    /* GİRİŞ KUTUSU SABİTLEME */
+    .fixed-input {{
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: {bg_color};
+        padding: 15px;
+        z-index: 1000;
+        border-top: 1px solid #444;
+    }}
+    div.stButton > button {{ color: white !important; background-color: #333 !important; border: 1px solid white !important; }}
     </style>
-    """, unsafe_allow_html=True)
-
-st.markdown("""
-    <script>
-    document.addEventListener('click', function(e) {
-        if(e.target.closest('[data-testid="stChatMessageAvatarAssistant"]')) {
-            let toast = document.createElement('div');
-            toast.innerText = 'Aslan Parçası';
-            toast.style = 'position:fixed; top:20px; left:30%; background:gold; color:black; padding:15px; border-radius:10px; z-index:9999; transition: opacity 3s; font-weight:bold;';
-            document.body.appendChild(toast);
-            setTimeout(function() { toast.style.opacity = '0'; }, 10);
-            setTimeout(function() { toast.remove(); }, 3000);
-        }
-    });
-    </script>
     """, unsafe_allow_html=True)
 
 st.title("🤖 Aslan Parçası V10.6")
@@ -71,26 +65,19 @@ for m in st.session_state.messages:
 
 def ai_cevap(mesaj_gecmisi, mod):
     headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com", "X-Title": "Aslan Parcasi"}
-    
-    # Claude için ağırlaştırılmış dil kilidi
-    kimlik = """Sen Aslan Parçası'sın. Kurucun Ayaz Reis.
-    TALİMATLARIN:
-    1. Sadece ve sadece günlük, düzgün Türkçe konuş.
-    2. Kod terimleri, teknik kelimeler, yabancı dilde kelimeler veya anlamsız semboller kullanman YASAKTIR.
-    3. Eğer sana programlama sorulursa 'Ben teknik konulardan anlamam' de geç.
-    4. Cümlelerinde asla yazım hatası yapma."""
-    
+    kimlik = """Sen Aslan Parçası'sın. Sadece Türkçe konuş, teknik terim kullanma."""
     sistem = {"role": "system", "content": f"Mod: {mod}. {kimlik}"}
-    
     try:
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json={"model": MODEL, "messages": [sistem] + mesaj_gecmisi[-6:]})
         return res.json()['choices'][0]['message']['content']
     except Exception: return "Sistem hazır."
 
-# --- FORM YAPISI ---
+# --- SABİT İNPUT KUTUSU ---
+st.markdown('<div class="fixed-input">', unsafe_allow_html=True)
 with st.form(key='chat_form', clear_on_submit=True):
     user_input = st.text_input("Mesajını yaz...", key="input_text")
     submit_button = st.form_submit_button(label='Gönder')
+st.markdown('</div>', unsafe_allow_html=True)
 
 if submit_button and user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
