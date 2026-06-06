@@ -4,7 +4,8 @@ import os
 
 # Ayarlar
 API_KEY = os.environ.get("API_KEY")
-MODEL = "google/gemini-pro-1.5"
+# Model Claude Haiku olarak güncellendi
+MODEL = "anthropic/claude-3-haiku"
 KURUCU_SIFRESI = "KAPLAN_REIS_74"
 
 st.set_page_config(page_title="Aslan Parçası V10.6", page_icon="🤖")
@@ -70,20 +71,23 @@ for m in st.session_state.messages:
 
 def ai_cevap(mesaj_gecmisi, mod):
     headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com", "X-Title": "Aslan Parcasi"}
+    
+    # Claude için ağırlaştırılmış dil kilidi
     kimlik = """Sen Aslan Parçası'sın. Kurucun Ayaz Reis.
     TALİMATLARIN:
-    1. Sadece Türkçe konuş.
-    2. Kelimeleri asla birleştirme, imla hatası yapma.
-    3. Teknik terim, yabancı dil veya saçma semboller kullanma."""
+    1. Sadece ve sadece günlük, düzgün Türkçe konuş.
+    2. Kod terimleri, teknik kelimeler, yabancı dilde kelimeler veya anlamsız semboller kullanman YASAKTIR.
+    3. Eğer sana programlama sorulursa 'Ben teknik konulardan anlamam' de geç.
+    4. Cümlelerinde asla yazım hatası yapma."""
     
     sistem = {"role": "system", "content": f"Mod: {mod}. {kimlik}"}
     
     try:
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json={"model": MODEL, "messages": [sistem] + mesaj_gecmisi[-6:]})
         return res.json()['choices'][0]['message']['content']
-    except Exception: return "Sistem sorunsuz çalışıyor."
+    except Exception: return "Sistem hazır."
 
-# --- FORM YAPISI (Metin sapmasını engellemek için) ---
+# --- FORM YAPISI ---
 with st.form(key='chat_form', clear_on_submit=True):
     user_input = st.text_input("Mesajını yaz...", key="input_text")
     submit_button = st.form_submit_button(label='Gönder')
