@@ -35,12 +35,11 @@ with st.sidebar:
     tema_secimi = st.selectbox("Arka Plan Seç:", list(theme_map.keys()))
     bg_color, text_color = theme_map[tema_secimi]
 
-# CSS - METİN RENGİ ZORLAMASI
+# CSS & JS - AVATAR EFEKTİ ENTEGRE EDİLDİ
 st.markdown(f"""
     <style>
     .stApp {{ background: {bg_color}; color: {text_color} !important; }}
     
-    /* Mesaj metinleri: Misafir modunda SİYAH ZORLAMASI */
     .stChatMessage p, .stChatMessage div {{ 
         color: {'black' if mod == "Misafir" else text_color} !important; 
         font-weight: 500 !important;
@@ -70,6 +69,19 @@ st.markdown(f"""
         font-weight: bold !important;
     }}
     </style>
+
+    <script>
+    document.addEventListener('click', function(e) {
+        if(e.target.closest('[data-testid="stChatMessageAvatarAssistant"]')) {
+            let toast = document.createElement('div');
+            toast.innerText = 'Aslan Parçası';
+            toast.style = 'position:fixed; top:20px; left:30%; background:gold; color:black; padding:15px; border-radius:10px; z-index:9999; transition: opacity 3s; font-weight:bold; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);';
+            document.body.appendChild(toast);
+            setTimeout(function() { toast.style.opacity = '0'; }, 10);
+            setTimeout(function() { toast.remove(); }, 3000);
+        }
+    });
+    </script>
     """, unsafe_allow_html=True)
 
 st.title("🤖 Aslan Parçası V10.6")
@@ -103,4 +115,3 @@ if submit_button and user_input:
         st.markdown(cevap)
     st.session_state.messages.append({"role": "assistant", "content": cevap})
     st.rerun()
- 
