@@ -35,14 +35,19 @@ with st.sidebar:
     tema_secimi = st.selectbox("Arka Plan Seç:", list(theme_map.keys()))
     bg_color, text_color = theme_map[tema_secimi]
 
-# CSS - GİRİŞ KUTUSU EN ALTA SABİTLENDİ VE GÖNDER BUTONU BEYAZ YAPILDI
+# CSS - Mod bazlı metin rengi ve sabit input alanı
 st.markdown(f"""
     <style>
     .stApp {{ background: {bg_color}; color: {text_color} !important; }}
-    .stChatMessage[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarUser"]) {{ background-color: {user_bg} !important; color: {text_color} !important; }}
-    .stChatMessage[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarAssistant"]) {{ background-color: {assistant_bg} !important; border-left: 5px solid gold; color: {text_color} !important; }}
     
-    /* GİRİŞ KUTUSU SABİTLEME */
+    /* Mesaj metinleri: Misafir modunda siyah, kurucu modunda tema rengi */
+    .stChatMessage[data-testid="stChatMessage"] {{ 
+        color: {'black' if mod == "Misafir" else text_color} !important; 
+    }}
+    .stChatMessage[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarUser"]) {{ background-color: {user_bg} !important; }}
+    .stChatMessage[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarAssistant"]) {{ background-color: {assistant_bg} !important; border-left: 5px solid gold; }}
+    
+    /* Sabit input kutusu */
     .fixed-input-area {{
         position: fixed;
         bottom: 0;
@@ -53,7 +58,7 @@ st.markdown(f"""
         z-index: 999;
     }}
     
-    /* GÖNDER BUTONU DÜZENLEME */
+    /* Gönder butonu stili */
     div.stButton > button, div.stFormSubmitButton > button {{ 
         color: white !important; 
         background-color: #444 !important; 
@@ -77,6 +82,9 @@ def ai_cevap(mesaj_gecmisi, mod):
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json={"model": MODEL, "messages": [sistem] + mesaj_gecmisi[-6:]})
         return res.json()['choices'][0]['message']['content']
     except Exception: return "Sistem hazır."
+
+# Sabit alanın altına boşluk bırak ki mesajlar altta kalmasın
+st.markdown("<br><br><br>", unsafe_allow_html=True)
 
 # --- SABİT İNPUT ALANI ---
 st.markdown('<div class="fixed-input-area">', unsafe_allow_html=True)
