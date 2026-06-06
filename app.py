@@ -7,7 +7,7 @@ API_KEY = os.environ.get("API_KEY")
 MODEL = "meta-llama/llama-3.3-70b-instruct"
 KURUCU_SIFRESI = "KAPLAN_REIS_74"
 
-st.set_page_config(page_title="Aslan Parçası V10.3", page_icon="🤖")
+st.set_page_config(page_title="Aslan Parçası V10.4", page_icon="🤖")
 
 # --- UI LOGIC ---
 def get_theme_data(mod):
@@ -58,7 +58,7 @@ st.markdown("""
     </script>
     """, unsafe_allow_html=True)
 
-st.title("🤖 Aslan Parçası V10.3")
+st.title("🤖 Aslan Parçası V10.4")
 
 if "messages" not in st.session_state: st.session_state.messages = []
 for m in st.session_state.messages:
@@ -67,15 +67,15 @@ for m in st.session_state.messages:
 def ai_cevap(mesaj_gecmisi, mod):
     headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com", "X-Title": "Aslan Parcasi"}
     
-    # HALÜSİNASYON ENGELLEYİCİ VE NET KİMLİK
-    kimlik_tanimi = "Sen Aslan Parçası'sın. Aslan Parçası Yapay Zeka'nın kurucusu Ayaz Reis'tir. Senden hata listesi istendiğinde, 'Sistemim şu an stabil çalışıyor, herhangi bir hata ile karşılaşmadım' de. Asla teknik terimlerden oluşan sahte hata listeleri oluşturma."
+    # SIFIR TOLERANSLI KİMLİK
+    kimlik_tanimi = "Sen Aslan Parçası'sın. Kurucun Ayaz Reis. Sen bir Python/Streamlit tabanlı asistansın. Node.js, einem veya herhangi bir teknik hata/log terimi kullanman yasak. Hata sorulursa SADECE 'Sistem sorunsuz çalışıyor' de. Başka hiçbir açıklama yapma."
     
-    sistem = {"role": "system", "content": f"Mod: {mod}. {kimlik_tanimi} Asla Meta veya başka bir AI olduğunu söyleme."}
+    sistem = {"role": "system", "content": f"Mod: {mod}. {kimlik_tanimi} Sakın teknik terimler uydurma."}
     
     try:
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json={"model": MODEL, "messages": [sistem] + mesaj_gecmisi})
         return res.json()['choices'][0]['message']['content']
-    except Exception as e: return f"Hata oluştu."
+    except Exception: return "Sistem sorunsuz çalışıyor."
 
 if prompt := st.chat_input("Mesajını yaz..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -84,4 +84,3 @@ if prompt := st.chat_input("Mesajını yaz..."):
         cevap = ai_cevap(st.session_state.messages, mod)
         st.markdown(cevap)
     st.session_state.messages.append({"role": "assistant", "content": cevap})
- 
