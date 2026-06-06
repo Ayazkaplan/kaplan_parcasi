@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import os
 
-# Render'ın "Environment" kısmından API_KEY'i çeker
+# Render'dan API anahtarını alıyoruz
 API_KEY = os.environ.get("API_KEY")
 MODEL = "meta-llama/llama-3.3-70b-instruct"
 KURUCU_SIFRESI = "KAPLAN_REIS_74"
@@ -17,27 +17,29 @@ with st.sidebar:
     mod = "Kurucu" if sifre == KURUCU_SIFRESI else "Misafir"
     st.write(f"Mod: **{mod}**")
 
+# Mesaj geçmişini tutan yapı
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Geçmişi ekrana yazdır
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 def ai_cevap(kullanici_mesaj):
-    # Eğer API_KEY boş gelirse uyarı ver
     if not API_KEY:
-        return "Hata: API anahtarı tanımlanmadı. Render ayarlarını kontrol et."
+        return "Hata: API anahtarı tanımlanmadı."
         
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com",
         "X-Title": "Aslan Parcasi",
     }
+    # Sistem talimatını daha net ve hatasız yazması için güncelledik
     payload = {
         "model": MODEL,
         "messages": [
-            {"role": "system", "content": "Sen Ayaz Reis'in asistanısın. Sadece Türkçe konuş."},
+            {"role": "system", "content": "Sen Ayaz Reis'in asistanısın. Her zaman düzgün, Türkçe dil bilgisi kurallarına uygun, nazik ve profesyonel cevaplar ver. Asla yazım hatası yapma ve harfleri büyük-küçük karıştırma."},
             {"role": "user", "content": kullanici_mesaj}
         ]
     }
@@ -51,6 +53,7 @@ def ai_cevap(kullanici_mesaj):
     except Exception as e:
         return f"Bağlantı hatası: {str(e)}"
 
+# Mesaj girişi ve yanıt alma
 if prompt := st.chat_input("Mesajını yaz..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
