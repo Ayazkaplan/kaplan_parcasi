@@ -6,11 +6,12 @@ import os
 API_KEY = os.environ.get("API_KEY")
 MODEL = "anthropic/claude-3-haiku"
 KURUCU_SIFRESI = "KAPLAN_REIS_74"
-AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg" # Güncel Siber Aslan Logo
+AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
 
-st.set_page_config(page_title="Aslan Parçası V10.9", page_icon="🤖")
+st.set_page_config(page_title="Aslan Parçası V11.0", page_icon="🤖")
 
 # --- UI LOGIC ---
+# (get_theme_data fonksiyonun aynı kalıyor, burayı kopyaladığını varsayıyorum)
 def get_theme_data(mod):
     if mod == "Kurucu":
         user_bg, assistant_bg = "rgba(10, 40, 10, 0.6)", "rgba(20, 20, 20, 0.8)"
@@ -36,6 +37,7 @@ with st.sidebar:
     tema_secimi = st.selectbox("Arka Plan Seç:", list(theme_map.keys()))
     bg_color, text_color = theme_map[tema_secimi]
 
+# --- STYLE & TOAST SCRIPT ---
 st.markdown(f"""
     <style>
     .stApp {{ background: {bg_color}; color: {text_color} !important; }}
@@ -45,13 +47,26 @@ st.markdown(f"""
     .fixed-input-area {{ position: fixed; bottom: 0; left: 0; width: 100%; padding: 10px; background: {bg_color}; z-index: 999; }}
     div.stButton > button, div.stFormSubmitButton > button {{ color: white !important; background-color: #444 !important; border: 2px solid white !important; font-weight: bold !important; }}
     </style>
+    
+    <script>
+    document.addEventListener('click', function(e) {{
+        // Asistan avatarına tıklandığında
+        if (e.target.closest('div[data-testid="stChatMessageAvatarAssistant"]')) {{
+            let toast = document.createElement('div');
+            toast.innerText = 'Aslan Parçası';
+            toast.style.cssText = 'position:fixed; top:20%; left:50%; transform:translateX(-50%); background:gold; color:black; padding:15px 30px; border-radius:15px; z-index:99999; font-weight:bold; box-shadow:0px 4px 15px rgba(0,0,0,0.5); opacity:1; transition: opacity 1s ease-out;';
+            document.body.appendChild(toast);
+            setTimeout(() => {{ toast.style.opacity = '0'; }}, 2000);
+            setTimeout(() => {{ toast.remove(); }}, 3000);
+        }}
+    }});
+    </script>
     """, unsafe_allow_html=True)
 
-st.title("🤖 Aslan Parçası V10.9")
+st.title("🤖 Aslan Parçası V11.0")
 
 if "messages" not in st.session_state: st.session_state.messages = []
 
-# Mesajları yazdırırken avatarı kullanıyoruz
 for m in st.session_state.messages:
     avatar = AVATAR_URL if m["role"] == "assistant" else None
     with st.chat_message(m["role"], avatar=avatar):
@@ -68,7 +83,6 @@ def ai_cevap(mesaj_gecmisi, mod):
 
 st.markdown("<br><br><br>", unsafe_allow_html=True)
 
-# Sabit giriş alanı
 st.markdown('<div class="fixed-input-area">', unsafe_allow_html=True)
 with st.form(key='chat_form', clear_on_submit=True):
     user_input = st.text_input("", placeholder="Mesajını yaz...")
