@@ -16,26 +16,21 @@ st.markdown("""
 
 st.title("🤖 ASLAN PARÇASI V8.9")
 
-# Hafıza Yönetimi
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Mesajları Ekrana Bas
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Kullanıcı Girişi
 if prompt := st.chat_input("Reis bir şey de..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # Client oluşturma
         client = genai.Client(api_key=API_KEY)
         
-        # Geçmiş hafızayı al
         gecmis_metin = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.messages[-10:]])
         
         config = types.GenerateContentConfig(
@@ -44,9 +39,9 @@ if prompt := st.chat_input("Reis bir şey de..."):
         )
         
         try:
-            # Model ismini doğrudan 'gemini-1.5-flash' olarak kullanıyoruz
+            # Buradaki model ismini değiştirdik
             response = client.models.generate_content(
-                model="gemini-1.5-flash", 
+                model="gemini-1.5-flash-002", 
                 contents=prompt,
                 config=config
             )
