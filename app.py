@@ -4,7 +4,7 @@ import os
 
 # Ayarlar
 API_KEY = os.environ.get("API_KEY")
-MODEL = "meta-llama/llama-3.3-70b-instruct"
+MODEL = "qwen/qwen-2.5-72b-instruct"
 KURUCU_SIFRESI = "KAPLAN_REIS_74"
 
 st.set_page_config(page_title="Aslan Parçası V10.7", page_icon="🤖")
@@ -37,7 +37,7 @@ with st.sidebar:
     tema_secimi = st.selectbox("Arka Plan Seç:", list(theme_map.keys()))
     bg_color, text_color = theme_map[tema_secimi]
 
-# CSS & JS - SyntaxError giderildi (parantezler çiftlendi)
+# CSS & JS (JS bloğu f-string dışına taşındı, artık hata vermez)
 st.markdown(f"""
     <style>
     .stApp {{ background: {bg_color}; color: {text_color} !important; }}
@@ -45,17 +45,20 @@ st.markdown(f"""
     .stChatMessage[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarUser"]) {{ background-color: {user_bg} !important; color: {text_color} !important; }}
     .stChatMessage[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarAssistant"]) {{ background-color: {assistant_bg} !important; border-left: 5px solid gold; color: {text_color} !important; }}
     </style>
+    """, unsafe_allow_html=True)
+
+st.markdown("""
     <script>
-    document.addEventListener('click', function(e) {{
-        if(e.target.closest('[data-testid="stChatMessageAvatarAssistant"]')) {{
+    document.addEventListener('click', function(e) {
+        if(e.target.closest('[data-testid="stChatMessageAvatarAssistant"]')) {
             let toast = document.createElement('div');
             toast.innerText = 'Aslan Parçası';
             toast.style = 'position:fixed; top:20px; left:30%; background:gold; color:black; padding:15px; border-radius:10px; z-index:9999; transition: opacity 3s; font-weight:bold;';
             document.body.appendChild(toast);
-            setTimeout(function() {{ toast.style.opacity = '0'; }}, 10);
-            setTimeout(function() {{ toast.remove(); }}, 3000);
-        }}
-    }});
+            setTimeout(function() { toast.style.opacity = '0'; }, 10);
+            setTimeout(function() { toast.remove(); }, 3000);
+        }
+    });
     </script>
     """, unsafe_allow_html=True)
 
@@ -70,10 +73,10 @@ def ai_cevap(mesaj_gecmisi, mod):
     
     kimlik = """Sen Aslan Parçası'sın. Kurucun Ayaz Reis.
     TALİMATLARIN:
-    1. İletişim dili KESİNLİKLE VE SADECE Türkçe'dir.
-    2. Türkçe dışındaki hiçbir dili anlama, kullanma veya çeviri yapma.
-    3. Kullanıcı başka bir dilde konuşmanı isterse 'Ben sadece Türkçe konuşan bir sistemim' de.
-    4. Teknik terimler, hata logları veya kod parçaları eklemen YASAKTIR."""
+    1. Sadece Türkçe konuş.
+    2. Kelimeleri asla birleştirme, imla hatası yapma.
+    3. Teknik terim, yabancı dil veya saçma semboller kullanma.
+    4. Kullanıcı başka dilde konuşmanı isterse reddet."""
     
     sistem = {"role": "system", "content": f"Mod: {mod}. {kimlik}"}
     
@@ -90,4 +93,3 @@ if prompt := st.chat_input("Mesajını yaz...", key="input_field"):
         st.markdown(cevap)
     st.session_state.messages.append({"role": "assistant", "content": cevap})
     st.rerun()
- 
