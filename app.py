@@ -6,6 +6,7 @@ import os
 API_KEY = os.environ.get("API_KEY")
 MODEL = "anthropic/claude-3-haiku"
 KURUCU_SIFRESI = "KAPLAN_REIS_74"
+AVATAR_URL = "https://i.imgur.com/83pL6vN.png" # Siber Aslan Logon
 
 st.set_page_config(page_title="Aslan Parçası V10.6", page_icon="🤖")
 
@@ -46,27 +47,15 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# TIKLAMA OLAYI: Sayfadaki herhangi bir "robot" (🤖) içeren öğeye tıklanırsa çalışır
-st.markdown("""
-    <script>
-    document.addEventListener('click', function(e) {
-        if (e.target.innerText.includes('🤖') || e.target.closest('div[data-testid="stChatMessageAvatarAssistant"]')) {
-            let toast = document.createElement('div');
-            toast.innerText = 'Aslan Parçası';
-            toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:gold; color:black; padding:15px; border-radius:10px; z-index:99999; font-weight:bold; box-shadow:0px 4px 10px rgba(0,0,0,0.3); transition: opacity 3s;';
-            document.body.appendChild(toast);
-            setTimeout(function() { toast.style.opacity = '0'; }, 10);
-            setTimeout(function() { toast.remove(); }, 3000);
-        }
-    });
-    </script>
-    """, unsafe_allow_html=True)
-
 st.title("🤖 Aslan Parçası V10.6")
 
 if "messages" not in st.session_state: st.session_state.messages = []
+
+# Mesajları yazdırırken avatarı burada tanımlıyoruz
 for m in st.session_state.messages:
-    with st.chat_message(m["role"]): st.markdown(m["content"])
+    avatar = AVATAR_URL if m["role"] == "assistant" else None
+    with st.chat_message(m["role"], avatar=avatar):
+        st.markdown(m["content"])
 
 def ai_cevap(mesaj_gecmisi, mod):
     headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com", "X-Title": "Aslan Parcasi"}
@@ -75,11 +64,11 @@ def ai_cevap(mesaj_gecmisi, mod):
     try:
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json={"model": MODEL, "messages": [sistem] + mesaj_gecmisi[-6:]})
         return res.json()['choices'][0]['message']['content']
-    except Exception: return "Sistem hazır."
+    except Exception: return "Sistem şu an meşgul, birazdan tekrar dene Reis."
 
 st.markdown("<br><br><br>", unsafe_allow_html=True)
 
-st.markdown('<div class="fixed-input-area">', unsafe_allow_html=True)
+st.markdown('<div class="fixed-input-area">', unsafe_action_html=True)
 with st.form(key='chat_form', clear_on_submit=True):
     user_input = st.text_input("", placeholder="Mesajını yaz...")
     submit_button = st.form_submit_button(label='Gönder')
@@ -88,8 +77,9 @@ st.markdown('</div>', unsafe_allow_html=True)
 if submit_button and user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"): st.markdown(user_input)
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=AVATAR_URL): # Burası yeni logon!
         cevap = ai_cevap(st.session_state.messages, mod)
         st.markdown(cevap)
     st.session_state.messages.append({"role": "assistant", "content": cevap})
     st.rerun()
+ 
