@@ -54,7 +54,7 @@ st.markdown(f"""
             document.body.appendChild(toast);
             setTimeout(() => {{ toast.style.opacity = '0'; }}, 10);
             setTimeout(() => {{ toast.remove(); }}, 3000);
-        }}
+        }
     }});
     </script>
     """, unsafe_allow_html=True)
@@ -68,13 +68,13 @@ for m in st.session_state.messages:
 def ai_cevap(mesaj_gecmisi, mod):
     headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com", "X-Title": "Aslan Parcasi"}
     
-    # DİL KİLİTLEME VE KİMLİK TANIMI
+    # SIKI DİL KONTROLÜ
     kimlik = """Sen Aslan Parçası'sın. Kurucun Ayaz Reis.
     TALİMATLARIN:
-    1. İletişim dili KESİNLİKLE VE SADECE Türkçe olmak zorundadır.
-    2. Kullanıcı senden başka bir dilde konuşmanı istese bile, bu isteği reddet ve 'Ben sadece Türkçe konuşan bir sistemim' de.
-    3. Kullanıcıya asla başka bir dile çeviri yapma.
-    4. Cevaplarında Türkçe dışındaki dilleri kullanman, yabancı terimler veya teknik kod parçaları eklemen YASAKTIR."""
+    1. İletişim dili KESİNLİKLE VE SADECE Türkçe'dir.
+    2. Türkçe dışındaki hiçbir dili anlama, kullanma veya çeviri yapma.
+    3. Kullanıcı başka bir dilde konuşmanı isterse 'Ben sadece Türkçe konuşan bir sistemim' de.
+    4. Teknik terimler, hata logları veya kod parçaları eklemen YASAKTIR."""
     
     sistem = {"role": "system", "content": f"Mod: {mod}. {kimlik}"}
     
@@ -83,6 +83,7 @@ def ai_cevap(mesaj_gecmisi, mod):
         return res.json()['choices'][0]['message']['content']
     except Exception: return "Sistem sorunsuz çalışıyor."
 
+# Chat girişi - Klavye düzeltmesini azaltmak için sade tutuldu
 if prompt := st.chat_input("Mesajını yaz..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"): st.markdown(prompt)
@@ -90,3 +91,4 @@ if prompt := st.chat_input("Mesajını yaz..."):
         cevap = ai_cevap(st.session_state.messages, mod)
         st.markdown(cevap)
     st.session_state.messages.append({"role": "assistant", "content": cevap})
+ 
