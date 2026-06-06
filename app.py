@@ -1,6 +1,5 @@
 import streamlit as st
 import requests
-import json
 
 # API Anahtarın
 API_KEY = "AIzaSyCZXEoUCgJCQN9dGJ1A-w4l_xbV1tqb_yY"
@@ -29,12 +28,10 @@ if prompt := st.chat_input("Reis bir şey de..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # HTTP isteği ile doğrudan API'ye bağlanıyoruz (SDK yok, kafa karışıklığı yok)
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+        # URL'yi v1beta yerine v1 yaptık
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
         headers = {'Content-Type': 'application/json'}
-        data = {
-            "contents": [{"parts": [{"text": prompt}]}]
-        }
+        data = {"contents": [{"parts": [{"text": prompt}]}]}
         
         try:
             response = requests.post(url, headers=headers, json=data)
@@ -46,6 +43,5 @@ if prompt := st.chat_input("Reis bir şey de..."):
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
                 st.error(f"Hata Kodu {response.status_code}: {response_json}")
-                
         except Exception as e:
             st.error(f"Bağlantı Hatası: {e}")
