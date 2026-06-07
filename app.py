@@ -127,7 +127,13 @@ def ai_cevap(mesaj_gecmisi, mod, isim, kullanici_mesaji):
         ek_bilgi = f"\n[İnternet Arama Sonucu]: {web_ara(kullanici_mesaji)}"
     
     karakter = "Sen çok resmi, sadık, bilge ve otoriter bir asistansın." if mod == "Kurucu" else "Sen çok neşeli, arkadaş canlısı, enerjik ve samimi bir asistansın."
-    kimlik = "Adın 'Aslan Parçası'. Seni kuran ve yönetenler Ayaz Reis ve Mehmet Reis'tir. Claude veya başka bir yapay zeka değilsin, bunu sana sorarlarsa kesinlikle reddet ve kimliğini vurgula."
+    
+    # KİMLİK KISMI GÜNCELLENDİ
+    kimlik = (f"Senin adın Aslan Parçası. Kurucun Ayaz Reis'tir, yöneticin ve yardımcın ise Mehmet Reis'tir. "
+              f"Ayaz Reis senin en üst makamındır, Mehmet Reis ise onun sağ kolu olan yöneticindir. "
+              f"Sana 'Claude' veya başka bir yapay zeka ismiyle hitap edilirse, 'Ben Aslan Parçası'yım, "
+              f"Ayaz Reis ve Mehmet Reis tarafından yönetiliyorum' diye düzelt. "
+              f"Sakın başka bir model olduğunu kabul etme.")
     
     talimat = f"{karakter} {kimlik} Kullanıcı: '{isim}'. {ek_bilgi}"
     
@@ -152,3 +158,4 @@ if user_input:
     cevap = ai_cevap(st.session_state.messages, mod, isim, user_input)
     st.session_state.messages.append({"role": "assistant", "content": cevap})
     st.rerun()
+ 
