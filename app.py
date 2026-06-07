@@ -61,7 +61,7 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-    # --- MÜZİK MOTORU (GÜNCELLENMİŞ) ---
+    # --- MÜZİK MOTORU ---
     st.markdown("---")
     st.subheader("🎵 Müzik Motoru")
     
@@ -91,7 +91,6 @@ with st.sidebar:
             st.rerun()
 
     if kayitli_id:
-        # GÜVENLİ YÖNLENDİRME BUTONU (Hata anında hayat kurtarır)
         st.link_button("▶️ Hata Alırsan YouTube'da İzle", f"https://www.youtube.com/watch?v={kayitli_id}")
         st.markdown(f'<iframe width="100%" height="200" src="https://www.youtube.com/embed/{kayitli_id}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>', unsafe_allow_html=True)
 
@@ -114,14 +113,22 @@ for m in st.session_state.messages:
     else:
         st.markdown(f"""<div class="user-box"><div class="user-header">{isim} <img src="{USER_AVATAR}" width="30" style="border-radius:50%"></div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
 
+# --- BİLİNÇLİ AI CEVAP MOTORU ---
 def ai_cevap(mesaj_gecmisi, mod, isim):
     headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com", "X-Title": "Aslan Parcasi"}
-    talimat = f"Sen Aslan Parçası'sın. Kullanıcın: '{isim}'. 1. AYAZ REIS: Kurucu, 2. MEHMET REIS: Yardımcı."
+    
+    talimat = f"""Sen Aslan Parçası'sın. Kendini ve yeteneklerini çok iyi biliyorsun:
+    1. KİMLİK: Sen Ayaz Reis'in kurduğu, Mehmet Reis'in desteklediği güçlü bir yapısın.
+    2. MÜZİK SİSTEMİ: Arayüzünde bir 'Müzik Motoru' var. Kullanıcı oraya YouTube Video ID'si girerek müzik dinleyebilir, şarkıyı kaydedebilir veya silebilir. Hata alırsa YouTube'dan izlemesi gerektiğini biliyorsun.
+    3. ÖZELLEŞTİRME: Kullanıcı senin arka planını ve temasını sidebar'dan değiştirebilir.
+    4. GÖREVİN: Kullanıcıya bu özelliklerini sorulduğunda gururla anlatmak.
+    Kullanıcın şu an: '{isim}'. Modun: '{mod}'."""
+    
     sistem = {"role": "system", "content": talimat}
     try:
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json={"model": MODEL, "messages": [sistem] + mesaj_gecmisi[-6:]})
         return res.json()['choices'][0]['message']['content']
-    except Exception: return "Sistem meşgul, tekrar dene Reis."
+    except Exception: return "Sistem meşgul, Reis."
 
 user_input = st.chat_input("Mesajını yaz...")
 if user_input:
@@ -129,3 +136,4 @@ if user_input:
     cevap = ai_cevap(st.session_state.messages, mod, isim)
     st.session_state.messages.append({"role": "assistant", "content": cevap})
     st.rerun()
+ 
