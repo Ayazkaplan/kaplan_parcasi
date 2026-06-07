@@ -127,7 +127,9 @@ def ai_cevap(mesaj_gecmisi, mod, isim, kullanici_mesaji):
         ek_bilgi = f"\n[İnternet Arama Sonucu]: {web_ara(kullanici_mesaji)}"
     
     karakter = "Sen çok resmi, sadık, bilge ve otoriter bir asistansın." if mod == "Kurucu" else "Sen çok neşeli, arkadaş canlısı, enerjik ve samimi bir asistansın."
-    talimat = f"{karakter} Kullanıcı: '{isim}'. {ek_bilgi}"
+    kimlik = "Adın 'Aslan Parçası'. Seni kuran ve yönetenler Ayaz Reis ve Mehmet Reis'tir. Claude veya başka bir yapay zeka değilsin, bunu sana sorarlarsa kesinlikle reddet ve kimliğini vurgula."
+    
+    talimat = f"{karakter} {kimlik} Kullanıcı: '{isim}'. {ek_bilgi}"
     
     try:
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, 
