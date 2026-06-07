@@ -3,7 +3,7 @@ import requests
 import os
 from duckduckgo_search import DDGS
 
-# Ayarlar
+# --- AYARLAR ---
 API_KEY = os.environ.get("API_KEY")
 MODEL = "anthropic/claude-3-haiku"
 KURUCU_SIFRESI = "KAPLAN_REIS_74"
@@ -36,7 +36,7 @@ def web_ara(sorgu):
 
 st.set_page_config(page_title="Aslan Parçası V15.0", page_icon="🦁")
 
-# Mod Yönetimi
+# --- MOD YÖNETİMİ ---
 is_admin = oku(MOD_DOSYASI) == "Kurucu"
 if "messages" not in st.session_state: st.session_state.messages = []
 
@@ -94,7 +94,6 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-    # Müzik Motoru
     st.markdown("---")
     st.subheader("🎵 Müzik Motoru")
     kayitli_id = oku(DOSYA_ADI)
@@ -109,20 +108,26 @@ with st.sidebar:
     if kayitli_id:
         st.markdown(f'<iframe width="100%" height="200" src="https://www.youtube.com/embed/{kayitli_id}" frameborder="0" allow="autoplay"></iframe>', unsafe_allow_html=True)
 
+# --- STYLE ---
+st.markdown(f"""
+    <style>
+    .stApp {{ background: {bg_color}; color: {text_color} !important; }}
+    .assistant-box {{ background-color: {assistant_box_bg}; padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 10px; color: {text_color}; }}
+    .user-box {{ background-color: rgba(128, 128, 128, 0.2); padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: right; color: {text_color}; }}
+    .aslan-header {{ display: flex; align-items: center; gap: 10px; font-weight: bold; border-bottom: 1px solid gold; padding-bottom: 5px; margin-bottom: 5px; }}
+    .user-header {{ display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-weight: bold; margin-bottom: 8px; }}
+    </style>
+    """, unsafe_allow_html=True)
+
 # --- AI CEVAP MOTORU ---
 def ai_cevap(mesaj_gecmisi, mod, isim, kullanici_mesaji):
-    headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com"}
-    
-    # İnternet Tetikleyici
+    headers = {"Authorization": f"Bearer {API_KEY}"}
     ek_bilgi = ""
-    if any(kelime in kullanici_mesaji.lower() for kelime in ["ara", "nedir", "kimdir", "haber", "kaç", "kaçta"]):
+    if any(kelime in kullanici_mesaji.lower() for kelime in ["ara", "nedir", "kimdir", "haber", "kaç"]):
         ek_bilgi = f"\n[İnternet Arama Sonucu]: {web_ara(kullanici_mesaji)}"
     
-    # Karakter Modu
     karakter = "Sen çok resmi, sadık, bilge ve otoriter bir asistansın." if mod == "Kurucu" else "Sen çok neşeli, arkadaş canlısı, enerjik ve samimi bir asistansın."
-    
     talimat = f"{karakter} Kullanıcı: '{isim}'. {ek_bilgi}"
-    sistem = {"role": "system", "content": talimat}
     
     try:
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, 
@@ -130,23 +135,14 @@ def ai_cevap(mesaj_gecmisi, mod, isim, kullanici_mesaji):
         return res.json()['choices'][0]['message']['content']
     except: return "Sistem meşgul, Reis."
 
-# --- STYLE ---
-st.markdown(f"""
-    <style>
-    .stApp {{ background: {bg_color}; color: {text_color} !important; }}
-    .assistant-box {{ background-color: {assistant_box_bg}; padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 10px; color: {text_color}; }}
-    .user-box {{ background-color: rgba(128, 128, 128, 0.2); padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: right; color: {text_color}; }}
-    .aslan-header {{ display: flex; align-items: center; gap: 10px; font-weight: bold; border-bottom: 1px solid gold; padding-bottom: 5px; }}
-    </style>
-    """, unsafe_allow_html=True)
-
 st.title("🤖 Aslan Parçası V15.0")
 
+# --- SOHBET ARAYÜZÜ ---
 for m in st.session_state.messages:
     if m["role"] == "assistant":
-        st.markdown(f"""<div class="assistant-box"><div class="aslan-header"> Aslan Parçası</div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="assistant-box"><div class="aslan-header"><img src="{AVATAR_URL}" width="30" style="border-radius:50%"> Aslan Parçası</div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
     else:
-        st.markdown(f"""<div class="user-box">{m['content']}</div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="user-box"><div class="user-header">{isim} <img src="{USER_AVATAR}" width="30" style="border-radius:50%"></div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
 
 user_input = st.chat_input("Mesajını yaz...")
 if user_input:
