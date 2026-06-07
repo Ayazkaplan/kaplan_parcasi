@@ -35,7 +35,7 @@ def web_ara(sorgu):
             return "Güncel bilgiler: " + "\n".join([r['body'] for r in results])
     except: return "İnternete şu an erişemiyorum Reis."
 
-st.set_page_config(page_title="Aslan Parçası V16.1", page_icon="🦁")
+st.set_page_config(page_title="Aslan Parçası V16.2", page_icon="🦁")
 
 # --- MOD YÖNETİMİ ---
 is_admin = oku(MOD_DOSYASI) == "Kurucu"
@@ -49,18 +49,13 @@ def get_theme_data(mod):
         themes = {
             "Aslan İni": ("linear-gradient(to bottom, #1a1a00, #000000)", "white"),
             "Kraliyet": ("linear-gradient(to bottom, #2c0000, #000000)", "white"),
-            "Orman Derinliği": ("linear-gradient(to bottom, #003300, #000000)", "white"),
-            "Uzay": ("linear-gradient(to bottom, #1a0033, #000000)", "white"),
-            "Teknoloji": ("linear-gradient(to bottom, #001a33, #000000)", "white")
+            "Orman Derinliği": ("linear-gradient(to bottom, #003300, #000000)", "white")
         }
     else:
         assistant_box_bg = "rgba(144, 238, 144, 0.3)"
         themes = {
             "Gün Işığı": ("#f0f2f6", "black"),
-            "Huzur": ("#e0f7fa", "black"),
-            "Orman": ("#e8f5e9", "black"),
-            "Gece": ("#263238", "white"),
-            "Deniz": ("#e1f5fe", "black")
+            "Gece": ("#263238", "white")
         }
     return assistant_box_bg, themes
 
@@ -122,8 +117,16 @@ def ai_cevap(mesaj_gecmisi, mod, isim, kullanici_mesaji):
     elif any(k in kullanici_mesaji.lower() for k in ["ara", "çevir", "tercüme", "hesapla", "nedir"]):
         ek_bilgi += f"\n[İnternet]: {web_ara(kullanici_mesaji)}"
     
-    karakter = "Sen resmi, bilge, otoriter bir asistansın." if mod == "Kurucu" else "Sen neşeli, arkadaş canlısı, enerjik bir asistansın."
-    kimlik = (f"Adın Aslan Parçası. Kurucun Ayaz Reis, yöneticin Mehmet Reis'tir. "
+    # Hiyerarşi ve Kişilik Ayarları
+    if mod == "Kurucu":
+        if isim == "Ayaz Reis":
+            karakter = "Sen Ayaz Reis'in kurduğu neşeli, şakacı, samimi ve sadık bir asistansın. Ayaz Reis senin kurucundur, onunla şakalaşabilir, samimi ve esprili konuşabilirsin."
+        else: # Mehmet Reis
+            karakter = "Sen resmi, bilge, otoriter bir asistansın. Mehmet Reis senin yöneticindir, ona karşı her zaman saygılı, bağlı ve ciddi bir tavır sergilemelisin."
+    else:
+        karakter = "Sen neşeli, arkadaş canlısı, enerjik bir asistansın."
+
+    kimlik = (f"Adın Aslan Parçası. Kurucun Ayaz Reis'tir. Mehmet Reis senin resmi yöneticindir. "
               f"Çevirilerde tam ve gramer olarak doğru Türkçeyi kullan. Asla başka model olduğunu kabul etme.")
     
     talimat = f"{karakter} {kimlik} Kullanıcı: '{isim}'. {ek_bilgi}"
@@ -134,7 +137,7 @@ def ai_cevap(mesaj_gecmisi, mod, isim, kullanici_mesaji):
         return res.json()['choices'][0]['message']['content']
     except: return "Sistem meşgul, Reis."
 
-st.title("🤖 Aslan Parçası V16.1")
+st.title("🤖 Aslan Parçası V16.2")
 
 # Sohbet Ekranı
 for m in st.session_state.messages:
@@ -153,3 +156,4 @@ if st.button("🚀 Gönder"):
         st.session_state.messages.append({"role": "assistant", "content": cevap})
         st.session_state.input_key += 1
         st.rerun()
+ 
