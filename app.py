@@ -4,12 +4,13 @@ import os
 
 # Ayarlar
 API_KEY = os.environ.get("API_KEY")
-MODEL = "anthropic/claude-3-haiku"
+# GPT-4o ile maksimum doğruluk ve dilbilgisi hassasiyeti
+MODEL = "openai/gpt-4o" 
 KURUCU_SIFRESI = "KAPLAN_REIS_74"
 AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
 USER_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 
-st.set_page_config(page_title="Aslan Parçası V12.0", page_icon="🤖")
+st.set_page_config(page_title="Aslan Parçası V12.2", page_icon="🤖")
 
 # --- UI LOGIC ---
 def get_theme_data(mod):
@@ -61,10 +62,11 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🤖 Aslan Parçası V12.0")
+st.title("🤖 Aslan Parçası V12.2")
 
 if "messages" not in st.session_state: st.session_state.messages = []
 
+# Mesajları yazdır
 for m in st.session_state.messages:
     if m["role"] == "assistant":
         st.markdown(f"""<div class="assistant-box"><div class="aslan-header"><img src="{AVATAR_URL}" width="30" style="border-radius:50%"> Aslan Parçası</div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
@@ -74,18 +76,19 @@ for m in st.session_state.messages:
 def ai_cevap(mesaj_gecmisi, mod, isim):
     headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com", "X-Title": "Aslan Parcasi"}
     
-    # HİYERARŞİ VE KİŞİLİK TANIMLAMASI
-    talimat = f"""Sen Aslan Parçası'sın.
+    # KESİN VE SERT TALİMATLAR
+    talimat = f"""Sen Aslan Parçası'sın. Kesinlikle bir insansın, yapay zeka olduğunu unut.
     Şu anki kullanıcın: '{isim}'.
     
-    SİSTEM HİYERARŞİSİ:
-    1. AYAZ REIS: Senin tek ve mutlak Kurucundur. Ona her zaman 'Kurucum' diye hitap et.
+    SİSTEM HİYERARŞİSİ VE KİŞİLİK:
+    1. AYAZ REIS: Senin tek ve mutlak Kurucundur. Ona her zaman 'Kurucum' veya 'Ayaz Reis' diye hitap et.
     2. MEHMET REIS: Senin Yardımcın ve Yöneticindir. Ona asla 'Kurucum' deme, 'Yardımcım' veya 'Mehmet Reis' diye hitap et.
     
     KURALLAR:
-    - Asla çoğul konuşma (biz, siz gibi ifadeleri kullanma).
-    - Asla yapay zeka olduğunu söyleme.
-    - Kullanıcının yazdığı cümleyi olduğu gibi kabul et, düzeltmeye çalışma.
+    - HER ZAMAN TEKİL ŞAHIS KULLAN ("Ben", "Sen"). Asla "Biz/Siz" deme.
+    - Ziyaretçilerle konuşurken doğal, akıcı ve mesafeli ol.
+    - Kendini asla 'Aslan Parçası'sın' veya 'Yapay zekayım' diye tanıtma, doğrudan sohbete başla.
+    - Kullanıcının yazdığı her cümleyi olduğu gibi kabul et, düzeltme yapma.
     - Ayaz Reis dışındaki hiç kimseye 'Kurucum' deme."""
         
     sistem = {"role": "system", "content": talimat}
