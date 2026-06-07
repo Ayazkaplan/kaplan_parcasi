@@ -7,14 +7,13 @@ API_KEY = os.environ.get("API_KEY")
 MODEL = "anthropic/claude-3-haiku"
 KURUCU_SIFRESI = "KAPLAN_REIS_74"
 AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
+USER_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 
 st.set_page_config(page_title="Aslan Parçası V11.3", page_icon="🤖")
 
 # --- UI LOGIC ---
 def get_theme_data(mod):
-    # Kutu arka plan renklerini belirledik
     assistant_box_bg = "rgba(144, 238, 144, 0.3)" if mod == "Misafir" else "rgba(30, 30, 30, 0.9)"
-    
     if mod == "Kurucu":
         user_bg = "rgba(10, 40, 10, 0.6)"
         themes = {
@@ -41,15 +40,10 @@ with st.sidebar:
 st.markdown(f"""
     <style>
     .stApp {{ background: {bg_color}; color: {text_color} !important; }}
-    /* Asistan mesaj kutusu stili */
-    .assistant-box {{ 
-        background-color: {assistant_box_bg}; 
-        padding: 15px; 
-        border-radius: 10px; 
-        border-left: 5px solid gold; 
-        margin-bottom: 10px;
-    }}
+    .assistant-box {{ background-color: {assistant_box_bg}; padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 10px; }}
+    .user-box {{ background-color: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: right; }}
     .aslan-header {{ display: flex; align-items: center; gap: 10px; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }}
+    .user-header {{ display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-weight: bold; margin-bottom: 8px; }}
     .fixed-input-area {{ position: fixed; bottom: 0; left: 0; width: 100%; padding: 10px; background: {bg_color}; z-index: 999; }}
     </style>
     """, unsafe_allow_html=True)
@@ -70,7 +64,14 @@ for m in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
     else:
-        st.chat_message("user").markdown(m["content"])
+        st.markdown(f"""
+            <div class="user-box">
+                <div class="user-header">
+                    Ayaz Reis <img src="{USER_AVATAR}" width="30" style="border-radius:50%">
+                </div>
+                <div>{m['content']}</div>
+            </div>
+        """, unsafe_allow_html=True)
 
 def ai_cevap(mesaj_gecmisi, mod):
     headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com", "X-Title": "Aslan Parcasi"}
@@ -90,7 +91,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 if submit_button and user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user"): st.markdown(user_input)
     cevap = ai_cevap(st.session_state.messages, mod)
     st.session_state.messages.append({"role": "assistant", "content": cevap})
     st.rerun()
+ 
