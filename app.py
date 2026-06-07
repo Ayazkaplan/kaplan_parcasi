@@ -157,4 +157,3 @@ if st.button("🚀 Gönder"):
         st.session_state.messages.append({"role": "assistant", "content": cevap})
         st.session_state.input_key += 1
         st.rerun()
- 
