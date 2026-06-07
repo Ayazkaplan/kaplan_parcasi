@@ -12,7 +12,7 @@ DOSYA_ADI = "sarki_id.txt"
 
 # --- KALICI DOSYA FONKSİYONLARI ---
 def id_kaydet(yeni_id):
-    with open(DOSYA_ADI, "w") as f: f.write(yeni_id)
+    with open(DOSYA_ADI, "w") as f: f.write(yeni_id.strip())
 
 def id_sil():
     if os.path.exists(DOSYA_ADI): os.remove(DOSYA_ADI)
@@ -67,14 +67,14 @@ with st.sidebar:
     
     with st.expander("⋮ Müzik ID Nedir ve Nasıl Bulunur?"):
         st.write("""
-        **Video ID, YouTube'daki şarkının özel kimlik kodudur.**
+        **Video ID, YouTube'daki videonun özel kimlik kodudur.**
         
         **Nasıl Bulunur?**
-        1. İstediğin şarkıyı YouTube uygulamasında veya tarayıcıda aç.
-        2. Paylaş butonuna basıp **'Bağlantıyı Kopyala'** de.
-        3. Kopyaladığın link şuna benzer: `https://youtu.be/Ju-VnQuWoQU` veya `...watch?v=Ju-VnQuWoQU`
-        4. Eşittir (=) işaretinden veya son eğik çizgiden (/) sonra gelen **Ju-VnQuWoQU** kodu senin ID'ndir.
-        5. Bu kodu kutucuğa yapıştırıp 'Kaydet ve Oynat' tuşuna basman yeterlidir.
+        1. Videoyu YouTube'da aç.
+        2. 'Paylaş' > 'Bağlantıyı Kopyala' yap.
+        3. Linkin içindeki `v=` veya `/` işaretinden sonra gelen **11 haneli harf/rakam dizisini** kopyala.
+        4. Kutucuğa yapıştır ve 'Kaydet' tuşuna bas.
+        *Not: Hata alırsan 'YouTube'da İzle' butonunu kullan.*
         """)
     
     kayitli_id = id_oku()
@@ -90,8 +90,10 @@ with st.sidebar:
             id_sil()
             st.rerun()
 
-    if id_oku():
-        st.markdown(f'<iframe width="100%" height="200" src="https://www.youtube.com/embed/{id_oku()}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>', unsafe_allow_html=True)
+    if kayitli_id:
+        # GÜVENLİ YÖNLENDİRME BUTONU (Hata anında hayat kurtarır)
+        st.link_button("▶️ Hata Alırsan YouTube'da İzle", f"https://www.youtube.com/watch?v={kayitli_id}")
+        st.markdown(f'<iframe width="100%" height="200" src="https://www.youtube.com/embed/{kayitli_id}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>', unsafe_allow_html=True)
 
 # --- STYLE ---
 st.markdown(f"""
