@@ -13,7 +13,7 @@ AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
 USER_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 DOSYA_ADI = "sarki_id.txt"
 MOD_DOSYASI = "mod_id.txt"
-ISIM_DOSYASI = "isim_id.txt" # İsim hafızası için yeni dosya
+ISIM_DOSYASI = "isim_id.txt"
 TEMA_KURUCU = "tema_kurucu.txt"
 TEMA_MISAFIR = "tema_misafir.txt"
 
@@ -52,13 +52,18 @@ def get_theme_data(mod):
         themes = {
             "Aslan İni": ("linear-gradient(to bottom, #1a1a00, #000000)", "white"),
             "Kraliyet": ("linear-gradient(to bottom, #2c0000, #000000)", "white"),
-            "Orman Derinliği": ("linear-gradient(to bottom, #003300, #000000)", "white")
+            "Orman Derinliği": ("linear-gradient(to bottom, #003300, #000000)", "white"),
+            "Uzay": ("linear-gradient(to bottom, #1a0033, #000000)", "white"),
+            "Teknoloji": ("linear-gradient(to bottom, #001a33, #000000)", "white")
         }
     else:
         assistant_box_bg = "rgba(144, 238, 144, 0.3)"
         themes = {
             "Gün Işığı": ("#f0f2f6", "black"),
-            "Gece": ("#263238", "white")
+            "Huzur": ("#e0f7fa", "black"),
+            "Orman": ("#e8f5e9", "black"),
+            "Gece": ("#263238", "white"),
+            "Deniz": ("#e1f5fe", "black")
         }
     return assistant_box_bg, themes
 
@@ -73,7 +78,6 @@ with st.sidebar:
         if st.button("🚪 Çıkış Yap"): sil(MOD_DOSYASI); sil(ISIM_DOSYASI); st.session_state.ayaz_yetkili = False; st.rerun()
         mod = "Kurucu"
         
-        # İsim Yönetimi
         kayitli_isim = oku(ISIM_DOSYASI) or "Mehmet Reis"
         secim = st.selectbox("👤 Kimsin Reis?", ["Mehmet Reis", "Ayaz Reis"], index=["Mehmet Reis", "Ayaz Reis"].index(kayitli_isim))
         
@@ -94,7 +98,6 @@ with st.sidebar:
             kaydet(ISIM_DOSYASI, "Mehmet Reis")
             isim = "Mehmet Reis"
 
-    # Tema ve Diğerleri
     tema_dosyasi = TEMA_KURUCU if mod == "Kurucu" else TEMA_MISAFIR
     assistant_box_bg, theme_map = get_theme_data(mod)
     kayitli_tema = oku(tema_dosyasi)
@@ -154,3 +157,4 @@ if st.button("🚀 Gönder"):
         st.session_state.messages.append({"role": "assistant", "content": cevap})
         st.session_state.input_key += 1
         st.rerun()
+ 
