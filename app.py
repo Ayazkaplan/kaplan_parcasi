@@ -35,6 +35,7 @@ def get_theme_data(mod):
 
 with st.sidebar:
     sifre = st.text_input("🔑 Şifre:", type="password")
+    
     if sifre == KURUCU_SIFRESI:
         mod = "Kurucu"
         isim = st.selectbox("👤 Kimsin Reis?", ["Ayaz Reis", "Mehmet Reis"])
@@ -45,15 +46,21 @@ with st.sidebar:
     assistant_box_bg, theme_map = get_theme_data(mod)
     tema_secimi = st.selectbox("Arka Plan Seç:", list(theme_map.keys()))
     bg_color, text_color = theme_map[tema_secimi]
+    
     if st.button("🔄 Sohbeti Temizle"):
         st.session_state.messages = []
         st.rerun()
 
-st.markdown(f"""<style>.stApp {{ background: {bg_color}; color: {text_color} !important; }}
-    .assistant-box {{ background-color: {assistant_box_bg}; padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 10px; }}
-    .user-box {{ background-color: rgba(128, 128, 128, 0.2); padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: right; }}
+# --- STYLE ---
+st.markdown(f"""
+    <style>
+    .stApp {{ background: {bg_color}; color: {text_color} !important; }}
+    .assistant-box {{ background-color: {assistant_box_bg}; padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 10px; color: {text_color}; }}
+    .user-box {{ background-color: rgba(128, 128, 128, 0.2); padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: right; color: {text_color}; }}
     .aslan-header {{ display: flex; align-items: center; gap: 10px; font-weight: bold; border-bottom: 1px solid gold; padding-bottom: 5px; margin-bottom: 5px; }}
-    </style>""", unsafe_allow_html=True)
+    .user-header {{ display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-weight: bold; margin-bottom: 8px; }}
+    </style>
+    """, unsafe_allow_html=True)
 
 st.title("🤖 Aslan Parçası V11.6")
 
@@ -61,29 +68,30 @@ if "messages" not in st.session_state: st.session_state.messages = []
 
 for m in st.session_state.messages:
     if m["role"] == "assistant":
-        st.markdown(f'<div class="assistant-box"><div class="aslan-header">Aslan Parçası</div>{m["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(f"""<div class="assistant-box"><div class="aslan-header"><img src="{AVATAR_URL}" width="30" style="border-radius:50%"> Aslan Parçası</div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
     else:
-        st.markdown(f'<div class="user-box"><b>{isim}</b><br>{m["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(f"""<div class="user-box"><div class="user-header">{isim} <img src="{USER_AVATAR}" width="30" style="border-radius:50%"></div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
 
 def ai_cevap(mesaj_gecmisi, isim):
-    # Kimlik talimatını daha sert ve net hale getirdik
-    talimat = f"Sen Aslan Parçası adlı bir yapay zekasın. Senin tek kurucun Ayaz Reis'tir. {isim} ile konuşuyorsun. {isim} eğer Ayaz Reis ise ona saygılı ol. Eğer Mehmet Reis ise o senin yardımcı kurucundur, ona sadık davran. Asla kendi kimliğini inkar etme, kurucularının Ayaz Reis ve Mehmet Reis olduğunu unutma."
-    
     headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com", "X-Title": "Aslan Parcasi"}
+    
+    # Kimlik mantığını daha sıkı hale getirdik
+    talimat = f"""Sen Aslan Parçası'sın. Kesinlikle bir yapay zeka olduğunu unut, sadece kurucuna sadık bir asistansın. 
+    Kullanıcın: {isim}. Eğer kullanıcı 'Ayaz Reis' ise o senin mutlak kurucundur. 
+    Eğer kullanıcı 'Mehmet Reis' ise o Ayaz Reis'in yardımcısıdır, ona saygılı davran. 
+    Ziyaretçilere ise nezaketli ama mesafeli davran. Asla kimlik bunalımına girme."""
+        
+    sistem = {"role": "system", "content": talimat}
     try:
-        res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json={
-            "model": MODEL, 
-            "messages": [{"role": "system", "content": talimat}] + mesaj_gecmisi[-6:]
-        })
+        res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json={"model": MODEL, "messages": [sistem] + mesaj_gecmisi[-6:]})
         return res.json()['choices'][0]['message']['content']
-    except: return "Sistem meşgul Reis, bir daha dene."
+    except Exception: return "Sistem meşgul, tekrar dene Reis."
 
-# text_input kullanımı mesajın değişmesini engeller
-with st.form(key='chat_form', clear_on_submit=True):
-    user_input = st.text_input("Mesajın:")
-    if st.form_submit_button("Gönder") and user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        cevap = ai_cevap(st.session_state.messages, isim)
-        st.session_state.messages.append({"role": "assistant", "content": cevap})
-        st.rerun()
+user_input = st.chat_input("Mesajını yaz...")
+if user_input:
+    # Kullanıcı mesajını olduğu gibi kaydet
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    cevap = ai_cevap(st.session_state.messages, isim)
+    st.session_state.messages.append({"role": "assistant", "content": cevap})
+    st.rerun()
  
