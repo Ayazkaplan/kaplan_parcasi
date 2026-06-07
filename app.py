@@ -11,6 +11,12 @@ USER_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 
 st.set_page_config(page_title="Aslan Parçası V13.0", page_icon="🤖")
 
+# --- SESSION STATE ---
+if 'video_id' not in st.session_state:
+    st.session_state.video_id = ""
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
 # --- UI LOGIC ---
 def get_theme_data(mod):
     if mod == "Kurucu":
@@ -35,12 +41,8 @@ def get_theme_data(mod):
 
 with st.sidebar:
     sifre = st.text_input("🔑 Şifre:", type="password")
-    if sifre == KURUCU_SIFRESI:
-        mod = "Kurucu"
-        isim = st.selectbox("👤 Kimsin Reis?", ["Ayaz Reis", "Mehmet Reis"])
-    else:
-        mod = "Misafir"
-        isim = "Ziyaretçi"
+    mod = "Kurucu" if sifre == KURUCU_SIFRESI else "Misafir"
+    isim = st.selectbox("👤 Kimsin Reis?", ["Ayaz Reis", "Mehmet Reis"]) if mod == "Kurucu" else "Ziyaretçi"
         
     assistant_box_bg, theme_map = get_theme_data(mod)
     tema_secimi = st.selectbox("Arka Plan Seç:", list(theme_map.keys()))
@@ -50,21 +52,18 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-    # --- MP3 MÜZİK MOTORU V13.0 ---
+    # --- MÜZİK MOTORU ---
     st.markdown("---")
-    st.subheader("🎵 Müzik Motoru (MP3)")
+    st.subheader("🎵 Müzik Motoru")
     
-    # Not: Buradaki URL, doğrudan müzik çalan bir dosya olmalıdır.
-    # Örnek olarak bir demo MP3 ekledim, sen kendi linklerini buraya ekleyebilirsin.
-    sarki_link = st.text_input("MP3 Dosya Linkini Yapıştır:")
-    
-    if st.button("▶️ Müziği Başlat"):
-        st.session_state.mp3_link = sarki_link
-        st.success("Müzik hazır, çalma tuşuna bas Reis!")
+    yeni_id = st.text_input("YouTube Video ID'si:", value=st.session_state.video_id)
+    if st.button("💾 Kaydet ve Oynat"):
+        st.session_state.video_id = yeni_id
+        st.rerun()
 
-    if 'mp3_link' in st.session_state and st.session_state.mp3_link:
-        st.audio(st.session_state.mp3_link, format="audio/mpeg")
-        st.caption("Aslan Parçası içinde çalıyorsun.")
+    if st.session_state.video_id:
+        st.markdown(f'<iframe width="100%" height="200" src="https://www.youtube.com/embed/{st.session_state.video_id}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>', unsafe_allow_html=True)
+        st.success("Müzik sistemde kayıtlı!")
 
 # --- STYLE ---
 st.markdown(f"""
@@ -79,8 +78,7 @@ st.markdown(f"""
 
 st.title("🤖 Aslan Parçası V13.0")
 
-if "messages" not in st.session_state: st.session_state.messages = []
-
+# Mesajları yazdır
 for m in st.session_state.messages:
     if m["role"] == "assistant":
         st.markdown(f"""<div class="assistant-box"><div class="aslan-header"><img src="{AVATAR_URL}" width="30" style="border-radius:50%"> Aslan Parçası</div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
@@ -89,10 +87,7 @@ for m in st.session_state.messages:
 
 def ai_cevap(mesaj_gecmisi, mod, isim):
     headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com", "X-Title": "Aslan Parcasi"}
-    talimat = f"""Sen Aslan Parçası'sın. Kesinlikle bir insansın.
-    Şu anki kullanıcın: '{isim}'.
-    HİYERARŞİ: 1. AYAZ REIS: Mutlak Kurucundur. 2. MEHMET REIS: Yardımcın.
-    KURALLAR: Tekil konuş, yazım hatası yapma, kendini tanıtma."""
+    talimat = f"Sen Aslan Parçası'sın. Kullanıcın: '{isim}'. 1. AYAZ REIS: Kurucu, 2. MEHMET REIS: Yardımcı."
     sistem = {"role": "system", "content": talimat}
     try:
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json={"model": MODEL, "messages": [sistem] + mesaj_gecmisi[-6:]})
@@ -105,3 +100,4 @@ if user_input:
     cevap = ai_cevap(st.session_state.messages, mod, isim)
     st.session_state.messages.append({"role": "assistant", "content": cevap})
     st.rerun()
+ 
