@@ -1,32 +1,18 @@
 import streamlit as st
 import requests
 import os
-import psycopg2
-import socket
+import sqlite3 # Artık postgresql değil, yerel SQLite kullanıyoruz
+from datetime import datetime, timedelta
 
-# --- VERİTABANI BAĞLANTISI (BULUT) ---
-DATABASE_URL = os.environ.get("DATABASE_URL")
-
+# --- VERİTABANI BAĞLANTISI (SQLite - Dosya tabanlı) ---
+# "veriler.db" dosyası, projenin olduğu klasörde otomatik oluşur.
 def get_db():
-    # IPv6 hatasını aşmak için: host ismini IP'ye çevirip bağlantıyı zorluyoruz.
-    try:
-        # Host adını URL'den alıyoruz (örnek: db.imacor...supabase.co)
-        host = DATABASE_URL.split("@")[1].split(":")[0]
-        # Hostu IP adresine çevirerek IPv4'e zorluyoruz
-        ip = socket.gethostbyname(host)
-        # Orijinal URL'deki host ismini IP ile değiştiriyoruz
-        dsn = DATABASE_URL.replace(host, ip)
-        
-        # Bağlantı
-        return psycopg2.connect(dsn, connect_timeout=10)
-    except Exception as e:
-        st.error(f"Veritabanı bağlantı hatası: {e}")
-        st.stop()
+    conn = sqlite3.connect("veriler.db")
+    return conn
 
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
-    # Tabloları oluştur
     cursor.execute('''CREATE TABLE IF NOT EXISTS kullanicilar 
                       (isim TEXT PRIMARY KEY, sifre TEXT, rol TEXT)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS tercihler 
@@ -35,7 +21,6 @@ def init_db():
     cursor.close()
     conn.close()
 
-# Uygulama başladığında tabloyu kontrol et
 init_db()
 
 API_KEY = os.environ.get("API_KEY")
@@ -62,12 +47,12 @@ if not st.session_state.logged_in:
         cursor = conn.cursor()
         if menu == "Kayıt Ol":
             try:
-                cursor.execute("INSERT INTO kullanicilar VALUES (%s, %s, %s)", (u_isim, u_sifre, "Misafir"))
-                cursor.execute("INSERT INTO tercihler VALUES (%s, %s, %s)", (u_isim, "Gün Işığı", ""))
+                cursor.execute("INSERT INTO kullanicilar VALUES (?, ?, ?)", (u_isim, u_sifre, "Misafir"))
+                cursor.execute("INSERT INTO tercihler VALUES (?, ?, ?)", (u_isim, "Gün Işığı", ""))
                 conn.commit(); st.success("Kayıt başarılı!"); st.rerun()
             except: st.error("İsim zaten alınmış!")
         else:
-            cursor.execute("SELECT * FROM kullanicilar WHERE isim=%s AND sifre=%s", (u_isim, u_sifre))
+            cursor.execute("SELECT * FROM kullanicilar WHERE isim=? AND sifre=?", (u_isim, u_sifre))
             user = cursor.fetchone()
             if user:
                 st.session_state.logged_in = True
@@ -93,7 +78,7 @@ mod = st.session_state.rol
 
 conn = get_db()
 cursor = conn.cursor()
-cursor.execute("SELECT tema, sarki_id FROM tercihler WHERE isim=%s", (isim,))
+cursor.execute("SELECT tema, sarki_id FROM tercihler WHERE isim=?", (isim,))
 tercih = cursor.fetchone()
 tema_secimi, kayitli_sarki = tercih if tercih else ("Gün Işığı", "")
 
@@ -105,7 +90,7 @@ with st.sidebar:
     yeni_id = st.text_input("Video ID:", value=kayitli_sarki)
     
     if st.button("💾 Profili Güncelle"):
-        cursor.execute("UPDATE tercihler SET tema=%s, sarki_id=%s WHERE isim=%s", (yeni_tema, yeni_id, isim))
+        cursor.execute("UPDATE tercihler SET tema=?, sarki_id=? WHERE isim=?", (yeni_tema, yeni_id, isim))
         conn.commit(); st.rerun()
 
     if st.button("🔄 Sohbeti Temizle"): st.session_state.messages = []; st.rerun()
