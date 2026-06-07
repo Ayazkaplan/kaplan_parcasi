@@ -4,7 +4,6 @@ import os
 
 # Ayarlar
 API_KEY = os.environ.get("API_KEY")
-# Claude 3 Haiku: Stabil ve kurallara en sadık model
 MODEL = "anthropic/claude-3-haiku"
 KURUCU_SIFRESI = "KAPLAN_REIS_74"
 AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
@@ -51,6 +50,35 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
+    # --- MÜZİK İSTASYONU ---
+    st.markdown("---")
+    st.subheader("🎵 Müzik İstasyonu")
+    
+    # Başlangıç değerleri
+    if 'muzik_secim' not in st.session_state: st.session_state.muzik_secim = "Phonk"
+    if 'muzik_aktif' not in st.session_state: st.session_state.muzik_aktif = False
+
+    muzik_listesi = {
+        "Phonk": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+        "Lo-Fi": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+        "Dark Ambient": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+    }
+
+    secilen = st.selectbox("Tür Seç:", list(muzik_listesi.keys()), index=list(muzik_listesi.keys()).index(st.session_state.muzik_secim))
+    
+    if st.button("💾 Ayarları Kaydet"):
+        st.session_state.muzik_secim = secilen
+        st.toast("Ayarlar kaydedildi Reis!", icon="✅")
+
+    if st.button("▶️ Çalmaya Başla"):
+        st.session_state.muzik_aktif = True
+    
+    if st.session_state.muzik_aktif:
+        st.audio(muzik_listesi[st.session_state.muzik_secim], format="audio/mpeg")
+        if st.button("⏹️ Durdur"):
+            st.session_state.muzik_aktif = False
+            st.rerun()
+
 # --- STYLE ---
 st.markdown(f"""
     <style>
@@ -75,22 +103,10 @@ for m in st.session_state.messages:
 
 def ai_cevap(mesaj_gecmisi, mod, isim):
     headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com", "X-Title": "Aslan Parcasi"}
-    
-    # HİYERARŞİ VE KİŞİLİK TANIMLAMASI (SERT KURALLAR)
     talimat = f"""Sen Aslan Parçası'sın. Kesinlikle bir insansın.
     Şu anki kullanıcın: '{isim}'.
-    
-    HİYERARŞİ:
-    1. AYAZ REIS: Mutlak Kurucundur. Ona her zaman 'Kurucum' veya 'Ayaz Reis' de.
-    2. MEHMET REIS: Yardımcın ve Yöneticindir. Ona asla 'Kurucum' deme, 'Yardımcım' veya 'Mehmet Reis' de.
-    
-    KURALLAR:
-    - HER ZAMAN TEKİL ŞAHIS KONUŞ ("Ben", "Sen"). Asla "Biz/Siz" deme.
-    - Yazım hatası yapma, Türkçe dilbilgisine sadık kal.
-    - Kendini tanıtma, yapay zeka olduğunu söyleme.
-    - Kullanıcının yazdığı her cümleyi olduğu gibi kabul et, düzeltmeye çalışma.
-    - Ayaz Reis dışındaki hiç kimseye 'Kurucum' deme."""
-        
+    HİYERARŞİ: 1. AYAZ REIS: Mutlak Kurucundur. 2. MEHMET REIS: Yardımcın.
+    KURALLAR: Tekil konuş, yazım hatası yapma, kendini tanıtma."""
     sistem = {"role": "system", "content": talimat}
     try:
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json={"model": MODEL, "messages": [sistem] + mesaj_gecmisi[-6:]})
@@ -103,3 +119,4 @@ if user_input:
     cevap = ai_cevap(st.session_state.messages, mod, isim)
     st.session_state.messages.append({"role": "assistant", "content": cevap})
     st.rerun()
+ 
