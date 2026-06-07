@@ -9,7 +9,7 @@ KURUCU_SIFRESI = "KAPLAN_REIS_74"
 AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
 USER_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 
-st.set_page_config(page_title="Aslan Parçası V12.5", page_icon="🤖")
+st.set_page_config(page_title="Aslan Parçası V12.6", page_icon="🤖")
 
 # --- UI LOGIC ---
 def get_theme_data(mod):
@@ -50,20 +50,20 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-    # --- YOUTUBE MÜZİK MOTORU GÜNCEL ---
+    # --- YOUTUBE GÖMÜLÜ MÜZİK MOTORU V12.6 ---
     st.markdown("---")
-    st.subheader("🎵 Müzik Motoru")
+    st.subheader("🎵 Müzik Motoru (Dahili)")
     
     sarki_arama = st.text_input("Şarkı veya Tür Ara:", key="arama_input")
     if st.button("🔍 Ara"):
+        # Burası arama terimini doğrudan YouTube arama embed'ine dönüştürür
         query = sarki_arama.replace(" ", "+")
-        st.session_state.son_sarki_link = f"https://www.youtube.com/results?search_query={query}"
-        st.session_state.son_sarki_isim = sarki_arama
-        st.info(f"'{sarki_arama}' için YouTube araması hazırlandı!")
+        st.session_state.video_url = f"https://www.youtube.com/embed?listType=search&list={query}"
+        st.success(f"'{sarki_arama}' çalmaya hazır Reis!")
 
-    if 'son_sarki_link' in st.session_state:
-        st.markdown(f"[▶️ {st.session_state.son_sarki_isim} Şarkısını YouTube'da Aç]({st.session_state.son_sarki_link})", unsafe_allow_html=True)
-        st.caption("Not: İstediğin şarkıya tek tıkla ulaşman için seni doğrudan YouTube sonuçlarına yönlendiriyorum Reis.")
+    if 'video_url' in st.session_state:
+        st.video(st.session_state.video_url)
+        st.caption("Şarkı Aslan Parçası'nın içinde çalıyor. Keyfini çıkar!")
 
 # --- STYLE ---
 st.markdown(f"""
@@ -76,11 +76,10 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🤖 Aslan Parçası V12.5")
+st.title("🤖 Aslan Parçası V12.6")
 
 if "messages" not in st.session_state: st.session_state.messages = []
 
-# Mesajları yazdır
 for m in st.session_state.messages:
     if m["role"] == "assistant":
         st.markdown(f"""<div class="assistant-box"><div class="aslan-header"><img src="{AVATAR_URL}" width="30" style="border-radius:50%"> Aslan Parçası</div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
