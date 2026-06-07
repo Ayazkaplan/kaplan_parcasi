@@ -97,12 +97,9 @@ def ai_cevap(mesaj_gecmisi, mod, isim):
         return res.json()['choices'][0]['message']['content']
     except Exception: return "Sistem meşgul, tekrar dene Reis."
 
-# Tarayıcı müdahalesini en aza indiren giriş alanı
-user_input = st.text_input("Mesajını yaz ve Enter'a bas...", key="user_input", autocomplete="off")
-
+user_input = st.chat_input("Mesajını yaz...")
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     cevap = ai_cevap(st.session_state.messages, mod, isim)
     st.session_state.messages.append({"role": "assistant", "content": cevap})
     st.rerun()
- 
