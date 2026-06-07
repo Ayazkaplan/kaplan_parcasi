@@ -10,6 +10,7 @@ AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
 USER_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 DOSYA_ADI = "sarki_id.txt"
 TEMA_DOSYASI = "tema_id.txt"
+MOD_DOSYASI = "mod_id.txt" # Modu kalıcı yapmak için
 
 # --- KALICI DOSYA FONKSİYONLARI ---
 def kaydet(dosya, deger):
@@ -25,10 +26,13 @@ def sil(dosya):
 
 st.set_page_config(page_title="Aslan Parçası V14.0", page_icon="🤖")
 
-# Session State Hazırlığı
+# --- MOD YÖNETİMİ ---
+if oku(MOD_DOSYASI) == "Kurucu":
+    st.session_state.is_admin = True
+else:
+    st.session_state.is_admin = False
+
 if "messages" not in st.session_state: st.session_state.messages = []
-if "is_admin" not in st.session_state: st.session_state.is_admin = False
-if "isim" not in st.session_state: st.session_state.isim = "Ziyaretçi"
 
 # --- UI LOGIC ---
 def get_theme_data(mod):
@@ -53,25 +57,20 @@ def get_theme_data(mod):
     return assistant_box_bg, themes
 
 with st.sidebar:
-    # Şifre girişi
+    # Şifre yönetimi
     if not st.session_state.is_admin:
         sifre = st.text_input("🔑 Şifre:", type="password")
         if sifre == KURUCU_SIFRESI:
-            st.session_state.is_admin = True
+            kaydet(MOD_DOSYASI, "Kurucu")
             st.rerun()
     else:
         st.success("✅ Kurucu Modu Aktif")
         if st.button("🚪 Çıkış Yap"):
-            st.session_state.is_admin = False
+            sil(MOD_DOSYASI)
             st.rerun()
 
     mod = "Kurucu" if st.session_state.is_admin else "Misafir"
-    
-    # İsim seçimi
-    if mod == "Kurucu":
-        st.session_state.isim = st.selectbox("👤 Kimsin Reis?", ["Ayaz Reis", "Mehmet Reis"], index=0 if st.session_state.isim == "Ayaz Reis" else 1)
-    else:
-        st.session_state.isim = "Ziyaretçi"
+    isim = st.selectbox("👤 Kimsin Reis?", ["Ayaz Reis", "Mehmet Reis"]) if mod == "Kurucu" else "Ziyaretçi"
         
     # --- TEMA SEÇİMİ ---
     assistant_box_bg, theme_map = get_theme_data(mod)
@@ -95,15 +94,12 @@ with st.sidebar:
     kayitli_id = oku(DOSYA_ADI)
     yeni_id = st.text_input("YouTube Video ID'si:", value=kayitli_id)
     
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("💾 Kaydet ve Oynat"):
-            kaydet(DOSYA_ADI, yeni_id)
-            st.rerun()
-    with col2:
-        if st.button("🗑️ Sil"):
-            sil(DOSYA_ADI)
-            st.rerun()
+    if st.button("💾 Kaydet ve Oynat"):
+        kaydet(DOSYA_ADI, yeni_id)
+        st.rerun()
+    if st.button("🗑️ Sil"):
+        sil(DOSYA_ADI)
+        st.rerun()
 
     if kayitli_id:
         st.link_button("▶️ Hata Alırsan YouTube'da İzle", f"https://www.youtube.com/watch?v={kayitli_id}")
@@ -126,7 +122,7 @@ for m in st.session_state.messages:
     if m["role"] == "assistant":
         st.markdown(f"""<div class="assistant-box"><div class="aslan-header"><img src="{AVATAR_URL}" width="30" style="border-radius:50%"> Aslan Parçası</div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
     else:
-        st.markdown(f"""<div class="user-box"><div class="user-header">{st.session_state.isim} <img src="{USER_AVATAR}" width="30" style="border-radius:50%"></div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="user-box"><div class="user-header">{isim} <img src="{USER_AVATAR}" width="30" style="border-radius:50%"></div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
 
 def ai_cevap(mesaj_gecmisi, mod, isim):
     headers = {"Authorization": f"Bearer {API_KEY}", "HTTP-Referer": "https://aslan-parcasi-widget.onrender.com", "X-Title": "Aslan Parcasi"}
@@ -140,7 +136,7 @@ def ai_cevap(mesaj_gecmisi, mod, isim):
 user_input = st.chat_input("Mesajını yaz...")
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
-    cevap = ai_cevap(st.session_state.messages, mod, st.session_state.isim)
+    cevap = ai_cevap(st.session_state.messages, mod, isim)
     st.session_state.messages.append({"role": "assistant", "content": cevap})
     st.rerun()
  
