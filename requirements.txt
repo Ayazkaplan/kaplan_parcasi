@@ -1,5 +1,4 @@
 streamlit
 requests
-authlib
-itsdangerous
 duckduckgo-search
+firebase-admin
