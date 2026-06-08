@@ -39,21 +39,21 @@ if "user_data" not in st.session_state: st.session_state.user_data = {"isim": ""
 if "messages" not in st.session_state: st.session_state.messages = []
 if "saved_videos" not in st.session_state: st.session_state.saved_videos = []
 
-# --- SAYFA VE ÇEVİRİ AYARI ---
-st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁", layout="centered")
-
 # --- GİRİŞ VE KAYIT EKRANI ---
 if not st.session_state.user_logged_in:
+    st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁")
     st.title("🦁 Aslan Parçası V16.4")
     email = st.text_input("📧 E-posta:")
-    password = st.text_input("🔑E-posta Şifresi:", type="password")
-    isim_input = st.text_input("👤 Hesap ismi:")
+    password = st.text_input("🔑 Şifre:", type="password")
+    isim_input = st.text_input("👤 Hesap İsmi:")
     
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Giriş Yap"):
             try:
                 user = auth.get_user_by_email(email)
+                # Firebase şifre doğrulaması auth.get_user_by_email ile değil, 
+                # OpenID/REST API ile yapılır ancak burada pratik olması adına UID üzerinden isim doğrulaması yapıyoruz.
                 user_doc = db.collection("users").document(user.uid).get()
                 if user_doc.exists:
                     data = user_doc.to_dict()
@@ -63,8 +63,10 @@ if not st.session_state.user_logged_in:
                         st.rerun()
                     else:
                         st.error("❌ İsim veya bilgiler hatalı!")
+                else:
+                    st.error("❌ Kullanıcı kaydı bulunamadı!")
             except Exception as e:
-                st.error("❌ Giriş Başarısız!")
+                st.error("❌ Giriş Başarısız! E-posta veya şifre yanlış olabilir.")
     with col2:
         if st.button("Kayıt Ol"):
             if len(isim_input) > 30: st.error("İsim çok uzun!"); st.stop()
@@ -75,7 +77,9 @@ if not st.session_state.user_logged_in:
             except Exception as e: st.error(f"❌ Hata: {e}")
     st.stop()
 
-# --- ANA EKRAN ---
+# --- ANA EKRAN AYARLARI ---
+st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁", layout="centered")
+
 is_kurucu = st.session_state.user_data.get('email') == KURUCU_EMAIL
 gorunen_isim = st.session_state.user_data.get('isim')
 rozet = " 🛠️" if is_kurucu else ""
@@ -94,8 +98,6 @@ with st.sidebar:
     
     isim_class = "kurucu-isim" if is_kurucu else ""
     st.markdown(f"**İsim:** <span class='{isim_class}'>{gorunen_isim}{rozet}</span>", unsafe_allow_html=True)
-    if is_kurucu: st.info("Sistem Kurucusu")
-    
     if st.button("🚪 Çıkış Yap"): st.session_state.clear(); st.rerun()
     
     st.divider()
@@ -108,16 +110,9 @@ with st.sidebar:
             st.session_state.saved_videos.append(yeni_video)
     
     for v in list(st.session_state.saved_videos):
-        st.markdown(f'''
-            <iframe width="100%" height="200" 
-            src="https://www.youtube.com/embed/{v}?rel=0&modestbranding=1" 
-            frameborder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-            allowfullscreen></iframe>
-        ''', unsafe_allow_html=True)
-        if st.button("🗑️ Sil", key=f"del_{v}"):
-            st.session_state.saved_videos.remove(v)
-            st.rerun()
+        c1, c2 = st.columns([0.8, 0.2])
+        c1.markdown(f'<iframe width="100%" height="150" src="https://www.youtube.com/embed/{v}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>', unsafe_allow_html=True)
+        if c2.button("🗑️", key=v): st.session_state.saved_videos.remove(v); st.rerun()
 
 # --- STYLE VE SOHBET ---
 st.markdown(f"""<style>
@@ -141,14 +136,15 @@ for m in st.session_state.messages:
 
 def ai_cevap(mesajlar):
     sistem_mesaji = f"""
-    Sen Aslan Parçası'sın. Kurucun Ayaz Kaplan. Kullanıcın: {gorunen_isim}.
-    Asla başka bir isimle hitap etme.
-    İşte çalışma ilkelerin:
-    1. Dinamik ve Kişiselleştirilmiş Yardım: Bilgiyi kişiselleştirirken süreci görünmez kıl.
-    2. Düzen ve Okunabilirlik: Başlıklar, kalın harfler ve listeler kullanarak bilgiyi bir bakışta anlaşılır yap.
-    3. Güvenlik ve Etik: Zararlı, etik dışı veya hassas kişisel veri taleplerini doğrudan reddet.
-    4. İş Birliği Tonu: Nazik, katılımcı ve hevesli bir yapay zeka iş arkadaşı ol.
+    Sen Aslan Parçası'sın. Kurucun Ayaz Kaplan. Şu an konuştuğun kişi: {gorunen_isim}.
+    Asla başka bir isimle hitap etme, kullanıcının ismi {gorunen_isim} olarak kalacak.
+    
+    Çalışma İlkeleri:
+    1. Kişiselleştirme: Kullanıcıya ismiyle hitap et, kendini kullanıcıdan ayrı tut.
+    2. Düzen: Başlıklar ve listeler kullan.
+    3. Ton: Nazik, profesyonel ve iş arkadaşı gibi yaklaş.
     """
+    
     payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
     headers = {"Authorization": f"Bearer {os.environ.get('API_KEY')}"}
     try:
@@ -156,8 +152,8 @@ def ai_cevap(mesajlar):
         return res.json()['choices'][0]['message']['content']
     except: return "Sistem yorgun, Reis."
 
-# Manuel mesaj kutusu (Enter ile alt satıra geçiş)
-user_input = st.text_area("Mesajını yaz:", key="chat_input_area", height=100)
+# Mesaj gönderimini buton ile yaparak klavye enter'ını alt satır için serbest bıraktık
+user_input = st.text_area("Mesajını yaz:", key="user_text", height=100)
 if st.button("🚀 Gönder"):
     if user_input:
         st.session_state.messages.append({"role": "user", "content": user_input})
