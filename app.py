@@ -44,8 +44,8 @@ if not st.session_state.user_logged_in:
     st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁")
     st.title("🦁 Aslan Parçası V16.4")
     email = st.text_input("📧 E-posta:")
-    password = st.text_input("🔑 Şifre:", type="password")
-    isim_input = st.text_input("👤 Kayıtlı İsmini Yaz:")
+    password = st.text_input("🔑E-posta Şifresi:", type="password")
+    isim_input = st.text_input("👤 Hesap ismi:")
     
     col1, col2 = st.columns(2)
     with col1:
