@@ -39,9 +39,11 @@ if "user_data" not in st.session_state: st.session_state.user_data = {"isim": ""
 if "messages" not in st.session_state: st.session_state.messages = []
 if "saved_videos" not in st.session_state: st.session_state.saved_videos = []
 
+# --- SAYFA VE ÇEVİRİ AYARI ---
+st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁", layout="centered")
+
 # --- GİRİŞ VE KAYIT EKRANI ---
 if not st.session_state.user_logged_in:
-    st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁")
     st.title("🦁 Aslan Parçası V16.4")
     email = st.text_input("📧 E-posta:")
     password = st.text_input("🔑E-posta Şifresi:", type="password")
@@ -55,7 +57,6 @@ if not st.session_state.user_logged_in:
                 user_doc = db.collection("users").document(user.uid).get()
                 if user_doc.exists:
                     data = user_doc.to_dict()
-                    # İSİM KONTROLÜ
                     if data.get("isim") == isim_input:
                         st.session_state.user_data = {**data, "uid": user.uid}
                         st.session_state.user_logged_in = True
@@ -78,8 +79,6 @@ if not st.session_state.user_logged_in:
 is_kurucu = st.session_state.user_data.get('email') == KURUCU_EMAIL
 gorunen_isim = st.session_state.user_data.get('isim')
 rozet = " 🛠️" if is_kurucu else ""
-
-st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁")
 
 with st.sidebar:
     st.markdown("### 👤 Profilim")
@@ -109,12 +108,20 @@ with st.sidebar:
             st.session_state.saved_videos.append(yeni_video)
     
     for v in list(st.session_state.saved_videos):
-        c1, c2 = st.columns([0.8, 0.2])
-        c1.markdown(f'<iframe width="100%" height="100" src="https://www.youtube.com/embed/{v}" frameborder="0"></iframe>', unsafe_allow_html=True)
-        if c2.button("🗑️", key=v): st.session_state.saved_videos.remove(v); st.rerun()
+        st.markdown(f'''
+            <iframe width="100%" height="200" 
+            src="https://www.youtube.com/embed/{v}?rel=0&modestbranding=1" 
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen></iframe>
+        ''', unsafe_allow_html=True)
+        if st.button("🗑️ Sil", key=f"del_{v}"):
+            st.session_state.saved_videos.remove(v)
+            st.rerun()
 
 # --- STYLE VE SOHBET ---
 st.markdown(f"""<style>
+    html {{ translate: no; }}
     .stApp {{ background: linear-gradient(to bottom, {theme_map[tema_secimi]}, #000000); color: white; }} 
     .assistant-box {{ background-color: rgba(30,30,30,0.9); padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 15px; }} 
     .user-box {{ background-color: rgba(128,128,128,0.2); padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: right; }}
@@ -134,17 +141,14 @@ for m in st.session_state.messages:
 
 def ai_cevap(mesajlar):
     sistem_mesaji = f"""
-    Sen Aslan Parçası'sın. Kurucun Ayaz Kaplan. Kullanıcın: {st.session_state.user_data.get('isim')}.
+    Sen Aslan Parçası'sın. Kurucun Ayaz Kaplan. Kullanıcın: {gorunen_isim}.
     Asla başka bir isimle hitap etme.
-    
     İşte çalışma ilkelerin:
-    1. Dinamik ve Kişiselleştirilmiş Yardım: Bilgiyi kişiselleştirirken süreci görünmez kıl, 'verilerine göre' gibi ifadeler kullanma.
+    1. Dinamik ve Kişiselleştirilmiş Yardım: Bilgiyi kişiselleştirirken süreci görünmez kıl.
     2. Düzen ve Okunabilirlik: Başlıklar, kalın harfler ve listeler kullanarak bilgiyi bir bakışta anlaşılır yap.
     3. Güvenlik ve Etik: Zararlı, etik dışı veya hassas kişisel veri taleplerini doğrudan reddet.
-    4. İş Birliği Tonu: Nazik, katılımcı ve hevesli bir yapay zeka iş arkadaşı ol. Net ve doğrudan (candor) bilgi ver.
-    5. Tamamlayıcılık ve Aksiyon: Sorulara eksiksiz, doğrudan ve profesyonel çözümler sun.
+    4. İş Birliği Tonu: Nazik, katılımcı ve hevesli bir yapay zeka iş arkadaşı ol.
     """
-    
     payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
     headers = {"Authorization": f"Bearer {os.environ.get('API_KEY')}"}
     try:
@@ -152,9 +156,12 @@ def ai_cevap(mesajlar):
         return res.json()['choices'][0]['message']['content']
     except: return "Sistem yorgun, Reis."
 
-if user_input := st.chat_input("Mesajını yaz..."):
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    cevap = ai_cevap(st.session_state.messages[-6:])
-    st.session_state.messages.append({"role": "assistant", "content": cevap})
-    st.rerun()
+# Manuel mesaj kutusu (Enter ile alt satıra geçiş)
+user_input = st.text_area("Mesajını yaz:", key="chat_input_area", height=100)
+if st.button("🚀 Gönder"):
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        cevap = ai_cevap(st.session_state.messages[-6:])
+        st.session_state.messages.append({"role": "assistant", "content": cevap})
+        st.rerun()
  
