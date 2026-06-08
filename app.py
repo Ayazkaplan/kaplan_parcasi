@@ -9,6 +9,7 @@ import re
 
 # --- AYARLAR ---
 KURUCU_EMAIL = "ayazscma92@gmail.com"
+MODEL = "anthropic/claude-3-haiku"  # Hata burada düzeldi
 AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
 USER_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 
@@ -33,12 +34,6 @@ db = firestore.client()
 def emoji_kontrol(isim):
     return bool(re.search(r'[^\w\s]', isim))
 
-def kaydet_video(yeni_id):
-    videos = st.session_state.get("saved_videos", [])
-    if yeni_id and yeni_id not in videos:
-        videos.append(yeni_id)
-        st.session_state.saved_videos = videos
-
 # --- OTURUM YÖNETİMİ ---
 if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = False
 if "user_data" not in st.session_state: st.session_state.user_data = {"isim": "", "email": "", "uid": ""}
@@ -57,13 +52,18 @@ if not st.session_state.user_logged_in:
     with col1:
         if st.button("Giriş Yap"):
             try:
+                # Auth kontrolü
                 user = auth.get_user_by_email(email)
+                # Firestore'dan kullanıcı verisini çek
                 user_doc = db.collection("users").document(user.uid).get()
                 if user_doc.exists:
                     st.session_state.user_data = {**user_doc.to_dict(), "uid": user.uid}
                     st.session_state.user_logged_in = True
                     st.rerun()
-            except: st.error("❌ Hata!")
+                else:
+                    st.error("❌ Kullanıcı profili bulunamadı!")
+            except Exception as e:
+                st.error(f"❌ Giriş hatası: {e}")
     with col2:
         if st.button("Kayıt Ol"):
             if len(isim_input) > 30: st.error("İsim çok uzun!"); st.stop()
@@ -71,7 +71,7 @@ if not st.session_state.user_logged_in:
             try:
                 user = auth.create_user(email=email, password=password)
                 db.collection("users").document(user.uid).set({"isim": isim_input, "email": email})
-                st.success("✅ Kayıt başarılı!")
+                st.success("✅ Kayıt başarılı! Şimdi giriş yapabilirsin.")
             except Exception as e: st.error(f"❌ Hata: {e}")
     st.stop()
 
@@ -83,7 +83,6 @@ st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁")
 
 with st.sidebar:
     st.markdown("### 👤 Profilim")
-    # İsmi güncelleme kısmı
     yeni_isim = st.text_input("İsmini Düzenle:", value=gorunen_isim)
     if st.button("Güncelle"):
         if len(yeni_isim) <= 30 and (is_kurucu or not emoji_kontrol(yeni_isim)):
@@ -104,9 +103,12 @@ with st.sidebar:
     theme_map = {"Aslan İni": "#1a1a00", "Kraliyet": "#2c0000", "Uzay": "#1a0033", "Orman Derinliği": "#001a00", "Teknoloji": "#001a1a"}
     
     yeni_video = st.text_input("YouTube ID ekle:")
-    if st.button("💾 Kaydet"): kaydet_video(yeni_video)
+    if st.button("💾 Kaydet"):
+        if yeni_video and yeni_video not in st.session_state.saved_videos:
+            st.session_state.saved_videos.append(yeni_video)
     
-    for v in st.session_state.saved_videos:
+    st.subheader("Kayıtlı Videolar:")
+    for v in list(st.session_state.saved_videos):
         c1, c2 = st.columns([0.8, 0.2])
         c1.markdown(f'<iframe width="100%" height="100" src="https://www.youtube.com/embed/{v}" frameborder="0"></iframe>', unsafe_allow_html=True)
         if c2.button("🗑️", key=v): st.session_state.saved_videos.remove(v); st.rerun()
@@ -130,7 +132,7 @@ for m in st.session_state.messages:
         st.markdown(f"""<div class="user-box"><div class="header-box user-header"><span class="{'kurucu-isim' if is_kurucu else ''}">{gorunen_isim}</span> <img src="{USER_AVATAR}" width="30" style="border-radius:50%"></div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
 
 def ai_cevap(mesajlar):
-    sistem_mesaji = f"Sen Aslan Parçası'sın. Kurucun Ayaz Kaplan. Kullanıcı: {gorunen_isim}."
+    sistem_mesaji = f"Sen Aslan Parçası'sın. Kendini Aslan Parçası olarak tanıt. Kurucun Ayaz Kaplan. Kullanıcı: {gorunen_isim}."
     payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
     headers = {"Authorization": f"Bearer {os.environ.get('API_KEY')}"}
     try:
@@ -146,3 +148,4 @@ if user_input := st.chat_input("Mesajını yaz..."):
         cevap = ai_cevap(st.session_state.messages[-6:])
     st.session_state.messages.append({"role": "assistant", "content": cevap})
     st.rerun()
+ 
