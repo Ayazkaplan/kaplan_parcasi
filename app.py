@@ -31,12 +31,10 @@ db = firestore.client()
 
 # --- YARDIMCI FONKSİYONLAR ---
 def emoji_kontrol(isim):
+    # Emojileri ve özel karakterleri tespit et
     return bool(re.search(r'[^\w\s]', isim))
 
 # --- OTURUM YÖNETİMİ ---
-# Session state verilerini korumak için cookie yerine st.session_state kullanıyoruz, 
-# ancak Streamlit'in doğası gereği sayfa yenilenince session sıfırlanabilir.
-# Giriş durumunu korumak için en sağlam yöntem budur.
 if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = False
 if "user_data" not in st.session_state: st.session_state.user_data = {"isim": "", "email": "", "uid": ""}
 if "messages" not in st.session_state: st.session_state.messages = []
@@ -60,8 +58,6 @@ if not st.session_state.user_logged_in:
                     st.session_state.user_data = {**user_doc.to_dict(), "uid": user.uid}
                     st.session_state.user_logged_in = True
                     st.rerun()
-                else:
-                    st.error("❌ Kullanıcı profili bulunamadı!")
             except Exception as e:
                 st.error("❌ Giriş Başarısız!")
     with col2:
@@ -86,11 +82,17 @@ with st.sidebar:
     yeni_isim = st.text_input("İsmini Düzenle:", value=gorunen_isim)
     if st.button("Güncelle"):
         if len(yeni_isim) <= 30:
-            db.collection("users").document(st.session_state.user_data['uid']).update({"isim": yeni_isim})
-            st.session_state.user_data['isim'] = yeni_isim
-            st.rerun()
+            # Emoji kısıtlaması: Sadece kurucu kullanabilir
+            if not is_kurucu and emoji_kontrol(yeni_isim):
+                st.error("❌ Sadece Kurucu isimde emoji kullanabilir!")
+            else:
+                db.collection("users").document(st.session_state.user_data['uid']).update({"isim": yeni_isim})
+                st.session_state.user_data['isim'] = yeni_isim
+                st.rerun()
     
-    st.markdown(f"**İsim:** <span class='kurucu-isim'>{gorunen_isim}{rozet}</span>", unsafe_allow_html=True)
+    # İsim rengi kısıtlaması: Sadece kurucuda "kurucu-isim" class'ı aktif
+    isim_class = "kurucu-isim" if is_kurucu else ""
+    st.markdown(f"**İsim:** <span class='{isim_class}'>{gorunen_isim}{rozet}</span>", unsafe_allow_html=True)
     if is_kurucu: st.info("Sistem Kurucusu")
     
     if st.button("🚪 Çıkış Yap"): st.session_state.clear(); st.rerun()
@@ -123,18 +125,14 @@ st.title("🤖 Aslan Parçası V16.4")
 
 for m in st.session_state.messages:
     if m["role"] == "assistant":
-        # Rozet AI'dan kaldırıldı
-        st.markdown(f"""<div class="assistant-box"><div class="header-box"><img src="{AVATAR_URL}" width="30" style="border-radius:50%"> Aslan Parçası</div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="assistant-box"><div class="header-box"><img src="{AVATAR_URL}" width="30" style="border-radius:50%"> Aslan Parçası 🛠️</div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
     else:
-        # Rozet sadece kurucuda görünür
-        st.markdown(f"""<div class="user-box"><div class="header-box user-header"><span class="{'kurucu-isim' if is_kurucu else ''}">{gorunen_isim}{rozet}</span> <img src="{USER_AVATAR}" width="30" style="border-radius:50%"></div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
+        # Mesaj balonundaki isim rengi kısıtlaması
+        msg_isim_class = "kurucu-isim" if is_kurucu else ""
+        st.markdown(f"""<div class="user-box"><div class="header-box user-header"><span class="{msg_isim_class}">{gorunen_isim}{rozet}</span> <img src="{USER_AVATAR}" width="30" style="border-radius:50%"></div><div>{m['content']}</div></div>""", unsafe_allow_html=True)
 
 def ai_cevap(mesajlar):
-    # AI'ın kimliği ve esnekliği için güncellenmiş sistem mesajı
-    sistem_mesaji = (f"Sen Aslan Parçası'sın. Asla kendini başka bir isimle tanıtma. "
-                     f"Kurucun Ayaz Kaplan. Kullanıcı: {gorunen_isim}. "
-                     f"Yardımcı ol, esnek ve arkadaş canlısı konuş. Çok katı kurallar koyma.")
-    
+    sistem_mesaji = f"Sen Aslan Parçası'sın. Asla başka bir isimle hitap etme. Kurucun Ayaz Kaplan. Kullanıcı: {gorunen_isim}."
     payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
     headers = {"Authorization": f"Bearer {os.environ.get('API_KEY')}"}
     try:
