@@ -9,24 +9,21 @@ from datetime import datetime, timedelta
 
 # --- FIREBASE BAŞLATMA ---
 if not firebase_admin._apps:
-    # Render'a eklediğin 'FIREBASE_JSON' değişkenini okuyoruz
-    firebase_json_str = os.environ.get("FIREBASE_JSON")
+    # Render'da Secret Files ile yüklendiğinde dosya buradadır
+    cred_path = "/etc/secrets/firebase-key.json"
     
-    if firebase_json_str:
-        try:
-            # JSON string'ini sözlüğe çevirip başlatıyoruz
-            cred_dict = json.loads(firebase_json_str)
-            cred = credentials.Certificate(cred_dict)
+    try:
+        if os.path.exists(cred_path):
+            cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
-        except Exception as e:
-            st.error(f"Firebase başlatma hatası: {e}")
-    else:
-        # Local test için fallback
-        if os.path.exists("firebase-key.json"):
+        elif os.path.exists("firebase-key.json"):
+            # Local test için
             cred = credentials.Certificate("firebase-key.json")
             firebase_admin.initialize_app(cred)
         else:
-            st.warning("Firebase anahtarı bulunamadı!")
+            st.error("Firebase anahtarı bulunamadı!")
+    except Exception as e:
+        st.error(f"Firebase başlatılamadı: {e}")
 
 # --- AYARLAR ---
 API_KEY = os.environ.get("API_KEY")
