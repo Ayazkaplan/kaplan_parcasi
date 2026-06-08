@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 
 # --- AYARLAR ---
 API_KEY = os.environ.get("API_KEY")
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 MODEL = "anthropic/claude-3-haiku"
 KURUCU_SIFRESI = "KAPLAN_REIS_74"
 NIHAI_SIFRE = "NiHAi_-kuRucU-AyAz"
@@ -18,17 +17,8 @@ ISIM_DOSYASI = "isim_id.txt"
 TEMA_KURUCU = "tema_kurucu.txt"
 TEMA_MISAFIR = "tema_misafir.txt"
 
-# --- GİRİŞ KONTROLÜ ---
+# --- OTURUM YÖNETİMİ ---
 if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = False
-
-if not st.session_state.user_logged_in:
-    st.title("🦁 Aslan Parçası'na Hoş Geldin!")
-    st.markdown("Devam etmek için lütfen Google ile giriş yap.")
-    
-    # Gerçek bir OAuth akışı için butona basıldığında Render'daki /login rotasına yönlendirme:
-    st.link_button("Google ile Giriş Yap", "https://aslan-parcasi-widget.onrender.com/login")
-    st.write("Not: Eğer daha önce giriş yaptıysan sistem seni yönlendirecektir.")
-    st.stop()
 
 # --- FONKSİYONLAR ---
 def kaydet(dosya, deger):
@@ -48,6 +38,18 @@ def web_ara(sorgu):
             results = list(ddgs.text(sorgu, max_results=3))
             return "Güncel bilgiler: " + "\n".join([r['body'] for r in results])
     except: return "İnternete erişemiyorum Reis."
+
+# Giriş Ekranı
+if not st.session_state.user_logged_in:
+    st.title("🦁 Aslan Parçası V16.3")
+    sifre = st.text_input("🔑 Şifre:", type="password")
+    if st.button("Giriş Yap"):
+        if sifre == KURUCU_SIFRESI: 
+            st.session_state.user_logged_in = True
+            kaydet(MOD_DOSYASI, "Kurucu")
+            st.rerun()
+        else: st.error("❌ Şifre Yanlış!")
+    st.stop()
 
 st.set_page_config(page_title="Aslan Parçası V16.3", page_icon="🦁")
 
@@ -80,25 +82,20 @@ def get_theme_data(mod):
     return assistant_box_bg, themes
 
 with st.sidebar:
-    if not is_admin:
-        sifre = st.text_input("🔑 Şifre:", type="password")
-        if sifre == KURUCU_SIFRESI: kaydet(MOD_DOSYASI, "Kurucu"); st.rerun()
-        mod, isim = "Misafir", "Ziyaretçi"
-    else:
-        st.success("✅ Kurucu Modu Aktif")
-        if st.button("🚪 Çıkış Yap"): sil(MOD_DOSYASI); sil(ISIM_DOSYASI); st.session_state.ayaz_yetkili = False; st.rerun()
-        mod = "Kurucu"
-        kayitli_isim = oku(ISIM_DOSYASI) or "Mehmet Reis"
-        secim = st.selectbox("👤 Kimsin Reis?", ["Mehmet Reis", "Ayaz Reis"], index=["Mehmet Reis", "Ayaz Reis"].index(kayitli_isim))
-        if secim == "Ayaz Reis":
-            if not st.session_state.ayaz_yetkili:
-                gizli_sifre = st.text_input("👑 Ayaz Reis Şifresi:", type="password")
-                if st.button("Doğrula"):
-                    if gizli_sifre == NIHAI_SIFRE: st.session_state.ayaz_yetkili = True; kaydet(ISIM_DOSYASI, "Ayaz Reis"); st.rerun()
-                    else: st.error("❌ Hatalı Şifre!")
-                isim = "Mehmet Reis"
-            else: isim = "Ayaz Reis"
-        else: st.session_state.ayaz_yetkili = False; kaydet(ISIM_DOSYASI, "Mehmet Reis"); isim = "Mehmet Reis"
+    st.success("✅ Kurucu Modu Aktif")
+    if st.button("🚪 Çıkış Yap"): sil(MOD_DOSYASI); sil(ISIM_DOSYASI); st.session_state.user_logged_in = False; st.rerun()
+    mod = "Kurucu"
+    kayitli_isim = oku(ISIM_DOSYASI) or "Mehmet Reis"
+    secim = st.selectbox("👤 Kimsin Reis?", ["Mehmet Reis", "Ayaz Reis"], index=["Mehmet Reis", "Ayaz Reis"].index(kayitli_isim))
+    if secim == "Ayaz Reis":
+        if not st.session_state.ayaz_yetkili:
+            gizli_sifre = st.text_input("👑 Ayaz Reis Şifresi:", type="password")
+            if st.button("Doğrula"):
+                if gizli_sifre == NIHAI_SIFRE: st.session_state.ayaz_yetkili = True; kaydet(ISIM_DOSYASI, "Ayaz Reis"); st.rerun()
+                else: st.error("❌ Hatalı Şifre!")
+            isim = "Mehmet Reis"
+        else: isim = "Ayaz Reis"
+    else: st.session_state.ayaz_yetkili = False; kaydet(ISIM_DOSYASI, "Mehmet Reis"); isim = "Mehmet Reis"
 
     tema_dosyasi = TEMA_KURUCU if mod == "Kurucu" else TEMA_MISAFIR
     assistant_box_bg, theme_map = get_theme_data(mod)
@@ -127,7 +124,6 @@ with col2:
     if isim == "Ayaz Reis":
         if st.button("⚙️ Yönetici"): st.session_state.admin_panel_open = not st.session_state.admin_panel_open; st.rerun()
 
-# --- YÖNETİCİ PANELİ ---
 if st.session_state.admin_panel_open:
     with st.container(border=True):
         st.subheader("🛠️ Yönetici Paneli")
@@ -156,4 +152,3 @@ if st.button("🚀 Gönder"):
         st.session_state.messages.append({"role": "assistant", "content": cevap})
         st.session_state.input_key += 1
         st.rerun()
- 
