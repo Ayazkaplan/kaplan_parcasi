@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import os
+import json
 import firebase_admin
 from firebase_admin import credentials, auth
 from duckduckgo_search import DDGS
@@ -8,31 +9,29 @@ from datetime import datetime, timedelta
 
 # --- FIREBASE BAŞLATMA ---
 if not firebase_admin._apps:
-    # Render'da Secret Files kısmına yüklediğimiz yol
-    cred_path = "/etc/secrets/firebase-key.json"
-    # Localde çalışıyorsan dosyayı klasörde arar
-    if not os.path.exists(cred_path):
-        cred_path = "firebase-key.json"
-    
-    cred = credentials.Certificate(cred_path)
-    firebase_admin.initialize_app(cred)
+    # Render ortam değişkeninden JSON'ı al (En güvenli ve hatasız yöntem)
+    cred_json = os.environ.get("FIREBASE_CREDENTIALS")
+    if cred_json:
+        cred_dict = json.loads(cred_json)
+        cred = credentials.Certificate(cred_dict)
+        firebase_admin.initialize_app(cred)
+    else:
+        # Local test için fallback
+        if os.path.exists("firebase-key.json"):
+            cred = credentials.Certificate("firebase-key.json")
+            firebase_admin.initialize_app(cred)
 
 # --- AYARLAR ---
 API_KEY = os.environ.get("API_KEY")
 MODEL = "anthropic/claude-3-haiku"
 NIHAI_SIFRE = "NiHAi_-kuRucU-AyAz"
-AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
-USER_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 DOSYA_ADI = "sarki_id.txt"
 MOD_DOSYASI = "mod_id.txt"
 ISIM_DOSYASI = "isim_id.txt"
-TEMA_KURUCU = "tema_kurucu.txt"
-TEMA_MISAFIR = "tema_misafir.txt"
 
 # --- OTURUM YÖNETİMİ ---
 if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = False
 
-# --- FONKSİYONLAR ---
 def kaydet(dosya, deger):
     with open(dosya, "w") as f: f.write(deger.strip())
 
@@ -61,7 +60,7 @@ if not st.session_state.user_logged_in:
     with col1:
         if st.button("Giriş Yap"):
             try:
-                user = auth.get_user_by_email(email)
+                auth.get_user_by_email(email)
                 st.session_state.user_logged_in = True
                 kaydet(MOD_DOSYASI, "Kurucu")
                 st.rerun()
@@ -77,24 +76,13 @@ if not st.session_state.user_logged_in:
 st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁")
 
 # --- MOD YÖNETİMİ ---
-is_admin = oku(MOD_DOSYASI) == "Kurucu"
 if "messages" not in st.session_state: st.session_state.messages = []
-if "input_key" not in st.session_state: st.session_state.input_key = 0
 if "ayaz_yetkili" not in st.session_state: st.session_state.ayaz_yetkili = False
-if "admin_panel_open" not in st.session_state: st.session_state.admin_panel_open = False
-
-def get_theme_data(mod):
-    assistant_box_bg = "rgba(30, 30, 30, 0.9)"
-    themes = {
-        "Aslan İni": ("linear-gradient(to bottom, #1a1a00, #000000)", "white"),
-        "Kraliyet": ("linear-gradient(to bottom, #2c0000, #000000)", "white"),
-        "Orman Derinliği": ("linear-gradient(to bottom, #003300, #000000)", "white")
-    }
-    return assistant_box_bg, themes
 
 with st.sidebar:
     st.success("✅ Firebase Modu Aktif")
-    if st.button("🚪 Çıkış Yap"): sil(MOD_DOSYASI); sil(ISIM_DOSYASI); st.session_state.user_logged_in = False; st.rerun()
+    if st.button("🚪 Çıkış Yap"): 
+        sil(MOD_DOSYASI); sil(ISIM_DOSYASI); st.session_state.user_logged_in = False; st.rerun()
     
     kayitli_isim = oku(ISIM_DOSYASI) or "Mehmet Reis"
     secim = st.selectbox("👤 Kimsin Reis?", ["Mehmet Reis", "Ayaz Reis"], index=["Mehmet Reis", "Ayaz Reis"].index(kayitli_isim))
@@ -109,20 +97,22 @@ with st.sidebar:
         else: isim = "Ayaz Reis"
     else: st.session_state.ayaz_yetkili = False; kaydet(ISIM_DOSYASI, "Mehmet Reis"); isim = "Mehmet Reis"
 
-    assistant_box_bg, theme_map = get_theme_data("Kurucu")
-    tema_secimi = st.selectbox("Arka Plan:", list(theme_map.keys()))
-    bg_color, text_color = theme_map[tema_secimi]
+    # Tema ve Müzik
+    tema_secimi = st.selectbox("Arka Plan:", ["Aslan İni", "Kraliyet", "Uzay"])
+    theme_map = {"Aslan İni": "#1a1a00", "Kraliyet": "#2c0000", "Uzay": "#1a0033"}
+    bg_color = theme_map[tema_secimi]
     
     if st.button("🔄 Sohbeti Temizle"): st.session_state.messages = []; st.rerun()
     
-    # Müzik Motoru
     kayitli_id = oku(DOSYA_ADI)
     yeni_id = st.text_input("YouTube ID:", value=kayitli_id)
     if st.button("💾 Kaydet ve Oynat"): kaydet(DOSYA_ADI, yeni_id); st.rerun()
-    if kayitli_id: st.markdown(f'<iframe width="100%" height="200" src="https://www.youtube.com/embed/{kayitli_id}" frameborder="0"></iframe>', unsafe_allow_html=True)
+    if kayitli_id: st.markdown(f'<iframe width="100%" height="150" src="https://www.youtube.com/embed/{kayitli_id}" frameborder="0"></iframe>', unsafe_allow_html=True)
 
 # --- STYLE ---
-st.markdown(f"""<style>.stApp {{ background: {bg_color}; color: {text_color} !important; }} .assistant-box {{ background-color: {assistant_box_bg}; padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 10px; }} .user-box {{ background-color: rgba(128, 128, 128, 0.2); padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: right; }}</style>""", unsafe_allow_html=True)
+st.markdown(f"""<style>.stApp {{ background: linear-gradient(to bottom, {bg_color}, #000000); color: white; }} 
+.assistant-box {{ background-color: rgba(30,30,30,0.9); padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 10px; }} 
+.user-box {{ background-color: rgba(128,128,128,0.2); padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: right; }}</style>""", unsafe_allow_html=True)
 
 st.title("🤖 Aslan Parçası V16.4")
 
@@ -146,4 +136,3 @@ if st.button("🚀 Gönder"):
         cevap = ai_cevap(st.session_state.messages, isim, user_input)
         st.session_state.messages.append({"role": "assistant", "content": cevap})
         st.rerun()
- 
