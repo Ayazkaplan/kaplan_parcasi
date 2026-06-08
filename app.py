@@ -1,8 +1,16 @@
 import streamlit as st
 import requests
 import os
+import firebase_admin
+from firebase_admin import credentials
 from duckduckgo_search import DDGS
 from datetime import datetime, timedelta
+
+# --- FIREBASE BAŞLATMA ---
+if not firebase_admin._apps:
+    # Render'da "GOOGLE_APPLICATION_CREDENTIALS" değişkeni bu dosyayı otomatik görür
+    cred = credentials.Certificate("firebase-key.json")
+    firebase_admin.initialize_app(cred)
 
 # --- AYARLAR ---
 API_KEY = os.environ.get("API_KEY")
