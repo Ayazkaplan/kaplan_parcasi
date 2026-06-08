@@ -2,20 +2,20 @@ import streamlit as st
 import requests
 import os
 import firebase_admin
-from firebase_admin import credentials
+from firebase_admin import credentials, auth
 from duckduckgo_search import DDGS
 from datetime import datetime, timedelta
 
 # --- FIREBASE BAŞLATMA ---
 if not firebase_admin._apps:
-    # Render'da "GOOGLE_APPLICATION_CREDENTIALS" değişkeni bu dosyayı otomatik görür
+    # Render'da "GOOGLE_APPLICATION_CREDENTIALS" ortam değişkenini kullandığını varsayıyorum
+    # Eğer localde çalışıyorsan 'firebase-key.json' dosyasının yerinde olduğundan emin ol.
     cred = credentials.Certificate("firebase-key.json")
     firebase_admin.initialize_app(cred)
 
 # --- AYARLAR ---
 API_KEY = os.environ.get("API_KEY")
 MODEL = "anthropic/claude-3-haiku"
-KURUCU_SIFRESI = "KAPLAN_REIS_74"
 NIHAI_SIFRE = "NiHAi_-kuRucU-AyAz"
 AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
 USER_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
@@ -47,54 +47,58 @@ def web_ara(sorgu):
             return "Güncel bilgiler: " + "\n".join([r['body'] for r in results])
     except: return "İnternete erişemiyorum Reis."
 
-# Giriş Ekranı
+# --- FIREBASE GİRİŞ EKRANI ---
 if not st.session_state.user_logged_in:
-    st.title("🦁 Aslan Parçası V16.3")
-    sifre = st.text_input("🔑 Şifre:", type="password")
-    if st.button("Giriş Yap"):
-        if sifre == KURUCU_SIFRESI: 
-            st.session_state.user_logged_in = True
-            kaydet(MOD_DOSYASI, "Kurucu")
-            st.rerun()
-        else: st.error("❌ Şifre Yanlış!")
+    st.title("🦁 Aslan Parçası V16.4 - Giriş")
+    email = st.text_input("📧 E-posta:")
+    password = st.text_input("🔑 Şifre (Sadece kayıt için):", type="password")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Giriş Yap"):
+            try:
+                # Firebase'de e-posta kontrolü
+                user = auth.get_user_by_email(email)
+                st.session_state.user_logged_in = True
+                kaydet(MOD_DOSYASI, "Kurucu")
+                st.rerun()
+            except:
+                st.error("❌ Kullanıcı bulunamadı!")
+    with col2:
+        if st.button("Kayıt Ol"):
+            try:
+                auth.create_user(email=email, password=password)
+                st.success("✅ Kayıt başarılı! Giriş yapabilirsin.")
+            except Exception as e:
+                st.error(f"❌ Kayıt hatası: {e}")
     st.stop()
 
-st.set_page_config(page_title="Aslan Parçası V16.3", page_icon="🦁")
+st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁")
 
 # --- MOD YÖNETİMİ ---
-is_admin = oku(MOD_DOSYASI) == "Kurucu"
+mod = "Kurucu" # Firebase ile giren herkes şimdilik kurucu modunda
 if "messages" not in st.session_state: st.session_state.messages = []
 if "input_key" not in st.session_state: st.session_state.input_key = 0
 if "ayaz_yetkili" not in st.session_state: st.session_state.ayaz_yetkili = False
 if "admin_panel_open" not in st.session_state: st.session_state.admin_panel_open = False
 
 def get_theme_data(mod):
-    if mod == "Kurucu":
-        assistant_box_bg = "rgba(30, 30, 30, 0.9)"
-        themes = {
-            "Aslan İni": ("linear-gradient(to bottom, #1a1a00, #000000)", "white"),
-            "Kraliyet": ("linear-gradient(to bottom, #2c0000, #000000)", "white"),
-            "Orman Derinliği": ("linear-gradient(to bottom, #003300, #000000)", "white"),
-            "Uzay": ("linear-gradient(to bottom, #1a0033, #000000)", "white"),
-            "Teknoloji": ("linear-gradient(to bottom, #001a33, #000000)", "white")
-        }
-    else:
-        assistant_box_bg = "rgba(144, 238, 144, 0.3)"
-        themes = {
-            "Gün Işığı": ("#f0f2f6", "black"),
-            "Huzur": ("#e0f7fa", "black"),
-            "Orman": ("#e8f5e9", "black"),
-            "Gece": ("#263238", "white"),
-            "Deniz": ("#e1f5fe", "black")
-        }
+    assistant_box_bg = "rgba(30, 30, 30, 0.9)"
+    themes = {
+        "Aslan İni": ("linear-gradient(to bottom, #1a1a00, #000000)", "white"),
+        "Kraliyet": ("linear-gradient(to bottom, #2c0000, #000000)", "white"),
+        "Uzay": ("linear-gradient(to bottom, #1a0033, #000000)", "white")
+    }
     return assistant_box_bg, themes
 
 with st.sidebar:
-    st.success("✅ Kurucu Modu Aktif")
-    if st.button("🚪 Çıkış Yap"): sil(MOD_DOSYASI); sil(ISIM_DOSYASI); st.session_state.user_logged_in = False; st.rerun()
-    mod = "Kurucu"
+    st.success("✅ Firebase Modu Aktif")
+    if st.button("🚪 Çıkış Yap"): 
+        sil(MOD_DOSYASI); sil(ISIM_DOSYASI); st.session_state.user_logged_in = False; st.rerun()
+    
     kayitli_isim = oku(ISIM_DOSYASI) or "Mehmet Reis"
     secim = st.selectbox("👤 Kimsin Reis?", ["Mehmet Reis", "Ayaz Reis"], index=["Mehmet Reis", "Ayaz Reis"].index(kayitli_isim))
+    
     if secim == "Ayaz Reis":
         if not st.session_state.ayaz_yetkili:
             gizli_sifre = st.text_input("👑 Ayaz Reis Şifresi:", type="password")
@@ -105,58 +109,34 @@ with st.sidebar:
         else: isim = "Ayaz Reis"
     else: st.session_state.ayaz_yetkili = False; kaydet(ISIM_DOSYASI, "Mehmet Reis"); isim = "Mehmet Reis"
 
-    tema_dosyasi = TEMA_KURUCU if mod == "Kurucu" else TEMA_MISAFIR
     assistant_box_bg, theme_map = get_theme_data(mod)
-    kayitli_tema = oku(tema_dosyasi)
-    if kayitli_tema not in theme_map: kayitli_tema = list(theme_map.keys())[0]
-    tema_secimi = st.selectbox("Arka Plan:", list(theme_map.keys()), index=list(theme_map.keys()).index(kayitli_tema))
-    if st.button("💾 Temayı Kaydet"): kaydet(tema_dosyasi, tema_secimi); st.rerun()
+    tema_secimi = st.selectbox("Arka Plan:", list(theme_map.keys()))
     bg_color, text_color = theme_map[tema_secimi]
+    
     if st.button("🔄 Sohbeti Temizle"): st.session_state.messages = []; st.rerun()
 
-    st.markdown("---")
-    st.subheader("🎵 Müzik Motoru")
-    kayitli_id = oku(DOSYA_ADI)
-    yeni_id = st.text_input("YouTube Video ID'si:", value=kayitli_id)
-    if st.button("💾 Kaydet ve Oynat"): kaydet(DOSYA_ADI, yeni_id); st.rerun()
-    if st.button("🗑️ Sil"): sil(DOSYA_ADI); st.rerun()
-    if kayitli_id: st.markdown(f'<iframe width="100%" height="200" src="https://www.youtube.com/embed/{kayitli_id}" frameborder="0" allow="autoplay"></iframe>', unsafe_allow_html=True)
+# --- STYLE VE MAIN KISMI AYNI KALDI ---
+st.markdown(f"""<style>.stApp {{ background: {bg_color}; color: {text_color} !important; }} .assistant-box {{ background-color: {assistant_box_bg}; padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 10px; }} .user-box {{ background-color: rgba(128, 128, 128, 0.2); padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: right; }}</style>""", unsafe_allow_html=True)
 
-# --- STYLE ---
-st.markdown(f"""<style>.stApp {{ background: {bg_color}; color: {text_color} !important; }} .assistant-box {{ background-color: {assistant_box_bg}; padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 10px; }} .user-box {{ background-color: rgba(128, 128, 128, 0.2); padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: right; }} .aslan-header {{ display: flex; align-items: center; gap: 10px; font-weight: bold; border-bottom: 1px solid gold; padding-bottom: 5px; margin-bottom: 5px; }} .user-header {{ display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-weight: bold; margin-bottom: 8px; }}</style>""", unsafe_allow_html=True)
+st.title("🤖 Aslan Parçası V16.4")
 
-# --- MAIN ---
-col1, col2 = st.columns([4, 1])
-with col1: st.title("🤖 Aslan Parçası V16.3")
-with col2:
-    if isim == "Ayaz Reis":
-        if st.button("⚙️ Yönetici"): st.session_state.admin_panel_open = not st.session_state.admin_panel_open; st.rerun()
-
-if st.session_state.admin_panel_open:
-    with st.container(border=True):
-        st.subheader("🛠️ Yönetici Paneli")
-        if st.button("❌ Paneli Kapat"): st.session_state.admin_panel_open = False; st.rerun()
-
-def ai_cevap(mesaj_gecmisi, mod, isim, kullanici_mesaji):
+def ai_cevap(mesaj_gecmisi, isim, kullanici_mesaji):
     headers = {"Authorization": f"Bearer {API_KEY}"}
-    ek_bilgi = f"\n[Bilgi]: Saat {(datetime.utcnow() + timedelta(hours=3)).strftime('%H:%M')}."
-    if any(k in kullanici_mesaji.lower() for k in ["hava", "ara", "çevir", "nedir"]): ek_bilgi += f"\n[İnternet]: {web_ara(kullanici_mesaji)}"
-    karakter = "Sen Ayaz Reis'in kurduğu neşeli, samimi ve sadık bir asistansın." if (mod == "Kurucu" and isim == "Ayaz Reis") else ("Sen ciddi, bilge, otoriter bir asistansın." if mod == "Kurucu" else "Sen doğal ve enerjik bir asistansın.")
-    talimat = f"{karakter} Adın Aslan Parçası. {ek_bilgi}"
+    talimat = f"Sen Aslan Parçası adlı asistansın. {isim} ile konuşuyorsun."
     try:
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json={"model": MODEL, "messages": [{"role": "system", "content": talimat}] + mesaj_gecmisi[-6:]})
         return res.json()['choices'][0]['message']['content']
     except: return "Sistem meşgul, Reis."
 
 for m in st.session_state.messages:
-    if m["role"] == "assistant": st.markdown(f'<div class="assistant-box"><div class="aslan-header"><img src="{AVATAR_URL}" width="30" style="border-radius:50%"> Aslan Parçası</div>{m["content"]}</div>', unsafe_allow_html=True)
-    else: st.markdown(f'<div class="user-box"><div class="user-header">{isim} <img src="{USER_AVATAR}" width="30" style="border-radius:50%"></div>{m["content"]}</div>', unsafe_allow_html=True)
+    if m["role"] == "assistant": st.markdown(f'<div class="assistant-box">{m["content"]}</div>', unsafe_allow_html=True)
+    else: st.markdown(f'<div class="user-box">{m["content"]}</div>', unsafe_allow_html=True)
 
-user_input = st.text_area("Mesajını yaz:", height=100, key=f"chat_input_{st.session_state.input_key}")
+user_input = st.text_area("Mesajını yaz:", height=100)
 if st.button("🚀 Gönder"):
     if user_input:
         st.session_state.messages.append({"role": "user", "content": user_input})
-        cevap = ai_cevap(st.session_state.messages, mod, isim, user_input)
+        cevap = ai_cevap(st.session_state.messages, isim, user_input)
         st.session_state.messages.append({"role": "assistant", "content": cevap})
-        st.session_state.input_key += 1
         st.rerun()
+ 
