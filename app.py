@@ -6,22 +6,12 @@ import firebase_admin
 from firebase_admin import credentials, auth, firestore
 import re
 
-# --- SAYFA AYARI (TEK VE EN BAŞTA) ---
-st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁", layout="centered")
-
 # --- AYARLAR ---
 KURUCU_EMAIL = "ayazscma92@gmail.com"
 MODEL = "anthropic/claude-3-haiku"
+AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
+USER_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 FIREBASE_API_KEY = os.environ.get("FIREBASE_API_KEY") 
-
-# --- TEMALAR ---
-TEMALAR = {
-    "Aslan İni": "#1A1A1A", 
-    "Orman Derinliği": "#0B2422", 
-    "Kraliyet": "#2E0854", 
-    "Teknoloji": "#003366", 
-    "Uzay": "#000022"
-}
 
 # --- FIREBASE BAŞLATMA ---
 if not firebase_admin._apps:
@@ -39,7 +29,6 @@ db = firestore.client()
 if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = False
 if "user_data" not in st.session_state: st.session_state.user_data = None
 if "messages" not in st.session_state: st.session_state.messages = []
-if "tema" not in st.session_state: st.session_state.tema = "Aslan İni"
 
 # --- ŞİFRE KONTROLÜ (REST API) ---
 def firebase_login(email, password):
@@ -50,6 +39,7 @@ def firebase_login(email, password):
 
 # --- GİRİŞ VE KAYIT EKRANI ---
 if not st.session_state.user_logged_in:
+    st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁")
     st.title("🦁 Aslan Parçası V16.4")
     email = st.text_input("📧 E-posta:")
     password = st.text_input("🔑 Şifre:", type="password")
@@ -76,56 +66,61 @@ if not st.session_state.user_logged_in:
             except Exception as e: st.error(f"❌ Hata: {e}")
     st.stop()
 
-# --- ANA EKRAN ---
+# --- ANA EKRAN AYARLARI ---
+st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁", layout="centered")
+
 uid = st.session_state.user_data['uid']
 user_ref = db.collection("users").document(uid)
 user_doc = user_ref.get().to_dict()
 gorunen_isim = user_doc.get('isim')
 is_kurucu = user_doc.get('email') == KURUCU_EMAIL
 saved_videos = user_doc.get("videos", [])
-renk = "gold" if is_kurucu else "white"
 rozet = " 🛠️" if is_kurucu else ""
 
-# Tema Uygulama
-st.session_state.tema = st.sidebar.selectbox("🎨 Tema Seç:", list(TEMALAR.keys()), index=list(TEMALAR.keys()).index(st.session_state.tema))
-st.markdown(f"<style>.stApp {{ background-color: {TEMALAR[st.session_state.tema]}; }}</style>", unsafe_allow_html=True)
-
 with st.sidebar:
-    st.markdown(f"### 👤 <span style='color:{renk}'>{gorunen_isim}{rozet}</span>", unsafe_allow_html=True)
+    st.markdown(f"**👤 Profil:** {gorunen_isim}")
     if st.button("🚪 Çıkış Yap"): st.session_state.clear(); st.rerun()
+    
     st.divider()
     yeni_video = st.text_input("YouTube ID ekle:")
     if st.button("💾 Kaydet"):
         if yeni_video and yeni_video not in saved_videos:
-            user_ref.update({"videos": firestore.ArrayUnion([yeni_video])}); st.rerun()
+            user_ref.update({"videos": firestore.ArrayUnion([yeni_video])})
+            st.rerun()
     
     for v in saved_videos:
-        st.markdown(f'<iframe width="100%" height="150" src="https://www.youtube.com/embed/{v}" frameborder="0"></iframe>', unsafe_allow_html=True)
-        if st.button("🗑️ Sil", key=v):
-            user_ref.update({"videos": firestore.ArrayRemove([v])}); st.rerun()
+        c1, c2 = st.columns([0.8, 0.2])
+        c1.markdown(f'<iframe width="100%" height="150" src="https://www.youtube.com/embed/{v}" frameborder="0"></iframe>', unsafe_allow_html=True)
+        if c2.button("🗑️", key=v):
+            user_ref.update({"videos": firestore.ArrayRemove([v])})
+            st.rerun()
 
-# --- SOHBET MANTIĞI ---
+# --- STYLE VE SOHBET ---
 st.markdown("""<style>
-    .assistant-box { background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 15px; }
-    .user-box { background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: right; }
+    .assistant-box { background-color: rgba(30,30,30,0.9); padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 15px; }
+    .user-box { background-color: rgba(128,128,128,0.2); padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: right; }
+    .header-box { display: flex; align-items: center; gap: 10px; font-weight: bold; margin-bottom: 5px; }
+    .user-header { justify-content: flex-end; }
 </style>""", unsafe_allow_html=True)
 
 st.title("🤖 Aslan Parçası V16.4")
 
 for m in st.session_state.messages:
     if m["role"] == "assistant":
-        st.markdown(f'<div class="assistant-box"><b>Aslan Parçası:</b><br>{m["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="assistant-box"><div class="header-box">Aslan Parçası</div><div>{m["content"]}</div></div>', unsafe_allow_html=True)
     else:
-        st.markdown(f'<div class="user-box"><b>{gorunen_isim}:</b><br>{m["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="user-box"><div class="header-box user-header">{gorunen_isim}</div><div>{m["content"]}</div></div>', unsafe_allow_html=True)
 
 def ai_cevap(mesajlar):
-    sistem_mesaji = f"Sen Aslan Parçası'sın. Kurucun Ayaz Kaplan. Kullanıcın: {gorunen_isim}. Nazik, profesyonel bir asistansın."
+    sistem_mesaji = f"Sen Aslan Parçası'sın. Kullanıcı: {gorunen_isim}. Nazik, profesyonel bir asistansın."
     payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
     headers = {"Authorization": f"Bearer {os.environ.get('API_KEY')}"}
     try:
         res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
         return res.json()['choices'][0]['message']['content']
     except: return "Sistem yorgun, Reis."
+
+if "input_key" not in st.session_state: st.session_state.input_key = 0
 
 def send_message():
     val = st.session_state.my_input
@@ -134,7 +129,7 @@ def send_message():
         cevap = ai_cevap(st.session_state.messages[-6:])
         st.session_state.messages.append({"role": "assistant", "content": cevap})
         st.session_state.my_input = "" 
+        st.session_state.input_key += 1
 
 st.text_area("Mesajını yaz:", key="my_input", height=100)
 st.button("🚀 Gönder", on_click=send_message)
- 
