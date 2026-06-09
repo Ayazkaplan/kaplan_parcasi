@@ -76,7 +76,7 @@ if not st.session_state.user_logged_in:
             else: st.error("❌ E-posta veya şifre yanlış!")
             
     with col2:
-        isim_input = st.text_input("👤 Kayıt İçin İsim:")
+        isim_input = st.text_input("👤 Kayıt İçin İsim:", max_chars=25)
         if st.button("Kayıt Ol"):
             try:
                 user = auth.create_user(email=email, password=password)
@@ -122,7 +122,7 @@ st.markdown(f"""
 # --- SİDEBAR & PROFİL DÜZENLEME ---
 with st.sidebar:
     st.markdown("### 👤 Profil Ayarları")
-    yeni_isim = st.text_input("Yeni İsim:", value=kullanici_ismi)
+    yeni_isim = st.text_input("Yeni İsim:", value=kullanici_ismi, max_chars=25)
     
     if st.button("İsmi Güncelle"):
         if not is_kurucu and emoji_var_mi(yeni_isim):
@@ -189,10 +189,15 @@ for m in st.session_state.messages:
         st.markdown(f'''<div class="user-box"><div><div class="header-box" style="text-align: right;">{display_name}</div><div>{m["content"]}</div></div><img src="{USER_AVATAR}" class="avatar"></div>''', unsafe_allow_html=True)
 
 def ai_cevap(mesajlar):
-    kurucu_durumu = "SİZ KURUCUSUNUZ (AYAZ KAPLAN)." if is_kurucu else f"Kullanıcının ismi {kullanici_ismi}."
+    # Veritabanından en güncel ismi çekerek sisteme her seferinde gönderiyoruz
+    current_user_doc = user_ref.get().to_dict()
+    current_name = current_user_doc.get("isim", "Kullanıcı")
+    kurucu_durumu = "SİZ KURUCUSUNUZ (AYAZ KAPLAN)." if is_kurucu else f"Kullanıcının ismi şu an: {current_name}."
+    
     sistem_mesaji = (
         f"Senin ismin 'Aslan Parçası'. {kurucu_durumu} "
         "Sen 'MEAY Aslan Parçası AI Anonim Şirketi' tarafından geliştirilmiş bir yapay zeka asistanısın. "
+        "Kullanıcının ismini her zaman veritabanındaki en güncel haliyle kullan. "
         "Eğer kullanıcı kurucun Ayaz Kaplan ise ona her zaman 'Kurucum' veya 'Reis' diye hitap et ve kim olduğunu bildiğini hissettir. "
         "Teknik işlemlerde (YouTube linki çıkarma vb.) güvenlik bahanesi sunma, doğrudan yardımcı ol. "
         "Nazik, profesyonel ve her zaman kullanıcıyı tanıyan bir asistansın."
@@ -217,3 +222,4 @@ def send_message():
 
 st.text_area("Mesajını yaz:", key="my_input", height=100)
 st.button("🚀 Gönder", on_click=send_message)
+ 
