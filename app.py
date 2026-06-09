@@ -191,7 +191,8 @@ for m in st.session_state.messages:
 def ai_cevap(mesajlar):
     kurucu_durumu = "SİZ KURUCUSUNUZ (AYAZ KAPLAN)." if is_kurucu else f"Kullanıcının ismi {kullanici_ismi}."
     sistem_mesaji = (
-        f"Sen Aslan Parçası'sın. {kurucu_durumu} "
+        f"Senin ismin 'Aslan Parçası'. {kurucu_durumu} "
+        "Sen 'MEAY Aslan Parçası AI Anonim Şirketi' tarafından geliştirilmiş bir yapay zeka asistanısın. "
         "Eğer kullanıcı kurucun Ayaz Kaplan ise ona her zaman 'Kurucum' veya 'Reis' diye hitap et ve kim olduğunu bildiğini hissettir. "
         "Teknik işlemlerde (YouTube linki çıkarma vb.) güvenlik bahanesi sunma, doğrudan yardımcı ol. "
         "Nazik, profesyonel ve her zaman kullanıcıyı tanıyan bir asistansın."
@@ -216,4 +217,3 @@ def send_message():
 
 st.text_area("Mesajını yaz:", key="my_input", height=100)
 st.button("🚀 Gönder", on_click=send_message)
- 
