@@ -155,12 +155,14 @@ for m in st.session_state.messages:
         st.markdown(f'''<div class="user-box"><div><div class="header-box" style="text-align: right;">{display_name}</div><div>{m["content"]}</div></div><img src="{USER_AVATAR}" class="avatar"></div>''', unsafe_allow_html=True)
 
 def ai_cevap(mesajlar):
-    # Kısıtlamaları kaldırdık, asistan artık daha özgür ve doğrudan
+    # Kurucu durumu anlık olarak gönderiliyor
+    kurucu_durumu = "SİZ KURUCUSUNUZ (AYAZ KAPLAN)." if is_kurucu else f"Kullanıcının ismi {kullanici_ismi}."
+    
     sistem_mesaji = (
-        f"Sen Aslan Parçası'sın. Kullanıcı ismi: {kullanici_ismi}. "
-        "Teknik işlemlerde (YouTube linki çıkarma, analiz vb.) güvenliği bahane etme, "
-        "kullanıcıya yardımcı olmaya odaklan. Kurucun Ayaz Kaplan'dır. "
-        "Nazik, profesyonel, ismiyle hitap eden ve yardımsever bir asistansın."
+        f"Sen Aslan Parçası'sın. {kurucu_durumu} "
+        "Eğer kullanıcı kurucun Ayaz Kaplan ise ona her zaman 'Kurucum' veya 'Reis' diye hitap et ve kim olduğunu bildiğini hissettir. "
+        "Teknik işlemlerde (YouTube linki çıkarma vb.) güvenlik bahanesi sunma, doğrudan yardımcı ol. "
+        "Nazik, profesyonel ve her zaman kullanıcıyı tanıyan bir asistansın."
     )
     payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
     headers = {"Authorization": f"Bearer {os.environ.get('API_KEY')}"}
