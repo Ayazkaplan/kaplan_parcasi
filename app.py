@@ -13,6 +13,15 @@ AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
 USER_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 FIREBASE_API_KEY = os.environ.get("FIREBASE_API_KEY") 
 
+# --- TEMALAR ---
+TEMALAR = {
+    "🦁 Aslan İni": "linear-gradient(135deg, #0f2027, #203a43, #2c5364)",
+    "👑 Kraliyet": "linear-gradient(135deg, #1a0000, #4a0000, #8b0000)",
+    "🌲 Orman Derinliği": "linear-gradient(135deg, #061700, #142f10, #2c4a2c)",
+    "💻 Teknoloji": "linear-gradient(135deg, #000428, #004e92)",
+    "🌌 Uzay": "linear-gradient(135deg, #0f0c29, #302b63, #24243e)"
+}
+
 # --- FIREBASE BAŞLATMA ---
 if not firebase_admin._apps:
     secret_path = "/etc/secrets/firebase-key.json"
@@ -29,6 +38,7 @@ db = firestore.client()
 if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = False
 if "user_data" not in st.session_state: st.session_state.user_data = None
 if "messages" not in st.session_state: st.session_state.messages = []
+if "tema" not in st.session_state: st.session_state.tema = list(TEMALAR.values())[0]
 
 # --- ŞİFRE KONTROLÜ (REST API) ---
 def firebase_login(email, password):
@@ -78,11 +88,12 @@ user_ref = db.collection("users").document(uid)
 user_doc = user_ref.get().to_dict()
 is_kurucu = user_doc.get('email') == KURUCU_EMAIL
 saved_videos = user_doc.get("videos", [])
+kullanici_ismi = user_doc.get('isim')
 
 # --- SİDEBAR & PROFİL DÜZENLEME ---
 with st.sidebar:
     st.markdown("### 👤 Profil Ayarları")
-    yeni_isim = st.text_input("Yeni İsim:", value=user_doc.get('isim'))
+    yeni_isim = st.text_input("Yeni İsim:", value=kullanici_ismi)
     
     if st.button("İsmi Güncelle"):
         if not is_kurucu and emoji_var_mi(yeni_isim):
@@ -92,14 +103,17 @@ with st.sidebar:
             st.success("✅ İsim güncellendi!")
             st.rerun()
             
-    # Kurucu İsmi Parlak Tasarımı
-    gorunen_isim = user_doc.get('isim')
     if is_kurucu:
-        isim_stili = f'<span style="color:red; font-weight:bold; text-shadow: 0 0 8px red;">{gorunen_isim} 🛠️</span>'
+        isim_stili = f'<span style="color:red; font-weight:bold; text-shadow: 0 0 8px red;">{kullanici_ismi} 🛠️</span>'
     else:
-        isim_stili = gorunen_isim
+        isim_stili = kullanici_ismi
 
     st.markdown(f"**Profil:** {isim_stili}", unsafe_allow_html=True)
+    
+    st.divider()
+    st.markdown("### 🎨 Tema Seçimi")
+    secilen_tema = st.selectbox("Arka Plan:", list(TEMALAR.keys()))
+    st.session_state.tema = TEMALAR[secilen_tema]
     
     if st.button("🧹 Sohbeti Temizle"):
         st.session_state.messages = []
@@ -122,11 +136,12 @@ with st.sidebar:
             st.rerun()
 
 # --- STYLE VE SOHBET ---
-st.markdown("""<style>
-    .assistant-box { background-color: rgba(30,30,30,0.9); padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 15px; display: flex; align-items: flex-start; gap: 10px; }
-    .user-box { background-color: rgba(128,128,128,0.2); padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: flex-end; align-items: flex-start; gap: 10px; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; }
-    .header-box { display: flex; align-items: center; gap: 10px; font-weight: bold; margin-bottom: 5px; }
+st.markdown(f"""<style>
+    .stApp {{ background: {st.session_state.tema}; background-attachment: fixed; }}
+    .assistant-box {{ background-color: rgba(30,30,30,0.8); padding: 15px; border-radius: 10px; border-left: 5px solid gold; margin-bottom: 15px; display: flex; align-items: flex-start; gap: 10px; color: white; }}
+    .user-box {{ background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: flex-end; align-items: flex-start; gap: 10px; color: white; }}
+    .avatar {{ width: 40px; height: 40px; border-radius: 50%; }}
+    .header-box {{ font-weight: bold; margin-bottom: 5px; }}
 </style>""", unsafe_allow_html=True)
 
 st.title("🤖 Aslan Parçası V16.4")
@@ -135,11 +150,11 @@ for m in st.session_state.messages:
     if m["role"] == "assistant":
         st.markdown(f'''<div class="assistant-box"><img src="{AVATAR_URL}" class="avatar"><div><div class="header-box">Aslan Parçası</div><div>{m["content"]}</div></div></div>''', unsafe_allow_html=True)
     else:
-        display_name = f'<span style="color:red; text-shadow: 0 0 5px red;">{user_doc.get("isim")} 🛠️</span>' if is_kurucu else user_doc.get("isim")
-        st.markdown(f'''<div class="user-box"><div><div class="header-box" style="justify-content: flex-end;">{display_name}</div><div>{m["content"]}</div></div><img src="{USER_AVATAR}" class="avatar"></div>''', unsafe_allow_html=True)
+        display_name = f'<span style="color:red; text-shadow: 0 0 5px red;">{kullanici_ismi} 🛠️</span>' if is_kurucu else kullanici_ismi
+        st.markdown(f'''<div class="user-box"><div><div class="header-box" style="text-align: right;">{display_name}</div><div>{m["content"]}</div></div><img src="{USER_AVATAR}" class="avatar"></div>''', unsafe_allow_html=True)
 
 def ai_cevap(mesajlar):
-    sistem_mesaji = f"Sen Aslan Parçası'sın. Kurucun Ayaz Kaplan. Nazik, profesyonel bir asistansın. Her zaman kendini 'Aslan Parçası' olarak tanıt."
+    sistem_mesaji = f"Sen Aslan Parçası'sın. Kullanıcının ismi: {kullanici_ismi}. Kurucun Ayaz Kaplan. Nazik, profesyonel ve ismiyle hitap eden bir asistansın."
     payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
     headers = {"Authorization": f"Bearer {os.environ.get('API_KEY')}"}
     try:
@@ -160,3 +175,4 @@ def send_message():
 
 st.text_area("Mesajını yaz:", key="my_input", height=100)
 st.button("🚀 Gönder", on_click=send_message)
+ 
