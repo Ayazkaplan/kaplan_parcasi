@@ -58,50 +58,42 @@ if not st.session_state.user_logged_in:
     st.title("🦁 Aslan Parçası V16.4")
     email = st.text_input("📧 E-posta:")
     password = st.text_input("🔑 Şifre:", type="password")
-    isim_input = st.text_input("👤 Hesap İsmi:")
     
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Giriş Yap"):
             auth_res = firebase_login(email, password)
             if auth_res:
-                user_doc = db.collection("users").document(auth_res['localId']).get()
-                if user_doc.exists and user_doc.to_dict().get("isim") == isim_input:
-                    st.session_state.user_data = {**user_doc.to_dict(), "uid": auth_res['localId']}
+                # E-posta ile veritabanındaki kullanıcıyı otomatik bul
+                users_ref = db.collection("users")
+                query = users_ref.where("email", "==", email).limit(1).get()
+                if query:
+                    user_data = query[0].to_dict()
+                    st.session_state.user_data = {**user_data, "uid": auth_res['localId']}
                     st.session_state.user_logged_in = True
-                    st.session_state.tema = user_doc.to_dict().get("tema", list(TEMALAR.values())[0])
+                    st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
                     st.rerun()
-                else: st.error("❌ İsim veya bilgiler hatalı!")
+                else: st.error("❌ Kullanıcı verisi bulunamadı!")
             else: st.error("❌ E-posta veya şifre yanlış!")
+            
     with col2:
+        isim_input = st.text_input("👤 Kayıt İçin İsim:")
         if st.button("Kayıt Ol"):
             try:
                 user = auth.create_user(email=email, password=password)
                 db.collection("users").document(user.uid).set({"isim": isim_input, "email": email, "videos": [], "tema": list(TEMALAR.values())[0]})
-                st.success("✅ Kayıt başarılı!")
+                st.success("✅ Kayıt başarılı! Giriş yapabilirsin.")
             except Exception as e: st.error(f"❌ Hata: {e}")
             
     st.divider()
-    col3, col4 = st.columns(2)
-    with col3:
-        if st.button("🔑 Şifremi Unuttum"):
-            if email:
-                try:
-                    reset_link = auth.generate_password_reset_link(email)
-                    st.success("✅ Şifre sıfırlama bağlantınız oluşturuldu!")
-                    st.info(f"Kopyalayıp tarayıcınıza yapıştırın: {reset_link}")
-                except Exception as e: st.error(f"❌ Link oluşturulamadı: {e}")
-            else: st.warning("Lütfen önce e-posta girin.")
-    with col4:
-        if st.button("👤 İsmimi Unuttum"):
-            if email:
-                users_ref = db.collection("users")
-                query = users_ref.where("email", "==", email).limit(1).get()
-                if query:
-                    kullanici_ismi = query[0].to_dict().get("isim")
-                    st.success(f"Hesap İsminiz: {kullanici_ismi}")
-                else: st.error("Bu e-posta kayıtlı değil.")
-            else: st.warning("Lütfen önce e-posta girin.")
+    if st.button("🔑 Şifremi Unuttum"):
+        if email:
+            try:
+                reset_link = auth.generate_password_reset_link(email)
+                st.success("✅ Şifre sıfırlama bağlantınız oluşturuldu!")
+                st.info(f"Link: {reset_link}")
+            except Exception as e: st.error(f"❌ Link oluşturulamadı: {e}")
+        else: st.warning("Lütfen önce e-posta girin.")
     st.stop()
 
 # --- ANA EKRAN AYARLARI ---
