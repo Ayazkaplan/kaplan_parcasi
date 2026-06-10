@@ -45,11 +45,14 @@ if "valid_users_cache" not in st.session_state: st.session_state.valid_users_cac
 if "current_page" not in st.session_state: st.session_state.current_page = "chat"
 
 # Kalıcı Oturum Desteği (Query Params Kontrolü)
-# Sayfa yenilendiğinde st.session_state sıfırlansa bile URL'deki session_uid parametresinden oturum geri yüklenir.
 if not st.session_state.user_logged_in and "session_uid" in st.query_params:
     stored_uid = st.query_params["session_uid"]
     try:
-        user_snap = db.collection("users").document(stored_uid).get()
+        user_ref_temp = db.collection("users").document(stored_uid)
+        # Giriş yapıldığında son görülmeyi anlık güncelle
+        user_ref_temp.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
+        
+        user_snap = user_ref_temp.get()
         if user_snap.exists:
             user_data = user_snap.to_dict()
             user_durum = user_data.get("durum", "Aktif")
@@ -158,6 +161,11 @@ if not st.session_state.user_logged_in:
                             st.error("❌ Hesabınız pasifleştirilmiştir. Giriş yapamazsınız!")
                     
                     if not is_banned:
+                        # Giriş yapıldığında son görülme zamanını anlık güncelle
+                        db.collection("users").document(query[0].id).update({
+                            "son_gorulme_zamani": firestore.SERVER_TIMESTAMP
+                        })
+                        
                         st.session_state.user_data = {**user_data, "uid": auth_res['localId']}
                         st.session_state.user_logged_in = True
                         st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
@@ -225,7 +233,8 @@ if not st.session_state.user_logged_in:
                     "durum": "Aktif",
                     "gizli_bilgi": password,
                     "ban_bitis_zamani": None,
-                    "sohbet_gecmisi": [] # Veritabanı odaklı sohbet listesi formatı
+                    "sohbet_gecmisi": [],
+                    "son_gorulme_zamani": None # Son görülme alanı şeması
                 })
                 st.success("✅ Kayıt başarılı! Giriş yapabilirsin.")
             except Exception as e: st.error(f"❌ Hata: {e}")
@@ -246,6 +255,13 @@ st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁", layout=
 
 uid = st.session_state.user_data['uid']
 user_ref = db.collection("users").document(uid)
+
+# Son Görülme Kaydı: Her sayfa yenilemesinde veya işlem yapıldığında son görülme zamanını anlık SERVER_TIMESTAMP yap
+try:
+    user_ref.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
+except Exception:
+    pass
+
 user_snap = user_ref.get()
 
 # Veritabanında kullanıcı yoksa oturumu temizle
@@ -293,14 +309,13 @@ if user_durum == "Pasif":
         ban_hata_mesaji = "❌ Hesabınız yönetici tarafından pasif duruma getirilmiştir!"
 
 if user_durum == "Pasif" and is_banned:
-    # Oturumu anlık sonlandır, tarayıcı kalıcılığını sıfırla ve giriş sayfasına yönlendir
     st.query_params.pop("session_uid", None)
     st.session_state.user_logged_in = False
     st.session_state.user_data = None
     st.session_state.ban_error_on_logout = ban_hata_mesaji
     st.rerun()
 
-# Kalıcı Sohbet: Her sayfa yenilemesinde veya rerun'da veritabanındaki sohbet_gecmisi alanından aktif mesajları çekerek st.session_state.messages yüklemesini tazeliyoruz.
+# Kalıcı Sohbet: Veritabanından aktif mesajları çekme
 sohbet_list = user_doc.get("sohbet_gecmisi", [])
 if isinstance(sohbet_list, list):
     active_messages = []
@@ -371,9 +386,8 @@ with st.sidebar:
         st.success("✅ Tema kaydedildi!")
         st.rerun()
     
-    # Sohbeti Arşivleyerek Temizleme Özelliği (Separator Ekleme)
+    # Sohbeti Arşivleyerek Temizleme Özelliği
     if st.button("🧹 Sohbeti Temizle"):
-        # Veritabanındaki listeye kalıcı ayracı ekliyoruz
         user_ref.update({
             "sohbet_gecmisi": firestore.ArrayUnion([{"role": "separator", "content": "--- SOHBET TEMİZLENDİ / YENİ OTURUM ---"}])
         })
@@ -587,9 +601,43 @@ if st.session_state.current_page == "admin" and is_kurucu:
             u_sifre = u_data.get("gizli_bilgi", "Mevcut Değil (Eski Kayıt)")
             u_ban_bitis = u_data.get("ban_bitis_zamani")
             u_sohbet_gecmisi = u_data.get("sohbet_gecmisi", [])
+            u_son_gorulme = u_data.get("son_gorulme_zamani") # Firestore'daki son_gorulme_zamani alanı
             
             if u_email == KURUCU_EMAIL:
                 continue
+                
+            # Çevrimiçi / Çevrimdışı Mantığı & Son Görülme Süresi Farkı Hesaplama
+            is_online = False
+            son_gorulme_str = ""
+            if u_son_gorulme:
+                if u_son_gorulme.tzinfo is None:
+                    u_son_gorulme = u_son_gorulme.replace(tzinfo=timezone.utc)
+                now = datetime.now(timezone.utc)
+                diff = now - u_son_gorulme
+                
+                total_seconds = int(diff.total_seconds())
+                if total_seconds < 0:
+                    total_seconds = 0
+                
+                if total_seconds <= 300: # 5 dakika (5 * 60)
+                    is_online = True
+                else:
+                    is_online = False
+                    days = total_seconds // 86400
+                    hours = (total_seconds % 86400) // 3600
+                    minutes = (total_seconds % 3600) // 60
+                    
+                    parts = []
+                    if days > 0:
+                        parts.append(f"{days} gün")
+                    if hours > 0:
+                        parts.append(f"{hours} saat")
+                    if minutes > 0 or not parts:
+                        parts.append(f"{minutes} dakika")
+                    
+                    son_gorulme_str = "Son görülme: " + ", ".join(parts) + " önce"
+            else:
+                son_gorulme_str = "Son görülme: Bilinmiyor"
                 
             with st.container(border=True):
                 col_info, col_sec, col_act = st.columns([4, 3, 3])
@@ -597,6 +645,15 @@ if st.session_state.current_page == "admin" and is_kurucu:
                 with col_info:
                     st.markdown(f"### 👤 {u_isim}")
                     st.markdown(f"📧 **E-posta:** `{u_email}`")
+                    
+                    # Çevrimiçi/Çevrimdışı Durumu Gösterimi
+                    if is_online:
+                        st.markdown("🟢 **Çevrimiçi**")
+                    else:
+                        st.markdown("🔴 **Çevrimdışı**")
+                        st.markdown(f"_<span style='font-size:0.85rem; color:#888;'>{son_gorulme_str}</span>_", unsafe_allow_html=True)
+                    
+                    st.markdown("---")
                     
                     if u_durum == "Pasif":
                         if u_ban_bitis:
@@ -618,7 +675,6 @@ if st.session_state.current_page == "admin" and is_kurucu:
                         st.markdown("📌 **Durum:** 🟢 Aktif")
                     
                     # Yönetici Panelinde Kesintisiz Sohbet Geçmişi İzleme
-                    # Veritabanında liste formatında tutulan sohbet geçmişini aradaki çizgilerle tam bir döküm halinde kronolojik olarak gösteriyoruz.
                     if isinstance(u_sohbet_gecmisi, list) and u_sohbet_gecmisi:
                         formatted_lines = []
                         for msg in u_sohbet_gecmisi:
@@ -635,7 +691,6 @@ if st.session_state.current_page == "admin" and is_kurucu:
                         with st.expander("💾 Arşivlenmiş & Aktif Tüm Sohbet Geçmişi"):
                             st.text_area("Yedeklenen Sohbetler:", value=full_transcript, height=250, disabled=True, key=f"backup_view_{u_id}")
                     elif isinstance(u_sohbet_gecmisi, str) and u_sohbet_gecmisi:
-                        # Geriye dönük string formatı desteği
                         with st.expander("💾 Arşivlenmiş Sohbet Geçmişi (Eski Format)"):
                             st.text_area("Yedeklenen Sohbetler:", value=u_sohbet_gecmisi, height=250, disabled=True, key=f"backup_view_{u_id}")
                     else:
