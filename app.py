@@ -6,6 +6,7 @@ import firebase_admin
 from firebase_admin import credentials, auth, firestore
 import re
 from datetime import datetime, timezone, timedelta
+import time
 
 # --- AYARLAR ---
 KURUCU_EMAIL = "ayazscma92@gmail.com"
@@ -250,7 +251,8 @@ if not st.session_state.user_logged_in:
                     "gizli_bilgi": password,
                     "ban_bitis_zamani": None,
                     "sohbet_gecmisi": [],
-                    "son_gorulme_zamani": None
+                    "son_gorulme_zamani": None,
+                    "okunmamis_duyurular": [] # Yeni kayıtlar için duyuru array entegrasyonu
                 })
                 st.success("✅ Kayıt başarılı! Giriş yapabilirsin.")
             except Exception as e: st.error(f"❌ Hata: {e}")
@@ -591,8 +593,12 @@ if st.session_state.current_page == "admin" and is_kurucu:
             
     st.divider()
     
-    # Yönetici Paneli Sekmeleri (Kullanıcılar ve Küfür Bildirimleri)
-    tab_kullanicilar, tab_bildirimler = st.tabs(["👥 Kullanıcılar", "⚠️ Yönetici Bildirimleri (Küfür Raporları)"])
+    # Yönetici Paneli Sekmeleri (Kullanıcılar, Küfür Bildirimleri ve Duyuru Gönder)
+    tab_kullanicilar, tab_bildirimler, tab_duyurular = st.tabs([
+        "👥 Kullanıcılar", 
+        "⚠️ Yönetici Bildirimleri (Küfür Raporları)",
+        "📣 Duyuru Gönder"
+    ])
     
     with tab_kullanicilar:
         # Arama Motoru
@@ -801,13 +807,39 @@ if st.session_state.current_page == "admin" and is_kurucu:
         
         try:
             bildirimler = db.collection("yonetici_bildirimleri").order_by("tarih", direction=firestore.Query.DESCENDING).get()
+            
+            # --- TEK TUŞLA TOPLU TEMİZLEME ALANI ---
             if bildirimler:
+                show_clear_all_confirm = st.session_state.get("show_clear_all_confirm", False)
+                if not show_clear_all_confirm:
+                    if st.button("🚨 Tüm Raporları Temizle", type="primary", use_container_width=True):
+                        st.session_state.show_clear_all_confirm = True
+                        st.rerun()
+                else:
+                    st.warning("⚠️ Mevcut tüm küfür raporlarını kalıcı olarak silmek istediğinize emin misiniz?")
+                    col_clear_y, col_clear_n = st.columns(2)
+                    with col_clear_y:
+                        if st.button("Evet, Tümünü Sil", key="clear_all_yes", type="primary", use_container_width=True):
+                            batch = db.batch()
+                            for b_doc in bildirimler:
+                                batch.delete(b_doc.reference)
+                            batch.commit()
+                            st.session_state.show_clear_all_confirm = False
+                            st.success("Tüm raporlar başarıyla silindi.")
+                            st.rerun()
+                    with col_clear_n:
+                        if st.button("Vazgeç", key="clear_all_no", use_container_width=True):
+                            st.session_state.show_clear_all_confirm = False
+                            st.rerun()
+                
+                st.divider()
+                
                 for b_doc in bildirimler:
                     b_data = b_doc.to_dict()
                     b_id = b_doc.id
                     b_isim = b_data.get("isim", "Bilinmeyen")
                     b_email = b_data.get("email", "")
-                    b_mesaj = b_data.get("mesaj", "")
+                    b_mesaj = b_data.get("metin", b_data.get("mesaj", ""))
                     b_tarih = b_data.get("tarih")
                     
                     tarih_str = ""
@@ -833,6 +865,70 @@ if st.session_state.current_page == "admin" and is_kurucu:
         except Exception as e:
             st.error(f"Bildirimler alınamadı: {e}")
 
+    with tab_duyurular:
+        st.markdown("### 📣 Kullanıcılara Duyuru Gönder")
+        st.write("Sistemdeki tüm kullanıcılara veya spesifik bir e-postaya sahip kullanıcıya anlık duyuru gönderebilirsiniz.")
+        
+        hedef_tipi = st.radio("Hedef Kitle Seçin:", ["Tüm Kullanıcılar", "E-posta ile Seç"])
+        
+        try:
+            if st.session_state.valid_users_cache is None:
+                st.session_state.valid_users_cache = otomatik_arindir_ve_grup()
+            all_u = st.session_state.valid_users_cache
+        except Exception:
+            all_u = []
+            
+        secilen_email = None
+        if hedef_tipi == "E-posta ile Seç":
+            email_list = [u["email"] for u in all_u if u["email"] != KURUCU_EMAIL]
+            if email_list:
+                secilen_email = st.selectbox("Duyuru Yapılacak Kullanıcı E-postası:", email_list)
+            else:
+                st.warning("Duyuru gönderilebilecek kayıtlı kullanıcı bulunmuyor.")
+                
+        duyuru_metni = st.text_area("Duyuru Metni:", placeholder="Duyuru içeriğini buraya yazın...")
+        
+        if st.button("📣 Duyuruyu Yayınla", type="primary", use_container_width=True):
+            if not duyuru_metni.strip():
+                st.warning("Lütfen boş bir duyuru metni girmeyin.")
+            else:
+                duyuru_id = f"announcement_{int(datetime.now(timezone.utc).timestamp())}"
+                duyuru_payload = {
+                    "id": duyuru_id,
+                    "metin": duyuru_metni.strip(),
+                    "tarih": firestore.SERVER_TIMESTAMP,
+                    "hedef": "Tümü" if hedef_tipi == "Tüm Kullanıcılar" else secilen_email
+                }
+                
+                # Duyuruyu küresel duyurular koleksiyonuna kaydet
+                db.collection("duyurular").document(duyuru_id).set(duyuru_payload)
+                
+                # Hedef kullanıcılara duyuru push işlemi
+                pushed_announcement = {"id": duyuru_id, "metin": duyuru_metni.strip()}
+                
+                if hedef_tipi == "Tüm Kullanıcılar":
+                    batch = db.batch()
+                    for u in all_u:
+                        if u["email"] != KURUCU_EMAIL:
+                            user_doc_ref = db.collection("users").document(u["id"])
+                            batch.update(user_doc_ref, {
+                                "okunmamis_duyurular": firestore.ArrayUnion([pushed_announcement])
+                            })
+                    batch.commit()
+                    st.success("Duyuru tüm kullanıcılara başarıyla yayınlandı!")
+                else:
+                    target_u = next((u for u in all_u if u["email"] == secilen_email), None)
+                    if target_u:
+                        db.collection("users").document(target_u["id"]).update({
+                            "okunmamis_duyurular": firestore.ArrayUnion([pushed_announcement])
+                        })
+                        st.success(f"Duyuru başarıyla {secilen_email} adresine iletildi!")
+                    else:
+                        st.error("Seçilen kullanıcı veritabanında bulunamadı.")
+                
+                st.session_state.valid_users_cache = None
+                st.rerun()
+
 else:
     # --- YÖNETİCİ PANELİ (Sadece Kurucuya Özel - Expander Korundu) ---
     if is_kurucu:
@@ -842,6 +938,37 @@ else:
             if st.button("👥 Kullanıcı Yönetim Sayfasını Aç", key="open_admin_page", use_container_width=True):
                 st.session_state.current_page = "admin"
                 st.rerun()
+
+    # --- KULLANICI EKRANINDA DUYURU GÖSTERİMİ VE SİLİNMESİ ---
+    if st.session_state.current_page == "chat":
+        okunmamis = user_doc.get("okunmamis_duyurular", [])
+        if isinstance(okunmamis, list) and okunmamis:
+            duyuru_obj = okunmamis[0]
+            d_metin = duyuru_obj.get("metin", "")
+            
+            # Üst kısımda duyuruyu 5 saniye göstermek için dinamik container oluşturma
+            announcement_placeholder = st.empty()
+            with announcement_placeholder.container():
+                st.markdown(f"""
+                <div style="background-color: rgba(255, 0, 0, 0.12); border-left: 5px solid red; padding: 15px; border-radius: 5px; margin-bottom: 20px; box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);">
+                    <strong style="color: #ff3333; text-shadow: 0 0 8px rgba(255, 51, 51, 0.7); font-size: 1.15rem;">
+                        AyazREİS_DEV 🛠️:
+                    </strong> 
+                    <span style="color: white; font-size: 1.1rem; margin-left: 5px; line-height: 1.4;">{d_metin}</span>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # 5 Saniye bekle
+            time.sleep(5)
+            
+            # Veritabanındaki listeden bu duyuruyu çıkar
+            user_ref.update({
+                "okunmamis_duyurular": firestore.ArrayRemove([duyuru_obj])
+            })
+            
+            # Container'ı temizle ve sayfayı tazeleyerek arayüzü sıfırla
+            announcement_placeholder.empty()
+            st.rerun()
 
     # --- SOHBET ARAYÜZÜ ---
     st.title("🤖 Aslan Parçası V16.4")
