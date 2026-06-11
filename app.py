@@ -62,7 +62,7 @@ def kufur_var_mi(text):
             return True
     return False
 
-# YouTube otomatik oynatma iframe oluşturucu (Hafıza yerine mute=0 ve autoplay=0 olarak güncellenmiş sürüm)
+# YouTube otomatik oynatma iframe oluşturucu
 def get_video_iframe(video_id):
     # mute=0 yaptık, autoplay=0 ile kullanıcı başlatacak
     return f'''<iframe width="100%" height="150" src="https://www.youtube.com/embed/{video_id}?autoplay=0&mute=0" 
@@ -285,7 +285,12 @@ if not st.session_state.user_logged_in or not st.session_state.force_login:
                     "ban_bitis_zamani": None,
                     "sohbet_gecmisi": [],
                     "son_gorulme_zamani": None,
-                    "okunmamis_duyurular": []
+                    "okunmamis_duyurular": [],
+                    "is_admin": False, # Yeni veri modeli alanları
+                    "tag": "",
+                    "rozet": "",
+                    "isim_rengi": "#FFFFFF",
+                    "ismin_parlakligi": False
                 })
                 st.success("✅ Kayıt başarılı! Giriş yapabilirsin.")
             except Exception as e: st.error(f"❌ Hata: {e}")
@@ -383,11 +388,18 @@ else:
 st.session_state.tema = user_doc.get("tema", list(TEMALAR.values())[0])
 
 is_kurucu = user_doc.get('email') == KURUCU_EMAIL
+is_admin_user = user_doc.get("is_admin", False)
 saved_videos = user_doc.get("videos", [])
 kullanici_ismi = user_doc.get('isim')
 
-# Kurucu değilse admin sayfalarında kalmasını engelle
-if st.session_state.current_page in ["admin_main", "admin_users", "admin_announcement"] and not is_kurucu:
+# --- YETKİ KISITLAMALARI VE GÜVENLİK KONTROLLERİ ---
+# Kurucu olmayanların girmesi yasak olan ağır yönetim sayfaları
+if st.session_state.current_page in ["admin_main", "admin_users", "admin_role_management"] and not is_kurucu:
+    st.session_state.current_page = "chat"
+    st.rerun()
+
+# Ne kurucu ne de yönetici olanların duyuru sayfasına girmesini engelle (Yönetici sadece bu sayfaya girebilir)
+if st.session_state.current_page == "admin_announcement" and not (is_kurucu or is_admin_user):
     st.session_state.current_page = "chat"
     st.rerun()
 
@@ -485,12 +497,23 @@ with st.sidebar:
             user_ref.update({"videos": firestore.ArrayRemove([v])})
             st.rerun()
 
-    # Sadece kurucular için en altta tek bir dinamik geçiş butonu (Sidebar navigasyonu kalıcı oturuma dirençli)
+    # Sidebar yönlendirme menüsü (Kurucu ve Alt Yöneticiler için özelleştirilmiş kalıcı oturuma dirençli yapı)
     if is_kurucu:
         st.divider()
         if st.session_state.current_page == "chat":
             if st.button("🛠️ Yönetici Paneline Git", use_container_width=True):
                 st.session_state.current_page = "admin_main"
+                st.rerun()
+        else:
+            if st.button("💬 Sohbet Paneline Dön", use_container_width=True):
+                st.session_state.current_page = "chat"
+                st.rerun()
+    elif is_admin_user:
+        # Atanan yöneticiler sadece admin_announcement (Duyuru) sayfasına erişebilir
+        st.divider()
+        if st.session_state.current_page == "chat":
+            if st.button("📣 Duyuru Sayfasına Git", use_container_width=True):
+                st.session_state.current_page = "admin_announcement"
                 st.rerun()
         else:
             if st.button("💬 Sohbet Paneline Dön", use_container_width=True):
@@ -608,7 +631,7 @@ if st.session_state.current_page == "admin_main" and is_kurucu:
     st.write("Kurucu paneline hoş geldiniz, Reis. Lütfen yapmak istediğiniz işlemi seçin:")
     st.write("")
     
-    # Alt alta direkt görünür 2 büyük buton
+    # Alt alta direkt görünür 3 büyük buton
     if st.button("👥 Kullanıcı Yönetim Sayfasına Git", key="goto_admin_users", type="primary", use_container_width=True):
         st.session_state.current_page = "admin_users"
         st.rerun()
@@ -617,6 +640,12 @@ if st.session_state.current_page == "admin_main" and is_kurucu:
     
     if st.button("📣 Duyuru ve Bilgilendirme Sayfasına Git", key="goto_admin_announcement", type="primary", use_container_width=True):
         st.session_state.current_page = "admin_announcement"
+        st.rerun()
+        
+    st.write("")
+    
+    if st.button("🛡️ Yönetici Rol Yönetimine Git", key="goto_admin_role_management", type="primary", use_container_width=True):
+        st.session_state.current_page = "admin_role_management"
         st.rerun()
         
     st.divider()
@@ -915,15 +944,19 @@ elif st.session_state.current_page == "admin_users" and is_kurucu:
         except Exception as e:
             st.error(f"Bildirimler alınamadı: {e}")
 
-elif st.session_state.current_page == "admin_announcement" and is_kurucu:
-    # --- ALT SAYFA: DUYURU VE BİLGİLENDİRME GÖNDERİMİ ---
+elif st.session_state.current_page == "admin_announcement" and (is_kurucu or is_admin_user):
+    # --- ALT SAYFA: DUYURU VE BİLGİLENDİRME GÖNDERİMİ (Sadece Kurucu ve Yöneticiler Girebilir) ---
     st.title("📣 Duyuru ve Bilgilendirme Sayfası")
     
     col_back_main, col_back_chat = st.columns([5, 5])
     with col_back_main:
-        if st.button("⬅️ Yönetici Ana Paneline Dön", key="back_to_main_from_ann", use_container_width=True):
-            st.session_state.current_page = "admin_main"
-            st.rerun()
+        # Kurucu ana panele dönebilir, normal yöneticilerin ana paneli olmadığı için doğrudan chat sayfasına yönlendirilirler
+        if is_kurucu:
+            if st.button("⬅️ Yönetici Ana Paneline Dön", key="back_to_main_from_ann", use_container_width=True):
+                st.session_state.current_page = "admin_main"
+                st.rerun()
+        else:
+            st.info("Sadece duyuru gönderme yetkiniz bulunmaktadır.")
     with col_back_chat:
         if st.button("💬 Sohbet Ekranına Dön", key="back_to_chat_from_ann", use_container_width=True):
             st.session_state.current_page = "chat"
@@ -992,6 +1025,108 @@ elif st.session_state.current_page == "admin_announcement" and is_kurucu:
             time.sleep(1)
             st.rerun()
 
+elif st.session_state.current_page == "admin_role_management" and is_kurucu:
+    # --- ALT SAYFA: YÖNETİCİ YÖNETİM SAYFASI (Yalnızca Kurucu Girebilir) ---
+    st.title("🛡️ Yönetici Rol Yönetimi")
+    
+    col_back_main, col_back_chat = st.columns([5, 5])
+    with col_back_main:
+        if st.button("⬅️ Yönetici Ana Paneline Dön", key="back_to_main_from_roles", use_container_width=True):
+            st.session_state.current_page = "admin_main"
+            st.rerun()
+    with col_back_chat:
+        if st.button("💬 Sohbet Ekranına Dön", key="back_to_chat_from_roles", use_container_width=True):
+            st.session_state.current_page = "chat"
+            st.rerun()
+            
+    st.divider()
+    
+    st.markdown("### 🔍 Kullanıcı Ara ve Düzenle")
+    search_email = st.text_input("E-posta ile kullanıcı ara:", placeholder="ornek@domain.com").strip().lower()
+    
+    if search_email:
+        user_query = db.collection("users").where("email", "==", search_email).limit(1).get()
+        if user_query:
+            target_doc = user_query[0]
+            target_id = target_doc.id
+            target_data = target_doc.to_dict()
+            
+            # Form Alanları (Salt Okunur Değerler ve Değiştirilebilir Özellikler)
+            st.text_input("Kullanıcı İsmi (Salt Okunur):", value=target_data.get("isim", "Bilinmiyor"), disabled=True)
+            st.text_input("Kullanıcı E-postası (Salt Okunur):", value=target_data.get("email", ""), disabled=True)
+            
+            isim_rengi = st.color_picker("İsim Rengi (Hex):", value=target_data.get("isim_rengi", "#FFFFFF"))
+            ismin_parlakligi = st.checkbox("Yazı Parlaklığı (CSS Gölge Efekti):", value=target_data.get("ismin_parlakligi", False))
+            tag_val = st.text_input("Kullanıcı Tagı (Örn: Moderatör, Vip):", value=target_data.get("tag", ""), max_chars=20)
+            rozet_val = st.text_input("Kullanıcı Rozeti (Örn: 🛡️, 💎):", value=target_data.get("rozet", ""), max_chars=10)
+            is_admin_flag = st.checkbox("Yönetici Yap (is_admin):", value=target_data.get("is_admin", False))
+            
+            if st.button("💾 Değişiklikleri Kaydet", type="primary", use_container_width=True):
+                db.collection("users").document(target_id).update({
+                    "isim_rengi": isim_rengi,
+                    "ismin_parlakligi": ismin_parlakligi,
+                    "tag": tag_val.strip(),
+                    "rozet": rozet_val.strip(),
+                    "is_admin": is_admin_flag
+                })
+                st.success("✅ Kullanıcı bilgileri başarıyla güncellendi!")
+                st.session_state.valid_users_cache = None
+                time.sleep(1)
+                st.rerun()
+        else:
+            st.error("❌ Eşleşen bir kullanıcı bulunamadı.")
+            
+    st.divider()
+    st.markdown("### 🛡️ Mevcut Yöneticiler")
+    
+    try:
+        admins_query = db.collection("users").where("is_admin", "==", True).get()
+        # Kurucu dışındaki tüm alt yöneticileri filtrele
+        admins_list = [doc for doc in admins_query if doc.to_dict().get("email") != KURUCU_EMAIL]
+        
+        if admins_list:
+            for admin_doc in admins_list:
+                a_data = admin_doc.to_dict()
+                a_id = admin_doc.id
+                a_name = a_data.get("isim", "Bilinmiyor")
+                a_email = a_data.get("email", "")
+                a_tag = a_data.get("tag", "")
+                a_rozet = a_data.get("rozet", "")
+                
+                with st.container(border=True):
+                    col_adm_info, col_adm_act = st.columns([7, 3])
+                    with col_adm_info:
+                        st.markdown(f"**Yönetici:** {a_name} ({a_email})")
+                        st.markdown(f"🏷️ **Tag:** `{a_tag}` | 🏆 **Rozet:** `{a_rozet}`")
+                    with col_adm_act:
+                        # 2 Aşamalı Onay Mekanizmasıyla Yöneticilikten Çıkarma
+                        show_demote_confirm = st.session_state.get(f"show_demote_{a_id}", False)
+                        if not show_demote_confirm:
+                            if st.button("🔴 Yöneticilikten Çıkar", key=f"demote_btn_{a_id}", use_container_width=True):
+                                st.session_state[f"show_demote_{a_id}"] = True
+                                st.rerun()
+                        else:
+                            st.warning("Emin misiniz?")
+                            c_y, c_n = st.columns(2)
+                            with c_y:
+                                if st.button("Evet", key=f"demote_yes_{a_id}", type="primary", use_container_width=True):
+                                    db.collection("users").document(a_id).update({
+                                        "is_admin": False
+                                    })
+                                    st.session_state[f"show_demote_{a_id}"] = False
+                                    st.success(f"✅ {a_name} yöneticilikten çıkarıldı.")
+                                    st.session_state.valid_users_cache = None
+                                    time.sleep(1)
+                                    st.rerun()
+                            with c_n:
+                                if st.button("Hayır", key=f"demote_no_{a_id}", use_container_width=True):
+                                    st.session_state[f"show_demote_{a_id}"] = False
+                                    st.rerun()
+        else:
+            st.info("Sistemde atanmış alt yönetici bulunmuyor.")
+    except Exception as e:
+        st.error(f"Yöneticiler yüklenirken hata oluştu: {e}")
+
 else:
     # --- KULLANICI EKRANINDA DUYURU GÖSTERİMİ VE SİLİNMESİ ---
     if st.session_state.current_page == "chat":
@@ -1031,11 +1166,26 @@ else:
     user_doc_fresh = user_ref.get().to_dict()
     kullanici_ismi_fresh = user_doc_fresh.get('isim', kullanici_ismi)
 
+    # Dinamik İsim Rengi ve Parlaklık CSS Ayarları
+    u_color = user_doc_fresh.get("isim_rengi", "#FFFFFF")
+    u_glow = user_doc_fresh.get("ismin_parlakligi", False)
+    u_tag = user_doc_fresh.get("tag", "")
+    u_rozet = user_doc_fresh.get("rozet", "")
+
+    glow_css = f"text-shadow: 0 0 8px {u_color};" if u_glow else ""
+    tag_html = f" <span style='font-size: 0.8rem; background-color: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px; margin-left: 5px;'>{u_tag}</span>" if u_tag else ""
+    rozet_html = f" {u_rozet}" if u_rozet else ""
+
     for m in st.session_state.messages:
         if m["role"] == "assistant":
             st.markdown(f'''<div class="assistant-box"><img src="{AVATAR_URL}" class="avatar"><div><div class="header-box">Aslan Parçası</div><div>{m["content"]}</div></div></div>''', unsafe_allow_html=True)
         else:
-            display_name = f'<span style="color:red; text-shadow: 0 0 5px red;">{kullanici_ismi_fresh} 🛠️</span>' if is_kurucu else kullanici_ismi_fresh
+            # Kurucunun parlak kırmızı isim stili korunur; diğer kullanıcıların renk, gölge ve etiket ayarları uygulanır
+            if is_kurucu:
+                display_name = f'<span style="color:red; font-weight:bold; text-shadow: 0 0 8px red;">{kullanici_ismi_fresh} 🛠️</span>'
+            else:
+                display_name = f'<span style="color:{u_color}; font-weight:bold; {glow_css}">{kullanici_ismi_fresh}{rozet_html}</span>{tag_html}'
+                
             st.markdown(f'''<div class="user-box"><div><div class="header-box" style="text-align: right;">{display_name}</div><div>{m["content"]}</div></div><img src="{USER_AVATAR}" class="avatar"></div>''', unsafe_allow_html=True)
 
     def ai_cevap(mesajlar):
