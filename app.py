@@ -136,6 +136,25 @@ if (not st.session_state.user_logged_in or not st.session_state.force_login) and
     except Exception:
         pass
 
+# --- ŞİFRE KONTROLÜ (GÜVENLİ REST API GİRİŞİ) ---
+def firebase_login(email, password):
+    try:
+        # Firebase REST API kullanarak giriş yapma
+        url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}"
+        payload = {"email": email, "password": password, "returnSecureToken": True}
+        response = requests.post(url, json=payload)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
+    except Exception as e:
+        return None
+
+# --- EMOJİ KONTROLÜ ---
+def emoji_var_mi(text):
+    return bool(re.search(r'[^\w\s,.]', text))
+
 # --- GİRİŞ VE KAYIT EKRANI ---
 # Her sayfa başında force_login durumunu kontrol et:
 if not st.session_state.user_logged_in or not st.session_state.force_login:
@@ -760,7 +779,7 @@ elif st.session_state.current_page == "admin_users" and is_kurucu:
                     with col_act:
                         st.write("") 
                         
-                        # Zaman Ayarlı Pasifleştirme (Ban) og Aktifleştirme Arayüzü
+                        # Zaman Ayarlı Pasifleştirme (Ban) ve Aktifleştirme Arayüzü
                         if u_durum == "Aktif":
                             show_ban = st.session_state.get(f"show_ban_{u_id}", False)
                             if not show_ban:
@@ -799,7 +818,7 @@ elif st.session_state.current_page == "admin_users" and is_kurucu:
                                 # E-posta kilit kaydını da kaldır
                                 db.collection("banlanan_emails").document(u_email).delete()
                                 st.session_state.valid_users_cache = None
-                                st.success("Hesap aktifleştirildi.")
+                                Triye_st = st.success("Hesap aktifleştirildi.")
                                 st.rerun()
                             
                         # 2 Aşamalı Yönetici Silme Butonu
