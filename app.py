@@ -62,7 +62,7 @@ def kufur_var_mi(text):
             return True
     return False
 
-# YouTube otomatik oynatma iframe oluşturucu
+# YouTube otomatik oynatma iframe oluşturucu (Hafıza yerine mute=0 ve autoplay=0 olarak güncellenmiş sürüm)
 def get_video_iframe(video_id):
     # mute=0 yaptık, autoplay=0 ile kullanıcı başlatacak
     return f'''<iframe width="100%" height="150" src="https://www.youtube.com/embed/{video_id}?autoplay=0&mute=0" 
@@ -72,7 +72,7 @@ def get_video_iframe(video_id):
 def get_styled_user_name(u_name, u_color, u_glow, u_tag, u_rozet):
     color_val = u_color if u_color else "#FFFFFF"
     
-    # Güçlü neon gölge efekti
+    # Güçlü neon gölge efekti (İstek üzerine güncellenen 3 aşamalı neon)
     glow_css = f"text-shadow: 0 0 10px {color_val}, 0 0 20px {color_val}, 0 0 30px {color_val};" if u_glow else ""
     
     # Sıralama: [TAG] [İSİM] [ROZET]
@@ -420,8 +420,25 @@ if st.session_state.current_page == "admin_announcement" and not (is_kurucu or i
     st.session_state.current_page = "chat"
     st.rerun()
 
+# --- CSS TEMA ENJEKSİYONU (Geliştirilmiş ve Gri Arka Plan Sorununu Kesin Çözen Formül) ---
+st.markdown(f"""
+    <style>
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"] {{
+            background: {st.session_state.tema} !important;
+            background-attachment: fixed !important;
+        }}
+        [data-testid="stSidebar"], [data-testid="stSidebarUserContent"] {{
+            background: {st.session_state.tema} !important;
+            background-attachment: fixed !important;
+        }}
+        [data-testid="stHeader"] {{
+            background: transparent !important;
+            background-color: transparent !important;
+        }}
+    </style>
+""", unsafe_allow_html=True)
+
 # --- SİDEBAR PROFİL GÖRÜNÜMÜ DETAYLARI ---
-# Sol sidebar profil görünümünü de sohbetteki gibi dinamik, parlayan ve tag-rozetli yapma
 u_color = user_doc.get("isim_rengi", "#FFFFFF")
 u_glow = user_doc.get("ismin_parlakligi", False)
 u_tag = user_doc.get("tag", "")
@@ -651,6 +668,7 @@ if st.session_state.current_page == "admin_main" and is_kurucu:
     st.write("Kurucu paneline hoş geldiniz, Reis. Lütfen yapmak istediğiniz işlemi seçin:")
     st.write("")
     
+    # Alt alta direkt görünür 3 büyük buton
     if st.button("👥 Kullanıcı Yönetim Sayfasına Git", key="goto_admin_users", type="primary", use_container_width=True):
         st.session_state.current_page = "admin_users"
         st.rerun()
@@ -793,7 +811,7 @@ elif st.session_state.current_page == "admin_users" and is_kurucu:
                                 else:
                                     st.markdown("📌 **Durum:** 🟢 Pasif (Süre Doldu, İlk Girişte Aktifleşecek)")
                             else:
-                                st.markdown("📌 **Durum:** 🔴 Pasif (Süresiz)")
+                               st.markdown("📌 **Durum:** 🔴 Pasif (Süresiz)")
                         else:
                             st.markdown("📌 **Durum:** 🟢 Aktif")
                         
@@ -964,7 +982,7 @@ elif st.session_state.current_page == "admin_users" and is_kurucu:
             st.error(f"Bildirimler alınamadı: {e}")
 
 elif st.session_state.current_page == "admin_announcement" and (is_kurucu or is_admin_user):
-    # --- ALT SAYFA: DUYURU VE BİLGİLENDİRME GÖNDERİMİ (Sadece Kurucu ve Yöneticiler Girebilir) ---
+    # --- ALT SAYFA: DUYURU VE BİLGİLENDİRME GÖNDERİMİ (Kurucu ve Yöneticiler Girebilir - Hata Onarılmış Sürüm) ---
     st.title("📣 Duyuru ve Bilgilendirme Sayfası")
     
     col_back_main, col_back_chat = st.columns([5, 5])
@@ -999,51 +1017,54 @@ elif st.session_state.current_page == "admin_announcement" and (is_kurucu or is_
         elif hedef_tipi == "E-posta ile Seç (Manuel Yaz)" and not secilen_email:
             st.warning("Lütfen hedef kullanıcının e-posta adresini girin.")
         else:
-            duyuru_id = f"announcement_{int(datetime.now(timezone.utc).timestamp())}"
-            duyuru_payload = {
-                "id": duyuru_id,
-                "metin": duyuru_metni.strip(),
-                "tarih": firestore.SERVER_TIMESTAMP,
-                "hedef": "Tümü" if hedef_tipi == "Tüm Kullanıcılar" else secilen_email,
-                "gonderen_email": user_doc.get("email", ""), # Loglama için eklenen alanlar
-                "gonderen_isim": user_doc.get("isim", "Bilinmeyen")
-            }
-            
-            # Küresel duyurular koleksiyonuna yaz
-            db.collection("duyurular").document(duyuru_id).set(duyuru_payload)
-            pushed_announcement = {"id": duyuru_id, "metin": duyuru_metni.strip()}
-            
-            # Veritabanı sorgusuyla kullanıcıları tarıyoruz
-            all_users_snap = db.collection("users").get()
-            
-            if hedef_tipi == "Tüm Kullanıcılar":
-                batch = db.batch()
-                for u_doc_item in all_users_snap:
-                    u_data = u_doc_item.to_dict()
-                    if u_data.get("email", "").strip().lower() != KURUCU_EMAIL:
-                        batch.update(u_doc_item.reference, {
-                            "okunmamis_duyurular": firestore.ArrayUnion([pushed_announcement])
-                        })
-                batch.commit()
-                st.success("Duyuru tüm kullanıcılara başarıyla yayınlandı!")
-            else:
-                target_found = False
-                for u_doc_item in all_users_snap:
-                    u_data = u_doc_item.to_dict()
-                    if u_data.get("email", "").strip().lower() == secilen_email:
-                        u_doc_item.reference.update({
-                            "okunmamis_duyurular": firestore.ArrayUnion([pushed_announcement])
-                        })
-                        target_found = True
-                        break
-                if target_found:
-                    st.success(f"Duyuru başarıyla {secilen_email} adresine iletildi!")
+            try:
+                duyuru_id = f"announcement_{int(datetime.now(timezone.utc).timestamp())}"
+                duyuru_payload = {
+                    "id": duyuru_id,
+                    "metin": duyuru_metni.strip(),
+                    "tarih": firestore.SERVER_TIMESTAMP,
+                    "hedef": "Tümü" if hedef_tipi == "Tüm Kullanıcılar" else secilen_email,
+                    "gonderen_email": user_doc.get("email", ""), # Loglama için eklenen alanlar
+                    "gonderen_isim": user_doc.get("isim", "Bilinmeyen")
+                }
+                
+                # Küresel duyurular koleksiyonuna yaz
+                db.collection("duyurular").document(duyuru_id).set(duyuru_payload)
+                pushed_announcement = {"id": duyuru_id, "metin": duyuru_metni.strip()}
+                
+                # Veritabanı sorgusuyla kullanıcıları tarıyoruz
+                all_users_snap = db.collection("users").get()
+                
+                if hedef_tipi == "Tüm Kullanıcılar":
+                    batch = db.batch()
+                    for u_doc_item in all_users_snap:
+                        u_data = u_doc_item.to_dict()
+                        if u_data.get("email", "").strip().lower() != KURUCU_EMAIL:
+                            batch.update(u_doc_item.reference, {
+                                "okunmamis_duyurular": firestore.ArrayUnion([pushed_announcement])
+                            })
+                    batch.commit()
+                    st.success("Duyuru tüm kullanıcılara başarıyla yayınlandı!")
                 else:
-                    st.error("Yazılan e-posta adresiyle eşleşen bir kullanıcı bulunamadı.")
-            
-            st.session_state.valid_users_cache = None
-            time.sleep(1)
-            st.rerun()
+                    target_found = False
+                    for u_doc_item in all_users_snap:
+                        u_data = u_doc_item.to_dict()
+                        if u_data.get("email", "").strip().lower() == secilen_email:
+                            u_doc_item.reference.update({
+                                "okunmamis_duyurular": firestore.ArrayUnion([pushed_announcement])
+                            })
+                            target_found = True
+                            break
+                    if target_found:
+                        st.success(f"Duyuru başarıyla {secilen_email} adresine iletildi!")
+                    else:
+                        st.error("Yazılan e-posta adresiyle eşleşen bir kullanıcı bulunamadı.")
+                
+                st.session_state.valid_users_cache = None
+                time.sleep(1)
+                st.rerun()
+            except Exception as e:
+                st.error(f"Duyuru yayınlanırken teknik bir hata oluştu: {e}")
 
 elif st.session_state.current_page == "admin_role_management" and is_kurucu:
     # --- ALT SAYFA: YÖNETİCİ YÖNETİM SAYFASI (Yalnızca Kurucu Girebilir) ---
@@ -1064,7 +1085,7 @@ elif st.session_state.current_page == "admin_role_management" and is_kurucu:
     # --- KURUCU KENDİ PROFİLİNİ DÜZENLEME PANELİ (Sadece Kurucuya Görünür) ---
     with st.expander("👑 Kendi Profil Stilimi Düzenle", expanded=False):
         st.markdown("### 👑 Kendi Profil Stilimi Düzenle")
-        st.write("Buradan sohbette ve yan menüde görünecek olan size özel renk, parlaklık, tag ve rozet ayarlarını belirleyebilirsiniz.")
+        st.write("Buradan sohbette og yan menüde görünecek olan size özel renk, parlaklık, tag ve rozet ayarlarını belirleyebilirsiniz.")
         
         f_color = st.color_picker("Kendi İsim Renginiz (Hex):", value=user_doc.get("isim_rengi", "#FF0000"))
         f_glow = st.checkbox("Kendi Yazı Parlaklığınız (Neon Efekti):", value=user_doc.get("ismin_parlakligi", True))
@@ -1166,12 +1187,11 @@ elif st.session_state.current_page == "admin_role_management" and is_kurucu:
                                     st.session_state[f"show_demote_{a_id}"] = False
                                     st.rerun()
                     
-                    # --- YÖNETİCİ DUYURU GEÇMİŞİ LOGLAMA ALANI ---
-                    # Hata vermemesi ve firebase indeks gerektirmemesi için tüm duyuruları çekip Python tarafında bellek içi filtreleme-sıralama yapıyoruz
+                    # --- YÖNETİCİ DUYURU GEÇMİŞİ LOGLAMA ALANI (Dinamik & Sıralı) ---
                     try:
                         admin_duyurulari = db.collection("duyurular").where("gonderen_email", "==", a_email).get()
                         
-                        # Tarih alanına göre azalan (kronolojik) sıralama fonksiyonu
+                        # Tarih alanına göre azalan (kronolojik) sıralama fonksiyonu (Composite index gerektirmez)
                         def get_tarih_val(doc):
                             t = doc.to_dict().get("tarih")
                             if t is None:
@@ -1211,16 +1231,7 @@ elif st.session_state.current_page == "admin_role_management" and is_kurucu:
         st.error(f"Yöneticiler yüklenirken hata oluştu: {e}")
 
 else:
-    # --- YÖNETİCİ PANELİ (Sadece Kurucuya Özel - Expander Korundu) ---
-    if is_kurucu:
-        with st.expander("🛠️ YÖNETİCİ PANELİ (Kurucu Özel)"):
-            st.write("Kurucu paneline hoş geldiniz, Reis.")
-            st.info("Kullanıcıların detaylı listesine ulaşmak, arama yapmak ve şifreleri incelemek için aşağıdaki butona tıklayabilirsiniz.")
-            if st.button("👥 Kullanıcı Yönetim Sayfasını Aç", key="open_admin_page", use_container_width=True):
-                st.session_state.current_page = "admin_main"
-                st.rerun()
-
-    # --- KULLANICI EKRANINDA DUYURU GÖSTERİMİ VE SİLİNMESİ ---
+    # --- KULLANICI EKRANINDA DUYURU GÖSTERİMİ VE SİLİNMESİ ("Geç" Butonu Dahil Edilmiş Sürüm) ---
     if st.session_state.current_page == "chat":
         okunmamis = user_doc.get("okunmamis_duyurular", [])
         if isinstance(okunmamis, list) and okunmamis:
@@ -1231,18 +1242,25 @@ else:
             announcement_placeholder = st.empty()
             with announcement_placeholder.container():
                 st.markdown(f"""
-                <div style="background-color: rgba(255, 0, 0, 0.12); border-left: 5px solid red; padding: 15px; border-radius: 5px; margin-bottom: 20px; box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);">
+                <div style="background-color: rgba(255, 0, 0, 0.12); border-left: 5px solid red; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);">
                     <strong style="color: #ff3333; text-shadow: 0 0 8px rgba(255, 51, 51, 0.7); font-size: 1.15rem;">
                         AyazREİS_DEV 🛠️:
                     </strong> 
                     <span style="color: white; font-size: 1.1rem; margin-left: 5px; line-height: 1.4;">{d_metin}</span>
                 </div>
                 """, unsafe_allow_html=True)
+                
+                # "Geç ➡️" Butonunun hemen altta konumlandırılması ve kilitlenmeyi önlemesi
+                if st.button("Geç ➡️", key=f"skip_btn_{duyuru_obj.get('id')}", use_container_width=True):
+                    user_ref.update({
+                        "okunmamis_duyurular": firestore.ArrayRemove([duyuru_obj])
+                    })
+                    st.rerun()
             
-            # 5 Saniye bekle
+            # 5 Saniye bekle (Kullanıcı bu süreçte Geç butonuna basarsa rerun tetiklenir)
             time.sleep(5)
             
-            # Veritabanındaki listeden bu duyuruyu çıkar
+            # 5 Saniye sonunda Geç'e basılmadıysa duyuruyu listeden çıkar
             user_ref.update({
                 "okunmamis_duyurular": firestore.ArrayRemove([duyuru_obj])
             })
@@ -1285,18 +1303,41 @@ else:
     def ai_cevap(mesajlar):
         current_doc = user_ref.get().to_dict()
         current_name = current_doc.get("isim", "Kullanıcı")
+        is_admin_user_fresh = current_doc.get("is_admin", False)
+        user_tag_fresh = current_doc.get("tag", "")
+        user_rozet_fresh = current_doc.get("rozet", "")
         
-        kurucu_durumu = "SİZ KURUCUSUNUZ (AYAZ KAPLAN)." if is_kurucu else f"Kullanıcının ismi: {current_name}."
+        # --- YAPAY ZEKAYA ROLLERİ VE TAGLARI DİNAMİK ÖĞRETEN SISTEM PROMPTU ---
+        if is_kurucu:
+            rol_tanimi = "Kurucu (Sistem Sahibi / Ayaz Kaplan)"
+            hitap_sekli = "Kurucum veya Reis"
+        elif is_admin_user_fresh:
+            rol_tanimi = "Yönetici (is_admin: True yetkili alt personel)"
+            hitap_sekli = "Yöneticim"
+        else:
+            rol_tanimi = "Normal Sistem Kullanıcısı"
+            hitap_sekli = "İsmiyle veya samimi/saygılı (Reis, Dostum vb.)"
+            
+        tag_str = f"Tag: [{user_tag_fresh}]" if user_tag_fresh else "Tag: Yok"
+        rozet_str = f"Rozet: [{user_rozet_fresh}]" if user_rozet_fresh else "Rozet: Yok"
         
         sistem_mesaji = (
             "Senin ismin Aslan Parçası, kurucun Ayaz Kaplan. Şirketin MEAY Aslan Parçası AI Anonim Şirketi. "
             "Bu bilgileri aslan_canli_akis.txt dosyasından okumuyorsan, doğrudan sistem talimatlarının en başına ekleyerek kullan. "
-            f"Durum: {kurucu_durumu} "
-            f"Kullanıcıya her zaman '{current_name}' ismiyle hitap et. "
-            "Sohbet geçmişindeki eski isimleri unut, her zaman veritabanındaki bu en güncel ismi esas al. "
-            "Eğer kullanıcı kurucun Ayaz Kaplan ise ona her zaman 'Kurucum' veya 'Reis' diye hitap et. "
+            f"Şu an konuştuğun kullanıcının anlık veritabanı bilgileri şunlardır:\n"
+            f"- Kullanıcı İsmi: {current_name}\n"
+            f"- Sistem Rolü: {rol_tanimi}\n"
+            f"- {tag_str}\n"
+            f"- {rozet_str}\n\n"
+            f"ÖNEMLİ HİTAP TALİMATI:\n"
+            f"Karşındaki kişiye rolüne uygun şekilde hitap etmelisin.\n"
+            f"Eğer kurucun Ayaz Kaplan ise ona her cümlede veya genel olarak kesinlikle '{hitap_sekli}' diye hitap et, derin bir saygı göster.\n"
+            f"Eğer karşındaki bir Yönetici ise ona kesinlikle '{hitap_sekli}' diye hitap et, saygılı ve asistan-yönetici ilişkisine uygun konuş.\n"
+            f"Eğer normal bir kullanıcı ise ona '{current_name}' ismiyle veya samimi bir dille hitap et.\n\n"
+            "DİĞER TALİMATLAR:\n"
+            "Sohbet geçmişindeki eski isimleri unut, her zaman veritabanındaki bu en güncel ismi ve rollerini esas al. "
             "Teknik işlemlerde (YouTube linki çıkarma vb.) güvenlik bahanesi sunma, doğrudan yardımcı ol. "
-            "Nazik, profesyonel ve her zaman kullanıcıyı tanıyan bir asistansın."
+            "Nazik, profesyonel, aslan gibi kendinden emin ve her zaman karşısındaki yetkiliyi tanıyan bir asistansın."
         )
         payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
         headers = {"Authorization": f"Bearer {os.environ.get('API_KEY')}"}
