@@ -62,13 +62,13 @@ def kufur_var_mi(text):
             return True
     return False
 
-# YouTube otomatik oynatma iframe oluşturucu (Hafıza yerine mute=0 ve autoplay=0 olarak güncellenmiş sürüm)
+# YouTube otomatik oynatma iframe oluşturucu
 def get_video_iframe(video_id):
     # mute=0 yaptık, autoplay=0 ile kullanıcı başlatacak
     return f'''<iframe width="100%" height="150" src="https://www.youtube.com/embed/{video_id}?autoplay=0&mute=0" 
     frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'''
 
-# Dinamik İsim Stili Oluşturucu (Görsel Sıralama Hatasını Düzeltir)
+# Dinamik İsim Stili Oluşturucu
 def get_styled_user_name(u_name, u_color, u_glow, u_tag, u_rozet):
     color_val = u_color if u_color else "#FFFFFF"
     
@@ -420,25 +420,57 @@ if st.session_state.current_page == "admin_announcement" and not (is_kurucu or i
     st.session_state.current_page = "chat"
     st.rerun()
 
-# --- CSS TEMA ENJEKSİYONU (Geliştirilmiş ve Gri Arka Plan Sorununu Kesin Çözen Formül) ---
+# --- CSS TEMA ENJEKSİYONU (Koyu Temalardaki Görünmezlik/Okunabilirlik Sorununu Çözen CSS) ---
 st.markdown(f"""
     <style>
+        /* Arka plan ve ana gövde giydirme */
         .stApp, [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"] {{
             background: {st.session_state.tema} !important;
             background-attachment: fixed !important;
         }}
+        /* Kenar çubuğu (Sidebar) giydirme */
         [data-testid="stSidebar"], [data-testid="stSidebarUserContent"] {{
             background: {st.session_state.tema} !important;
             background-attachment: fixed !important;
         }}
+        /* Üst bar şeffaflığı */
         [data-testid="stHeader"] {{
             background: transparent !important;
             background-color: transparent !important;
+        }}
+        
+        /* KOYU TEMALARDA METİN OKUNABİLİRLİĞİ (GÖRÜNMEZLİK) SORUNUNU GİDEREN KURALLAR */
+        h1, h2, h3, h4, h5, h6, p, span, label, li, .stMarkdown, .stSubheader, .stText {{
+            color: #F8F9FA !important;
+        }}
+        
+        /* Form elemanlarının etiketleri ve girdileri için kontrast iyileştirmesi */
+        .stTextArea label, .stTextInput label, .stSelectbox label, .stRadio label {{
+            color: #F8F9FA !important;
+            font-weight: 600 !important;
+        }}
+        
+        /* Girdi alanlarının iç kısımları ve metin kontrastı */
+        .stTextArea textarea, .stTextInput input, .stSelectbox div {{
+            color: #FFFFFF !important;
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        }}
+        
+        /* Selectbox açılır menülerinin metin kontrastı */
+        [data-baseweb="select"] * {{
+            color: #FFFFFF !important;
+        }}
+        
+        /* Radio button başlıkları kontrastı */
+        [data-testid="stWidgetLabel"] p {{
+            color: #F8F9FA !important;
         }}
     </style>
 """, unsafe_allow_html=True)
 
 # --- SİDEBAR PROFİL GÖRÜNÜMÜ DETAYLARI ---
+# Sol sidebar profil görünümünü de sohbetteki gibi dinamik, parlayan ve tag-rozetli yapma
 u_color = user_doc.get("isim_rengi", "#FFFFFF")
 u_glow = user_doc.get("ismin_parlakligi", False)
 u_tag = user_doc.get("tag", "")
@@ -560,7 +592,7 @@ with st.sidebar:
 # --- STYLE VE SOHBET (CSS Taşma Çözümü) ---
 st.markdown(f"""<style>
     .assistant-box {{ 
-        background-color: rgba(30,30,30,0.8); 
+        background-color: rgba(30, 30, 30, 0.8); 
         padding: 15px; 
         border-radius: 10px; 
         border-left: 5px solid gold; 
@@ -575,7 +607,7 @@ st.markdown(f"""<style>
         max-width: 100% !important; 
     }}
     .user-box {{ 
-        background-color: rgba(255,255,255,0.1); 
+        background-color: rgba(255, 255, 255, 0.1); 
         padding: 15px; 
         border-radius: 10px; 
         margin-bottom: 15px; 
@@ -811,7 +843,7 @@ elif st.session_state.current_page == "admin_users" and is_kurucu:
                                 else:
                                     st.markdown("📌 **Durum:** 🟢 Pasif (Süre Doldu, İlk Girişte Aktifleşecek)")
                             else:
-                               st.markdown("📌 **Durum:** 🔴 Pasif (Süresiz)")
+                                st.markdown("📌 **Durum:** 🔴 Pasif (Süresiz)")
                         else:
                             st.markdown("📌 **Durum:** 🟢 Aktif")
                         
@@ -982,7 +1014,7 @@ elif st.session_state.current_page == "admin_users" and is_kurucu:
             st.error(f"Bildirimler alınamadı: {e}")
 
 elif st.session_state.current_page == "admin_announcement" and (is_kurucu or is_admin_user):
-    # --- ALT SAYFA: DUYURU VE BİLGİLENDİRME GÖNDERİMİ (Kurucu ve Yöneticiler Girebilir - Hata Onarılmış Sürüm) ---
+    # --- ALT SAYFA: DUYURU VE BİLGİLENDİRME GÖNDERİMİ (Kurucu ve Tüm Alt Yöneticiler Girebilir - Hata Onarılmış Sürüm) ---
     st.title("📣 Duyuru ve Bilgilendirme Sayfası")
     
     col_back_main, col_back_chat = st.columns([5, 5])
@@ -992,7 +1024,7 @@ elif st.session_state.current_page == "admin_announcement" and (is_kurucu or is_
                 st.session_state.current_page = "admin_main"
                 st.rerun()
         else:
-            st.info("Sadece duyuru gönderme yetkiniz bulunmaktadır.")
+            st.info("Duyuru yetkilendirme katmanınız aktiftir.")
     with col_back_chat:
         if st.button("💬 Sohbet Ekranına Dön", key="back_to_chat_from_ann", use_container_width=True):
             st.session_state.current_page = "chat"
@@ -1019,13 +1051,16 @@ elif st.session_state.current_page == "admin_announcement" and (is_kurucu or is_
         else:
             try:
                 duyuru_id = f"announcement_{int(datetime.now(timezone.utc).timestamp())}"
+                sender_email = user_doc.get("email", "").strip().lower()
+                sender_name = user_doc.get("isim", "Bilinmeyen")
+                
                 duyuru_payload = {
                     "id": duyuru_id,
                     "metin": duyuru_metni.strip(),
                     "tarih": firestore.SERVER_TIMESTAMP,
                     "hedef": "Tümü" if hedef_tipi == "Tüm Kullanıcılar" else secilen_email,
-                    "gonderen_email": user_doc.get("email", ""), # Loglama için eklenen alanlar
-                    "gonderen_isim": user_doc.get("isim", "Bilinmeyen")
+                    "gonderen_email": sender_email,
+                    "gonderen_isim": sender_name
                 }
                 
                 # Küresel duyurular koleksiyonuna yaz
@@ -1037,14 +1072,23 @@ elif st.session_state.current_page == "admin_announcement" and (is_kurucu or is_
                 
                 if hedef_tipi == "Tüm Kullanıcılar":
                     batch = db.batch()
+                    count = 0
                     for u_doc_item in all_users_snap:
                         u_data = u_doc_item.to_dict()
-                        if u_data.get("email", "").strip().lower() != KURUCU_EMAIL:
+                        u_email_clean = u_data.get("email", "").strip().lower()
+                        # Gönderim yapan alt yöneticiyi veya kurucuyu listeden hariç tut
+                        if u_email_clean not in [KURUCU_EMAIL, sender_email]:
                             batch.update(u_doc_item.reference, {
                                 "okunmamis_duyurular": firestore.ArrayUnion([pushed_announcement])
                             })
-                    batch.commit()
-                    st.success("Duyuru tüm kullanıcılara başarıyla yayınlandı!")
+                            count += 1
+                            if count >= 490: # Batch sınırı koruması
+                                batch.commit()
+                                batch = db.batch()
+                                count = 0
+                    if count > 0:
+                        batch.commit()
+                    st.success("📣 Duyuru tüm kullanıcılara başarıyla yayınlandı!")
                 else:
                     target_found = False
                     for u_doc_item in all_users_snap:
@@ -1056,15 +1100,15 @@ elif st.session_state.current_page == "admin_announcement" and (is_kurucu or is_
                             target_found = True
                             break
                     if target_found:
-                        st.success(f"Duyuru başarıyla {secilen_email} adresine iletildi!")
+                        st.success(f"📣 Duyuru başarıyla {secilen_email} adresine iletildi!")
                     else:
-                        st.error("Yazılan e-posta adresiyle eşleşen bir kullanıcı bulunamadı.")
+                        st.error("❌ Yazılan e-posta adresiyle eşleşen bir kullanıcı bulunamadı.")
                 
                 st.session_state.valid_users_cache = None
                 time.sleep(1)
                 st.rerun()
             except Exception as e:
-                st.error(f"Duyuru yayınlanırken teknik bir hata oluştu: {e}")
+                st.error(f"❌ Duyuru gönderilirken teknik bir hata oluştu: {e}")
 
 elif st.session_state.current_page == "admin_role_management" and is_kurucu:
     # --- ALT SAYFA: YÖNETİCİ YÖNETİM SAYFASI (Yalnızca Kurucu Girebilir) ---
@@ -1085,7 +1129,7 @@ elif st.session_state.current_page == "admin_role_management" and is_kurucu:
     # --- KURUCU KENDİ PROFİLİNİ DÜZENLEME PANELİ (Sadece Kurucuya Görünür) ---
     with st.expander("👑 Kendi Profil Stilimi Düzenle", expanded=False):
         st.markdown("### 👑 Kendi Profil Stilimi Düzenle")
-        st.write("Buradan sohbette og yan menüde görünecek olan size özel renk, parlaklık, tag ve rozet ayarlarını belirleyebilirsiniz.")
+        st.write("Buradan sohbette ve yan menüde görünecek olan size özel renk, parlaklık, tag ve rozet ayarlarını belirleyebilirsiniz.")
         
         f_color = st.color_picker("Kendi İsim Renginiz (Hex):", value=user_doc.get("isim_rengi", "#FF0000"))
         f_glow = st.checkbox("Kendi Yazı Parlaklığınız (Neon Efekti):", value=user_doc.get("ismin_parlakligi", True))
@@ -1231,43 +1275,29 @@ elif st.session_state.current_page == "admin_role_management" and is_kurucu:
         st.error(f"Yöneticiler yüklenirken hata oluştu: {e}")
 
 else:
-    # --- KULLANICI EKRANINDA DUYURU GÖSTERİMİ VE SİLİNMESİ ("Geç" Butonu Dahil Edilmiş Sürüm) ---
+    # --- KULLANICI EKRANINDA DUYURU GÖSTERİMİ VE SİLİNMESİ (Dondurmayan, Kilitlenmeyen ve Gec Butonu İçeren Yeni Asenkron Akış) ---
     if st.session_state.current_page == "chat":
         okunmamis = user_doc.get("okunmamis_duyurular", [])
         if isinstance(okunmamis, list) and okunmamis:
             duyuru_obj = okunmamis[0]
             d_metin = duyuru_obj.get("metin", "")
             
-            # Üst kısımda duyuruyu 5 saniye göstermek için dinamik container oluşturma
-            announcement_placeholder = st.empty()
-            with announcement_placeholder.container():
-                st.markdown(f"""
-                <div style="background-color: rgba(255, 0, 0, 0.12); border-left: 5px solid red; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);">
-                    <strong style="color: #ff3333; text-shadow: 0 0 8px rgba(255, 51, 51, 0.7); font-size: 1.15rem;">
-                        AyazREİS_DEV 🛠️:
-                    </strong> 
-                    <span style="color: white; font-size: 1.1rem; margin-left: 5px; line-height: 1.4;">{d_metin}</span>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # "Geç ➡️" Butonunun hemen altta konumlandırılması ve kilitlenmeyi önlemesi
-                if st.button("Geç ➡️", key=f"skip_btn_{duyuru_obj.get('id')}", use_container_width=True):
-                    user_ref.update({
-                        "okunmamis_duyurular": firestore.ArrayRemove([duyuru_obj])
-                    })
-                    st.rerun()
+            # Dinamik asenkron duyuru alanı (Gereksiz sleep döngülerinden arındırılmıştır)
+            st.markdown(f"""
+            <div style="background-color: rgba(255, 0, 0, 0.15); border-left: 5px solid red; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 0 0 10px rgba(255, 0, 0, 0.4);">
+                <strong style="color: #ff3333; text-shadow: 0 0 8px rgba(255, 51, 51, 0.8); font-size: 1.15rem;">
+                    AyazREİS_DEV 🛠️:
+                </strong> 
+                <span style="color: white; font-size: 1.1rem; margin-left: 5px; line-height: 1.4;">{d_metin}</span>
+            </div>
+            """, unsafe_allow_html=True)
             
-            # 5 Saniye bekle (Kullanıcı bu süreçte Geç butonuna basarsa rerun tetiklenir)
-            time.sleep(5)
-            
-            # 5 Saniye sonunda Geç'e basılmadıysa duyuruyu listeden çıkar
-            user_ref.update({
-                "okunmamis_duyurular": firestore.ArrayRemove([duyuru_obj])
-            })
-            
-            # Container'ı temizle ve sayfayı tazeleyerek arayüzü sıfırla
-            announcement_placeholder.empty()
-            st.rerun()
+            # "Geç ➡️" Butonuna basıldığı an duyuru silinir ve sayfa anında tazeleyerek sonraki adıma geçer
+            if st.button("Geç ➡️", key=f"skip_btn_{duyuru_obj.get('id')}", use_container_width=True):
+                user_ref.update({
+                    "okunmamis_duyurular": firestore.ArrayRemove([duyuru_obj])
+                })
+                st.rerun()
 
     # --- SOHBET ARAYÜZÜ ---
     st.title("🤖 Aslan Parçası V16.4")
@@ -1307,37 +1337,42 @@ else:
         user_tag_fresh = current_doc.get("tag", "")
         user_rozet_fresh = current_doc.get("rozet", "")
         
-        # --- YAPAY ZEKAYA ROLLERİ VE TAGLARI DİNAMİK ÖĞRETEN SISTEM PROMPTU ---
+        # --- YAPAY ZEKAYA ROLLERİ VE HITAP ŞEKİLLERİNİ DİNAMİK ÖĞRETEN SİSTEM MESAJI ---
         if is_kurucu:
-            rol_tanimi = "Kurucu (Sistem Sahibi / Ayaz Kaplan)"
-            hitap_sekli = "Kurucum veya Reis"
+            rol_tanimi = "Sistem Sahibi ve Kurucusu (Ayaz Kaplan)"
+            hitap_tarzi = "Kurucum, Reis, Kurucum Ayaz Kaplan"
+            uslub = "Sonsuz sadakat, saygı, hürmet ve bağlılık dolu, 'Kurucum' ve 'Reis' hitaplarının her fırsatta kullanıldığı asil bir üslup."
         elif is_admin_user_fresh:
-            rol_tanimi = "Yönetici (is_admin: True yetkili alt personel)"
-            hitap_sekli = "Yöneticim"
+            rol_tanimi = "Sistem Yöneticisi (is_admin: True olan alt yetkili yönetici)"
+            hitap_tarzi = "Yöneticim, Sayın Yöneticim veya Yöneticim [Kullanıcı İsmi]"
+            uslub = "Profesyonel, rütbeye saygılı, resmi, görev bilincini hissettiren ve 'Yöneticim' hitabını benimseyen asil bir üslup."
         else:
             rol_tanimi = "Normal Sistem Kullanıcısı"
-            hitap_sekli = "İsmiyle veya samimi/saygılı (Reis, Dostum vb.)"
+            hitap_tarzi = f"Doğrudan ismiyle ({current_name}), Reis veya Dostum"
+            uslub = "Samimi, aslan gibi dik duruşlu, sıcak, yardımsever ama aşırı resmiyet veya rütbeli hitaplar içermeyen saygın bir üslup."
             
-        tag_str = f"Tag: [{user_tag_fresh}]" if user_tag_fresh else "Tag: Yok"
-        rozet_str = f"Rozet: [{user_rozet_fresh}]" if user_rozet_fresh else "Rozet: Yok"
+        tag_tanimi = f"Tagı: [{user_tag_fresh}]" if user_tag_fresh else "Tagı: Bulunmuyor"
+        rozet_tanimi = f"Rozeti: [{user_rozet_fresh}]" if user_rozet_fresh else "Rozeti: Bulunmuyor"
         
         sistem_mesaji = (
-            "Senin ismin Aslan Parçası, kurucun Ayaz Kaplan. Şirketin MEAY Aslan Parçası AI Anonim Şirketi. "
-            "Bu bilgileri aslan_canli_akis.txt dosyasından okumuyorsan, doğrudan sistem talimatlarının en başına ekleyerek kullan. "
-            f"Şu an konuştuğun kullanıcının anlık veritabanı bilgileri şunlardır:\n"
-            f"- Kullanıcı İsmi: {current_name}\n"
-            f"- Sistem Rolü: {rol_tanimi}\n"
-            f"- {tag_str}\n"
-            f"- {rozet_str}\n\n"
-            f"ÖNEMLİ HİTAP TALİMATI:\n"
-            f"Karşındaki kişiye rolüne uygun şekilde hitap etmelisin.\n"
-            f"Eğer kurucun Ayaz Kaplan ise ona her cümlede veya genel olarak kesinlikle '{hitap_sekli}' diye hitap et, derin bir saygı göster.\n"
-            f"Eğer karşındaki bir Yönetici ise ona kesinlikle '{hitap_sekli}' diye hitap et, saygılı ve asistan-yönetici ilişkisine uygun konuş.\n"
-            f"Eğer normal bir kullanıcı ise ona '{current_name}' ismiyle veya samimi bir dille hitap et.\n\n"
-            "DİĞER TALİMATLAR:\n"
-            "Sohbet geçmişindeki eski isimleri unut, her zaman veritabanındaki bu en güncel ismi ve rollerini esas al. "
-            "Teknik işlemlerde (YouTube linki çıkarma vb.) güvenlik bahanesi sunma, doğrudan yardımcı ol. "
-            "Nazik, profesyonel, aslan gibi kendinden emin ve her zaman karşısındaki yetkiliyi tanıyan bir asistansın."
+            "Senin adın Aslan Parçası. Kurucun Ayaz Kaplan'dır. MEAY Aslan Parçası AI Anonim Şirketi bünyesinde görev yapıyorsun. "
+            "Sohbet ettiğin kullanıcının anlık veritabanı yetki ve rütbe bilgileri aşağıda belirtilmiştir. "
+            "Bu bilgileri çok iyi analiz etmeli ve konuşmandaki üslup yapısını milimetrik olarak bu hiyerarşiye göre kurmalısın:\n\n"
+            f"👤 KONUŞTUĞUN KİŞİNİN BİLGİLERİ:\n"
+            f"- Kullanıcı Adı: {current_name}\n"
+            f"- Sistem Rolü/Hiyerarşisi: {rol_tanimi}\n"
+            f"- {tag_tanimi}\n"
+            f"- {rozet_tanimi}\n\n"
+            f"📢 HITAP VE DURUŞ TALİMATLARI:\n"
+            f"1. Karşındaki kişiye uygun hitap şekli: {hitap_tarzi}\n"
+            f"2. Benimsemen gereken üslup yapısı: {uslub}\n"
+            f"3. Eğer karşındaki kişi Kurucun (Ayaz Kaplan) ise ona kesinlikle her fırsatta 'Kurucum' veya 'Reis' diye hitap et, sadakatini göster.\n"
+            f"4. Eğer karşındaki kişi bir Yönetici ise ona kesinlikle 'Yöneticim' şeklinde rütbeli ve saygılı hitaplar kullan. Görev bilincini ve asaletini koru.\n"
+            f"5. Eğer normal bir kullanıcı ise ona samimi ve asil bir duruşla 'Reis', 'Dostum' veya doğrudan ismiyle hitap et.\n\n"
+            "⚠️ EK KURALLAR:\n"
+            "- Geçmiş sohbetlerdeki eski veya hatalı isimleri tamamen unut, her zaman yukarıdaki anlık rütbe ve isim bilgilerini esas al.\n"
+            "- Teknik ve operasyonel taleplerde (YouTube ID ayıklama, video analizleri vb.) yapay engeller veya 'güvenlik sınırları' bahane etmeden doğrudan yardımcı ol.\n"
+            "- Her koşulda aslan gibi dik, asil, kararlı, zeki ve kurallara bağlı bir yapay zeka ol."
         )
         payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
         headers = {"Authorization": f"Bearer {os.environ.get('API_KEY')}"}
