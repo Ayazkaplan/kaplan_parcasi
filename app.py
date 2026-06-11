@@ -19,7 +19,19 @@ KURUCU_ISIM = "Ayaz Kaplan"
 MODEL = "anthropic/claude-3-haiku"
 AVATAR_URL = "https://i.imgur.com/3EfO8Ae.jpeg"
 USER_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+
+# Ortam değişkenlerinden anahtarları çek
 FIREBASE_API_KEY = os.environ.get("FIREBASE_API_KEY") 
+OPENROUTER_API_KEY = os.environ.get("API_KEY")
+
+# API Anahtarları Eksiklik Kontrolleri
+if not FIREBASE_API_KEY:
+    st.error("❌ Firebase API anahtarı (FIREBASE_API_KEY) ortam değişkenlerinde bulunamadı!")
+    st.stop()
+
+if not OPENROUTER_API_KEY:
+    st.error("❌ OpenRouter API anahtarı (API_KEY) ortam değişkenlerinde bulunamadı!")
+    st.stop()
 
 # --- TEMALAR ---
 TEMALAR = {
@@ -65,7 +77,7 @@ def emoji_var_mi(text):
     # Emojileri ve özel sembolleri tespit eden regex deseni
     emoji_pattern = re.compile(
         "["
-        "\U00010000-\U0010ffff"  # SMP (Sanal Çok Dilli Düzlem - Emojilerin büyük kısmı)
+        "\U00010000-\U0010ffff"  # SMP (Sanal Çok Dilli Düzlem)
         "\u2600-\u27bf"          # Çeşitli Semboller ve Dingbats
         "]+", flags=re.UNICODE
     )
@@ -94,6 +106,18 @@ def get_styled_user_name(u_name, u_color, u_glow, u_tag, u_rozet):
     
     return f"{tag_html}{isim_html}{rozet_html}"
 
+def firebase_login(email, password):
+    try:
+        url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}"
+        payload = {"email": email, "password": password, "returnSecureToken": True}
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            return response.json()
+        return None
+    except Exception as e:
+        print(f"[FIREBASE LOGIN REST API HATASI] Giriş isteği gönderilirken hata oluştu: {e}")
+        return None
+
 # --- OTURUM YÖNETİMİ & LOCALSTORAGE KALICILIĞI ---
 if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = False
 if "user_data" not in st.session_state: st.session_state.user_data = None
@@ -103,126 +127,97 @@ if "valid_users_cache" not in st.session_state: st.session_state.valid_users_cac
 if "current_page" not in st.session_state: st.session_state.current_page = "chat"
 if "force_login" not in st.session_state: st.session_state.force_login = False
 if "trigger_logout" not in st.session_state: st.session_state.trigger_logout = False
-if "init_check" not in st.session_state: st.session_state.init_check = False
+if "storage_checked" not in st.session_state: st.session_state.storage_checked = False
 
-# 1. Çıkış Yapıldıysa LocalStorage'ı Temizle
-if st.session_state.trigger_logout:
+def logout_user():
+    st.session_state.force_login = False
+    st.session_state.user_logged_in = False
+    st.session_state.user_data = None
+    st.session_state.messages = []
+    st.query_params.clear()
+    
     components.html("""
     <script>
         localStorage.removeItem('aslan_session_uid');
-        const params = new URLSearchParams(window.parent.location.search);
-        if (params.has('session_uid')) {
-            params.delete('session_uid');
-            window.parent.location.href = window.parent.location.pathname + '?' + params.toString();
-        }
+        window.parent.location.href = window.parent.location.pathname;
     </script>
     """, height=0, width=0)
-    st.session_state.trigger_logout = False
-    st.session_state.init_check = True  # Çıkış sonrası aramayı bloke et
+    time.sleep(0.2)
+    st.rerun()
 
-# 2. Yeni Giriş Yapıldıysa LocalStorage'a Kaydet
-if "write_local_storage_uid" in st.session_state:
-    uid_to_save = st.session_state.pop("write_local_storage_uid")
-    components.html(f"""
-    <script>
-        localStorage.setItem('aslan_session_uid', '{uid_to_save}');
-    </script>
-    """, height=0, width=0)
+# URL'de session_uid Varsa Doğrudan Oturum Açmayı Dene
+if "session_uid" in st.query_params:
+    stored_uid = st.query_params["session_uid"]
+    if not st.session_state.user_logged_in:
+        try:
+            user_ref_temp = db.collection("users").document(stored_uid)
+            user_snap = user_ref_temp.get()
+            if user_snap.exists:
+                user_data = user_snap.to_dict()
+                user_durum = user_data.get("durum", "Aktif")
+                ban_bitis = user_data.get("ban_bitis_zamani")
+                
+                # Timestamp -> Datetime Güvenli Dönüşümü
+                if hasattr(ban_bitis, "to_datetime"):
+                    ban_bitis = ban_bitis.to_datetime()
+                
+                is_banned = False
+                if user_durum == "Pasif":
+                    if ban_bitis:
+                        if ban_bitis.tzinfo is None: ban_bitis = ban_bitis.replace(tzinfo=timezone.utc)
+                        if datetime.now(timezone.utc) < ban_bitis: is_banned = True
+                    else:
+                        is_banned = True
+                
+                if not is_banned:
+                    user_ref_temp.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
+                    st.session_state.user_data = {**user_data, "uid": stored_uid}
+                    st.session_state.user_logged_in = True
+                    st.session_state.force_login = True
+                    st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
+                    
+                    sohbet_list = user_data.get("sohbet_gecmisi", [])
+                    if isinstance(sohbet_list, list):
+                        active_messages = []
+                        last_separator_idx = -1
+                        for idx, msg in enumerate(sohbet_list):
+                            if msg.get("role") == "separator": last_separator_idx = idx
+                        if last_separator_idx != -1: active_messages = sohbet_list[last_separator_idx + 1:]
+                        else: active_messages = [m for m in sohbet_list if m.get("role") in ["user", "assistant"]]
+                        st.session_state.messages = active_messages
+                    else:
+                        st.session_state.messages = []
+                else:
+                    st.query_params.clear()
+            else:
+                st.query_params.clear()
+        except Exception:
+            st.query_params.clear()
 
-# 3. Giriş Yapılı Değilse LocalStorage'dan Oturumu Kurtar (Yalnızca ilk açılışta 1 kereye mahsus çalışır)
-if not st.session_state.user_logged_in and "session_uid" not in st.query_params and not st.session_state.trigger_logout and not st.session_state.init_check:
-    st.session_state.init_check = True
+# URL'de Yoksa Ama LocalStorage'da Varsa Kurtarma Mekanizması (Döngüsüz Akıllı Kontrol)
+if not st.session_state.user_logged_in and "session_uid" not in st.query_params and not st.session_state.get("storage_checked", False):
+    st.session_state.storage_checked = True
     st.markdown("""
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 250px;">
-            <div style="border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #FFD700; border-radius: 50%; width: 45px; height: 45px; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
-            <style>
-                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-            </style>
-            <h3 style="color: #FFD700; font-family: 'Segoe UI', sans-serif; font-weight: 500;">Güvenli Bağlantı Kuruluyor...</h3>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 150px;">
+            <div style="border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #FFD700; border-radius: 50%; width: 35px; height: 35px; animation: spin 1s linear infinite; margin-bottom: 15px;"> </div>
+            <style> @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style>
+            <h4 style="color: #FFD700; font-family: 'Segoe UI', sans-serif;">Oturum Kontrol Ediliyor...</h4>
         </div>
     """, unsafe_allow_html=True)
     
     components.html("""
     <script>
         const uid = localStorage.getItem('aslan_session_uid');
-        const params = new URLSearchParams(window.parent.location.search);
-        if (uid && !params.has('session_uid')) {
-            params.set('session_uid', uid);
-            window.parent.location.href = window.parent.location.pathname + '?' + params.toString();
+        if (uid) {
+            const params = new URLSearchParams(window.parent.location.search);
+            if (!params.has('session_uid')) {
+                params.set('session_uid', uid);
+                window.parent.location.href = window.parent.location.pathname + '?' + params.toString();
+            }
         }
     </script>
     """, height=0, width=0)
-    time.sleep(0.5)
-    st.rerun()
-
-def logout_user():
-    st.session_state.force_login = False
-    st.session_state.user_logged_in = False
-    st.query_params.pop("session_uid", None)
-    st.session_state.trigger_logout = True
-    st.rerun()
-
-# Python Tarafı Query Params Kalıcılık Kontrolü
-if (not st.session_state.user_logged_in or not st.session_state.force_login) and "session_uid" in st.query_params:
-    stored_uid = st.query_params["session_uid"]
-    try:
-        user_ref_temp = db.collection("users").document(stored_uid)
-        user_ref_temp.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
-        
-        user_snap = user_ref_temp.get()
-        if user_snap.exists:
-            user_data = user_snap.to_dict()
-            user_durum = user_data.get("durum", "Aktif")
-            ban_bitis = user_data.get("ban_bitis_zamani")
-            
-            is_banned = False
-            if user_durum == "Pasif":
-                if ban_bitis:
-                    if ban_bitis.tzinfo is None:
-                        ban_bitis = ban_bitis.replace(tzinfo=timezone.utc)
-                    now = datetime.now(timezone.utc)
-                    if now < ban_bitis:
-                        is_banned = True
-                else:
-                    is_banned = True
-            
-            if not is_banned:
-                st.session_state.user_data = {**user_data, "uid": stored_uid}
-                st.session_state.user_logged_in = True
-                st.session_state.force_login = True
-                st.session_state.init_check = True  # Kalıcılık kontrolü yapıldı, döngüyü önle
-                st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
-                
-                sohbet_list = user_data.get("sohbet_gecmisi", [])
-                if isinstance(sohbet_list, list):
-                    active_messages = []
-                    last_separator_idx = -1
-                    for idx, msg in enumerate(sohbet_list):
-                        if msg.get("role") == "separator":
-                            last_separator_idx = idx
-                    if last_separator_idx != -1:
-                        active_messages = sohbet_list[last_separator_idx + 1:]
-                    else:
-                        active_messages = [m for m in sohbet_list if m.get("role") in ["user", "assistant"]]
-                    st.session_state.messages = active_messages
-                else:
-                    st.session_state.messages = []
-            else:
-                st.session_state.force_login = False
-                st.query_params.pop("session_uid", None)
-    except Exception:
-        pass
-
-def firebase_login(email, password):
-    try:
-        url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}"
-        payload = {"email": email, "password": password, "returnSecureToken": True}
-        response = requests.post(url, json=payload)
-        if response.status_code == 200:
-            return response.json()
-        return None
-    except Exception:
-        return None
+    time.sleep(0.6)
 
 # --- GİRİŞ VE KAYIT EKRANI ---
 if not st.session_state.user_logged_in or not st.session_state.force_login:
@@ -247,6 +242,10 @@ if not st.session_state.user_logged_in or not st.session_state.force_login:
                     user_data = query[0].to_dict()
                     user_durum = user_data.get("durum", "Aktif")
                     ban_bitis = user_data.get("ban_bitis_zamani")
+                    
+                    # Timestamp -> Datetime Güvenli Dönüşümü
+                    if hasattr(ban_bitis, "to_datetime"):
+                        ban_bitis = ban_bitis.to_datetime()
                     
                     is_banned = False
                     if user_durum == "Pasif":
@@ -273,35 +272,23 @@ if not st.session_state.user_logged_in or not st.session_state.force_login:
                     
                     if not is_banned:
                         db.collection("users").document(query[0].id).update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
-                        
                         uid_logged = auth_res['localId']
                         
-                        # Rerun öncesi animasyon çakışmasını engellemek için oturum bayraklarını anında havada setle
                         st.session_state.user_data = {**user_data, "uid": uid_logged}
                         st.session_state.user_logged_in = True
                         st.session_state.force_login = True
-                        st.session_state.init_check = True
-                        st.query_params["session_uid"] = uid_logged
-                        
-                        # LocalStorage a yazdırılması için tetikleyici ekle
-                        st.session_state.write_local_storage_uid = uid_logged
-                        
                         st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
                         
-                        sohbet_list = user_data.get("sohbet_gecmisi", [])
-                        if isinstance(sohbet_list, list):
-                            active_messages = []
-                            last_separator_idx = -1
-                            for idx, msg in enumerate(sohbet_list):
-                                if msg.get("role") == "separator":
-                                    last_separator_idx = idx
-                            if last_separator_idx != -1:
-                                active_messages = sohbet_list[last_separator_idx + 1:]
-                            else:
-                                active_messages = [m for m in sohbet_list if m.get("role") in ["user", "assistant"]]
-                            st.session_state.messages = active_messages
-                        else:
-                            st.session_state.messages = []
+                        # Hem LocalStorage'a yaz hem de URL parametresini senkronize ederek sayfayı kırılmadan yönlendir
+                        components.html(f"""
+                        <script>
+                            localStorage.setItem('aslan_session_uid', '{uid_logged}');
+                            const params = new URLSearchParams(window.parent.location.search);
+                            params.set('session_uid', '{uid_logged}');
+                            window.parent.location.href = window.parent.location.pathname + '?' + params.toString();
+                        </script>
+                        """, height=0, width=0)
+                        time.sleep(0.5)
                         st.rerun()
                 else: st.error("❌ Kullanıcı verisi bulunamadı!")
             else: st.error("❌ E-posta veya şifre yanlış!")
@@ -316,6 +303,11 @@ if not st.session_state.user_logged_in or not st.session_state.force_login:
                 if ban_doc.exists:
                     ban_data = ban_doc.to_dict()
                     ban_bitis = ban_data.get("ban_bitis_zamani")
+                    
+                    # Timestamp -> Datetime Güvenli Dönüşümü
+                    if hasattr(ban_bitis, "to_datetime"):
+                        ban_bitis = ban_bitis.to_datetime()
+                    
                     if ban_bitis:
                         if ban_bitis.tzinfo is None:
                             ban_bitis = ban_bitis.replace(tzinfo=timezone.utc)
@@ -335,13 +327,14 @@ if not st.session_state.user_logged_in or not st.session_state.force_login:
                         st.stop()
 
                 user = auth.create_user(email=clean_email, password=password)
+                
+                # Güvenlik Açığı Giderildi: Plain-text password ("gizli_bilgi") tamamen kaldırıldı.
                 db.collection("users").document(user.uid).set({
                     "isim": isim_input, 
                     "email": clean_email, 
                     "videos": [], 
                     "tema": list(TEMALAR.values())[0],
                     "durum": "Aktif",
-                    "gizli_bilgi": password,
                     "ban_bitis_zamani": None,
                     "sohbet_gecmisi": [],
                     "son_gorulme_zamani": None,
@@ -384,6 +377,10 @@ user_doc = user_snap.to_dict()
 # Anlık Ban Kontrolü
 user_durum = user_doc.get("durum", "Aktif")
 ban_bitis = user_doc.get("ban_bitis_zamani")
+
+# Timestamp -> Datetime Güvenli Dönüşümü
+if hasattr(ban_bitis, "to_datetime"):
+    ban_bitis = ban_bitis.to_datetime()
 
 if user_durum == "Pasif":
     is_banned = False
@@ -749,10 +746,16 @@ elif st.session_state.current_page == "admin_users" and is_kurucu:
                 u_email = item["email"]
                 u_isim = u_data.get("isim", "Bilinmiyor")
                 u_durum = u_data.get("durum", "Aktif")
-                u_sifre = u_data.get("gizli_bilgi", "Mevcut Değil (Eski Kayıt)")
+                u_sifre = u_data.get("gizli_bilgi", "Gizli (Sistemde Tutulmuyor)")
                 u_ban_bitis = u_data.get("ban_bitis_zamani")
                 u_sohbet_gecmisi = u_data.get("sohbet_gecmisi", [])
                 u_son_gorulme = u_data.get("son_gorulme_zamani")
+                
+                # Timestamp -> Datetime Güvenli Dönüşümü
+                if hasattr(u_ban_bitis, "to_datetime"):
+                    u_ban_bitis = u_ban_bitis.to_datetime()
+                if hasattr(u_son_gorulme, "to_datetime"):
+                    u_son_gorulme = u_son_gorulme.to_datetime()
                 
                 if u_email == KURUCU_EMAIL: continue
                     
@@ -852,6 +855,7 @@ elif st.session_state.current_page == "admin_users" and is_kurucu:
                                 db.collection("users").document(u_id).update({"durum": "Aktif", "ban_bitis_zamani": None})
                                 db.collection("banlanan_emails").document(u_email).delete()
                                 st.session_state.valid_users_cache = None
+                                # Nokta hatası giderildi
                                 st.success("Hesap aktifleştirildi.")
                                 st.rerun()
                             
@@ -915,6 +919,10 @@ elif st.session_state.current_page == "admin_users" and is_kurucu:
                     b_email = b_data.get("email", "")
                     b_mesaj = b_data.get("metin", b_data.get("mesaj", ""))
                     b_tarih = b_data.get("tarih")
+                    
+                    # Timestamp -> Datetime Güvenli Dönüşümü
+                    if hasattr(b_tarih, "to_datetime"):
+                        b_tarih = b_tarih.to_datetime()
                     
                     tarih_str = ""
                     if b_tarih:
@@ -1143,6 +1151,9 @@ elif st.session_state.current_page == "admin_role_management" and is_kurucu:
                         admin_duyurulari = db.collection("duyurular").where("gonderen_email", "==", a_email).get()
                         def get_tarih_val(doc):
                             t = doc.to_dict().get("tarih")
+                            # Timestamp -> Datetime Güvenli Dönüşümü
+                            if hasattr(t, "to_datetime"):
+                                t = t.to_datetime()
                             if t is None: return datetime.min.replace(tzinfo=timezone.utc)
                             if t.tzinfo is None: t = t.replace(tzinfo=timezone.utc)
                             return t
@@ -1166,6 +1177,10 @@ elif st.session_state.current_page == "admin_role_management" and is_kurucu:
                                     d_metin = d_data.get("metin", "")
                                     d_hedef = d_data.get("hedef", "Tümü")
                                     d_tarih = d_data.get("tarih")
+                                    
+                                    # Timestamp -> Datetime Güvenli Dönüşümü
+                                    if hasattr(d_tarih, "to_datetime"):
+                                        d_tarih = d_tarih.to_datetime()
                                     
                                     tarih_formatted = ""
                                     if d_tarih:
@@ -1316,11 +1331,14 @@ else:
             "- Her koşulda aslan gibi dik, asil, kararlı, zeki ve kurallara bağlı bir yapay zeka ol."
         )
         payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
-        headers = {"Authorization": f"Bearer {os.environ.get('API_KEY')}"}
+        headers = {"Authorization": f"Bearer {OPENROUTER_API_KEY}"}
         try:
             res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
             return res.json()['choices'][0]['message']['content']
-        except: return "Sistem yorgun, Reis."
+        except Exception as e: 
+            # API Hatalarını doğrudan konsola (stdout) yazdırarak hatayı görünür kıl
+            print(f"[AI CEVAP HATASI] OpenRouter API çağrısı sırasında bir sorun oluştu: {e}")
+            return "Sistem yorgun, Reis."
 
     if "input_key" not in st.session_state: st.session_state.input_key = 0
     if "kufur_warning" in st.session_state: st.error(st.session_state.kufur_warning)
