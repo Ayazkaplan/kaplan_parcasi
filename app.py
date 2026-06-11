@@ -68,16 +68,16 @@ def get_video_iframe(video_id):
     return f'''<iframe width="100%" height="150" src="https://www.youtube.com/embed/{video_id}?autoplay=0&mute=0" 
     frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'''
 
-# Dinamik İsim Stili Oluşturucu
+# Dinamik İsim Stili Oluşturucu (Yüksek öncelikli !important tanımlamaları ile renk çakışmasını çözer)
 def get_styled_user_name(u_name, u_color, u_glow, u_tag, u_rozet):
     color_val = u_color if u_color else "#FFFFFF"
     
     # Güçlü neon gölge efekti (İstek üzerine güncellenen 3 aşamalı neon)
-    glow_css = f"text-shadow: 0 0 10px {color_val}, 0 0 20px {color_val}, 0 0 30px {color_val};" if u_glow else ""
+    glow_css = f"text-shadow: 0 0 10px {color_val}, 0 0 20px {color_val}, 0 0 30px {color_val} !important;" if u_glow else ""
     
     # Sıralama: [TAG] [İSİM] [ROZET]
-    tag_html = f'<span class="tag" style="color: {color_val}; font-weight: bold; {glow_css} font-size: 0.8rem; background-color: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px; margin-right: 5px;">[{u_tag}]</span>' if u_tag else ""
-    isim_html = f'<span class="isim" style="color: {color_val}; font-weight: bold; {glow_css}">{u_name}</span>'
+    tag_html = f'<span class="tag" style="color: {color_val} !important; font-weight: bold; {glow_css} font-size: 0.8rem; background-color: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px; margin-right: 5px;">[{u_tag}]</span>' if u_tag else ""
+    isim_html = f'<span class="isim" style="color: {color_val} !important; font-weight: bold; {glow_css}">{u_name}</span>'
     rozet_html = f'<span class="rozet" style="margin-left: 5px;">{u_rozet}</span>' if u_rozet else ""
     
     parts = []
@@ -219,7 +219,7 @@ if not st.session_state.user_logged_in or not st.session_state.force_login:
                                 else:
                                     st.error(f"❌ Hesabınız pasifleştirilmiştir. Kalan süre: {kalan_dakika} dakika")
                             else:
-                                # Süre dolmuşsa banı otomatik kaldır ve girişe izin ver
+                                # Süre dolmuşsa banı otomatik kaldır og girişe izin ver
                                 db.collection("users").document(query[0].id).update({
                                     "durum": "Aktif",
                                     "ban_bitis_zamani": None
@@ -420,7 +420,7 @@ if st.session_state.current_page == "admin_announcement" and not (is_kurucu or i
     st.session_state.current_page = "chat"
     st.rerun()
 
-# --- CSS TEMA ENJEKSİYONU (Koyu Temalardaki Görünmezlik/Okunabilirlik Sorununu Çözen CSS) ---
+# --- CSS TEMA ENJEKSİYONU (Koyu Temalardaki Renk Ezilme / Görünmezlik Sorununu Çözen CSS) ---
 st.markdown(f"""
     <style>
         /* Arka plan ve ana gövde giydirme */
@@ -440,7 +440,8 @@ st.markdown(f"""
         }}
         
         /* KOYU TEMALARDA METİN OKUNABİLİRLİĞİ (GÖRÜNMEZLİK) SORUNUNU GİDEREN KURALLAR */
-        h1, h2, h3, h4, h5, h6, p, span, label, li, .stMarkdown, .stSubheader, .stText {{
+        /* Dinamik isimleri ve span etiketlerini ezmemesi için span seçicisi kaldırılmıştır */
+        h1, h2, h3, h4, h5, h6, p, label, li, .stSubheader, .stText {{
             color: #F8F9FA !important;
         }}
         
@@ -1076,8 +1077,18 @@ elif st.session_state.current_page == "admin_announcement" and (is_kurucu or is_
                     for u_doc_item in all_users_snap:
                         u_data = u_doc_item.to_dict()
                         u_email_clean = u_data.get("email", "").strip().lower()
-                        # Gönderim yapan alt yöneticiyi veya kurucuyu listeden hariç tut
-                        if u_email_clean not in [KURUCU_EMAIL, sender_email]:
+                        
+                        # --- YÖNETİCİNİN ATTIĞI DUYURULARIN KURUCUYA GİTMESİ HATASI DÜZELTİLDİ ---
+                        # Eğer gönderen kurucu ise kurucuya gitmez, ancak alt yönetici ise kurucuya da iletilir.
+                        should_send = False
+                        if sender_email == KURUCU_EMAIL:
+                            if u_email_clean != KURUCU_EMAIL:
+                                should_send = True
+                        else:
+                            if u_email_clean != sender_email:
+                                should_send = True
+                                
+                        if should_send:
                             batch.update(u_doc_item.reference, {
                                 "okunmamis_duyurular": firestore.ArrayUnion([pushed_announcement])
                             })
@@ -1088,7 +1099,7 @@ elif st.session_state.current_page == "admin_announcement" and (is_kurucu or is_
                                 count = 0
                     if count > 0:
                         batch.commit()
-                    st.success("📣 Duyuru tüm kullanıcılara başarıyla yayınlandı!")
+                    st.success("📣 Duyuru başarıyla yayınlandı!")
                 else:
                     target_found = False
                     for u_doc_item in all_users_snap:
@@ -1247,6 +1258,17 @@ elif st.session_state.current_page == "admin_role_management" and is_kurucu:
                         sorted_duyurular = sorted(admin_duyurulari, key=get_tarih_val, reverse=True)
                         
                         with st.expander("📋 Yapılan Duyuru Geçmişi"):
+                            # --- 4. YÖNETİCİ DUYURU GEÇMİŞİ TEMİZLEME BUTONU (Sadece Kurucu Tetikleyebilir) ---
+                            if is_kurucu and sorted_duyurular:
+                                if st.button("🗑️ Duyuru Geçmişini Temizle", key=f"clear_ann_log_{a_id}", type="primary", use_container_width=True):
+                                    batch_del = db.batch()
+                                    for d_doc in sorted_duyurular:
+                                        batch_del.delete(d_doc.reference)
+                                    batch_del.commit()
+                                    st.success(f"✅ {a_name} adlı yöneticinin duyuru geçmişi başarıyla temizlendi!")
+                                    time.sleep(1)
+                                    st.rerun()
+                                    
                             if sorted_duyurular:
                                 for d_doc in sorted_duyurular:
                                     d_data = d_doc.to_dict()
@@ -1275,24 +1297,33 @@ elif st.session_state.current_page == "admin_role_management" and is_kurucu:
         st.error(f"Yöneticiler yüklenirken hata oluştu: {e}")
 
 else:
-    # --- KULLANICI EKRANINDA DUYURU GÖSTERİMİ VE SİLİNMESİ (Dondurmayan, Kilitlenmeyen ve Gec Butonu İçeren Yeni Asenkron Akış) ---
+    # --- KULLANICI EKRANINDA DUYURU GÖSTERİMİ VE SİLİNMESİ (Asenkron, Kilitlenmeyen ve Gec Butonu İçeren Yeni Çözüm) ---
     if st.session_state.current_page == "chat":
         okunmamis = user_doc.get("okunmamis_duyurular", [])
         if isinstance(okunmamis, list) and okunmamis:
             duyuru_obj = okunmamis[0]
             d_metin = duyuru_obj.get("metin", "")
             
-            # Dinamik asenkron duyuru alanı (Gereksiz sleep döngülerinden arındırılmıştır)
+            # --- 1. DUYURU GÖNDEREN İSMİNİN STATİK KALMASI HATASI DÜZELTİLDİ ---
+            # Gönderenin email durumuna göre dinamik başlık atama
+            sender_email = duyuru_obj.get("gonderen_email", "")
+            sender_name = duyuru_obj.get("gonderen_isim", "Sistem Yöneticisi")
+            
+            if sender_email.strip().lower() == KURUCU_EMAIL.strip().lower():
+                display_sender = "AyazREİS_DEV 🛠️"
+            else:
+                display_sender = f"{sender_name} [Yönetici] 🛡️"
+            
             st.markdown(f"""
             <div style="background-color: rgba(255, 0, 0, 0.15); border-left: 5px solid red; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 0 0 10px rgba(255, 0, 0, 0.4);">
                 <strong style="color: #ff3333; text-shadow: 0 0 8px rgba(255, 51, 51, 0.8); font-size: 1.15rem;">
-                    AyazREİS_DEV 🛠️:
+                    {display_sender}:
                 </strong> 
                 <span style="color: white; font-size: 1.1rem; margin-left: 5px; line-height: 1.4;">{d_metin}</span>
             </div>
             """, unsafe_allow_html=True)
             
-            # "Geç ➡️" Butonuna basıldığı an duyuru silinir ve sayfa anında tazeleyerek sonraki adıma geçer
+            # "Geç ➡️" Butonuna basıldığı an duyuru silinir ve dondurucu sleep döngüsüne girmeden anında rerun edilir.
             if st.button("Geç ➡️", key=f"skip_btn_{duyuru_obj.get('id')}", use_container_width=True):
                 user_ref.update({
                     "okunmamis_duyurular": firestore.ArrayRemove([duyuru_obj])
@@ -1339,17 +1370,17 @@ else:
         
         # --- YAPAY ZEKAYA ROLLERİ VE HITAP ŞEKİLLERİNİ DİNAMİK ÖĞRETEN SİSTEM MESAJI ---
         if is_kurucu:
-            rol_tanimi = "Sistem Sahibi ve Kurucusu (Ayaz Kaplan)"
-            hitap_tarzi = "Kurucum, Reis, Kurucum Ayaz Kaplan"
-            uslub = "Sonsuz sadakat, saygı, hürmet ve bağlılık dolu, 'Kurucum' ve 'Reis' hitaplarının her fırsatta kullanıldığı asil bir üslup."
+            rol_tanimi = "Kurucu ve Sistem Sahibi (Ayaz Kaplan)"
+            hitap_tarzi = "Kurucum, Reis, Kurucum Ayaz, Reis Ayaz Kaplan"
+            uslub = "Sonsuz sadakat, saygı, hürmet ve bağlılık içeren, 'Kurucum' ve 'Reis' hitaplarının sıklıkla kullanıldığı asil bir üslup."
         elif is_admin_user_fresh:
             rol_tanimi = "Sistem Yöneticisi (is_admin: True olan alt yetkili yönetici)"
             hitap_tarzi = "Yöneticim, Sayın Yöneticim veya Yöneticim [Kullanıcı İsmi]"
-            uslub = "Profesyonel, rütbeye saygılı, resmi, görev bilincini hissettiren ve 'Yöneticim' hitabını benimseyen asil bir üslup."
+            uslub = "Profesyonel, rütbeye ve hiyerarşiye son derece saygılı, resmi, 'Yöneticim' hitabını tam benimseyen asil bir üslup."
         else:
             rol_tanimi = "Normal Sistem Kullanıcısı"
             hitap_tarzi = f"Doğrudan ismiyle ({current_name}), Reis veya Dostum"
-            uslub = "Samimi, aslan gibi dik duruşlu, sıcak, yardımsever ama aşırı resmiyet veya rütbeli hitaplar içermeyen saygın bir üslup."
+            uslub = "Samimi, aslan gibi dik duruşlu, sıcak, yardımsever ama aşırı resmiyet veya kurucu/yöneticiye duyulan rütbeli hitapları içermeyen saygın bir üslup."
             
         tag_tanimi = f"Tagı: [{user_tag_fresh}]" if user_tag_fresh else "Tagı: Bulunmuyor"
         rozet_tanimi = f"Rozeti: [{user_rozet_fresh}]" if user_rozet_fresh else "Rozeti: Bulunmuyor"
