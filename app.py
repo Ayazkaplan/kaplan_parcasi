@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import requests
 import os
 import json
@@ -104,7 +105,7 @@ def firebase_login(email, password):
         print(f"[FIREBASE LOGIN REST API HATASI] Giriş isteği gönderilirken hata oluştu: {e}")
         return None
 
-# --- OTURUM YÖNETİMİ (SERVER-SIDE MIMARI) ---
+# --- OTURUM YÖNETİMİ & LOCALSTORAGE KALICILIĞI (KUSURSUZ YÖNTEM) ---
 if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = False
 if "user_data" not in st.session_state: st.session_state.user_data = None
 if "messages" not in st.session_state: st.session_state.messages = []
@@ -112,64 +113,114 @@ if "tema" not in st.session_state: st.session_state.tema = list(TEMALAR.values()
 if "valid_users_cache" not in st.session_state: st.session_state.valid_users_cache = None
 if "current_page" not in st.session_state: st.session_state.current_page = "chat"
 if "force_login" not in st.session_state: st.session_state.force_login = False
+if "storage_checked" not in st.session_state: st.session_state.storage_checked = False
 
 def logout_user():
-    st.session_state.force_login = False
-    st.session_state.user_logged_in = False
-    st.session_state.user_data = None
-    st.session_state.messages = []
-    # Çıkış yapıldığında URL parametresini temizle ve sayfayı yenile
-    st.query_params.clear()
-    st.rerun()
+    st.session_state.clear()
+    # Çıkış yapıldığında JS ile LocalStorage temizlenip, tam sayfa yenilemesi (Hard Redirect) tetiklenir
+    components.html("""
+    <script>
+        localStorage.removeItem('aslan_uid');
+        const params = new URLSearchParams(window.parent.location.search);
+        params.delete('session_uid');
+        params.set('checked', 'true');
+        window.parent.location.search = params.toString();
+    </script>
+    """, height=0, width=0)
+    st.stop() # JS işini yapana kadar Python kodunu dondur (Çakışma Önleyici)
 
-# --- OTURUM KONTROLÜ VE DOĞRULAMA (SPINNER ILE) ---
+def trigger_invalid_session():
+    # Geçersiz/Banlı/Silinmiş bir session algılanırsa belleği temizleyip Giriş ekranına şutlayan fonksiyon
+    components.html("""
+    <script>
+        localStorage.removeItem('aslan_uid');
+        const params = new URLSearchParams(window.parent.location.search);
+        params.delete('session_uid');
+        params.set('checked', 'true');
+        window.parent.location.search = params.toString();
+    </script>
+    """, height=0, width=0)
+    st.stop()
+
+# Tarayıcı URL'sindeki "checked" (kontrol edildi) bayrağını yakala ve temizle
+if "checked" in st.query_params:
+    st.session_state.storage_checked = True
+    try: del st.query_params["checked"]
+    except Exception: pass
+
+# ADIM 1: SİTEYE İLK GİRİŞ VEYA KAPATIP AÇMA DURUMU (Kalıcı Oturum Yakalayıcı)
+if not st.session_state.user_logged_in and "session_uid" not in st.query_params and not st.session_state.storage_checked:
+    # Sayfa temiz açıldıysa estetik bir bekleme animasyonu göster ve JS ile LocalStorage kontrolü yap
+    st.markdown("""
+    <div style="display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column; background: #0f2027; position:fixed; top:0; left:0; width:100%; z-index:9999;">
+        <div style="width: 70px; height: 70px; border: 6px solid rgba(255,255,255,0.1); border-top: 6px solid #f39c12; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <h3 style="color: white; margin-top: 25px; font-family: sans-serif; font-weight: 600; text-shadow: 0 0 10px rgba(0,0,0,0.5);">Hesabına giriş yapılıyor...</h3>
+    </div>
+    <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+    """, unsafe_allow_html=True)
+    
+    components.html("""
+    <script>
+        const uid = localStorage.getItem('aslan_uid');
+        const params = new URLSearchParams(window.parent.location.search);
+        if (uid) {
+            params.set('session_uid', uid);
+        } else {
+            params.set('checked', 'true');
+        }
+        window.parent.location.search = params.toString();
+    </script>
+    """, height=0, width=0)
+    st.stop() # JS yönlendirmesini beklerken Python çalışmasını durdur, böylece ekran arkada kaymaz
+
+# ADIM 2: URL'DE SESSİON_UİD YAKALANDI (Firestore'dan Doğrula ve İçeri Al)
 if "session_uid" in st.query_params and not st.session_state.user_logged_in:
-    with st.spinner("Oturum doğrulanıyor..."):
-        stored_uid = st.query_params["session_uid"]
-        try:
-            user_ref_temp = db.collection("users").document(stored_uid)
-            user_snap = user_ref_temp.get()
-            if user_snap.exists:
-                user_data = user_snap.to_dict()
-                user_durum = user_data.get("durum", "Aktif")
-                ban_bitis = user_data.get("ban_bitis_zamani")
+    stored_uid = st.query_params["session_uid"]
+    try:
+        user_ref_temp = db.collection("users").document(stored_uid)
+        user_snap = user_ref_temp.get()
+        if user_snap.exists:
+            user_data = user_snap.to_dict()
+            user_durum = user_data.get("durum", "Aktif")
+            ban_bitis = user_data.get("ban_bitis_zamani")
 
-                # Timestamp -> Datetime Güvenli Dönüşümü
-                if hasattr(ban_bitis, "to_datetime"):
-                    ban_bitis = ban_bitis.to_datetime()
-                
-                is_banned = False
-                if user_durum == "Pasif":
-                    if ban_bitis:
-                        if ban_bitis.tzinfo is None: ban_bitis = ban_bitis.replace(tzinfo=timezone.utc)
-                        if datetime.now(timezone.utc) < ban_bitis: is_banned = True
-                    else:
-                        is_banned = True
-                
-                if not is_banned:
-                    user_ref_temp.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
-                    st.session_state.user_data = {**user_data, "uid": stored_uid}
-                    st.session_state.user_logged_in = True
-                    st.session_state.force_login = True
-                    st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
-                    
-                    sohbet_list = user_data.get("sohbet_gecmisi", [])
-                    if isinstance(sohbet_list, list):
-                        active_messages = []
-                        last_separator_idx = -1
-                        for idx, msg in enumerate(sohbet_list):
-                            if msg.get("role") == "separator": last_separator_idx = idx
-                        if last_separator_idx != -1: active_messages = sohbet_list[last_separator_idx + 1:]
-                        else: active_messages = [m for m in sohbet_list if m.get("role") in ["user", "assistant"]]
-                        st.session_state.messages = active_messages
-                    else:
-                        st.session_state.messages = []
+            if hasattr(ban_bitis, "to_datetime"):
+                ban_bitis = ban_bitis.to_datetime()
+            
+            is_banned = False
+            if user_durum == "Pasif":
+                if ban_bitis:
+                    if ban_bitis.tzinfo is None: ban_bitis = ban_bitis.replace(tzinfo=timezone.utc)
+                    if datetime.now(timezone.utc) < ban_bitis: is_banned = True
                 else:
-                    st.query_params.clear()
+                    is_banned = True
+            
+            if not is_banned:
+                # Kullanıcı aktif ve temiz, sisteme sorunsuz giriş izni veriliyor
+                user_ref_temp.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
+                st.session_state.user_data = {**user_data, "uid": stored_uid}
+                st.session_state.user_logged_in = True
+                st.session_state.force_login = True
+                st.session_state.storage_checked = True
+                st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
+                
+                sohbet_list = user_data.get("sohbet_gecmisi", [])
+                if isinstance(sohbet_list, list):
+                    active_messages = []
+                    last_separator_idx = -1
+                    for idx, msg in enumerate(sohbet_list):
+                        if msg.get("role") == "separator": last_separator_idx = idx
+                    if last_separator_idx != -1: active_messages = sohbet_list[last_separator_idx + 1:]
+                    else: active_messages = [m for m in sohbet_list if m.get("role") in ["user", "assistant"]]
+                    st.session_state.messages = active_messages
+                else:
+                    st.session_state.messages = []
             else:
-                st.query_params.clear()
-        except Exception:
-            st.query_params.clear()
+                trigger_invalid_session()
+        else:
+            trigger_invalid_session()
+    except Exception:
+        trigger_invalid_session()
 
 # --- GİRİŞ VE KAYIT EKRANI ---
 if not st.session_state.user_logged_in or not st.session_state.force_login:
@@ -231,9 +282,17 @@ if not st.session_state.user_logged_in or not st.session_state.force_login:
                         st.session_state.force_login = True
                         st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
                         
-                        # SUNUCU TARAFLI URL SENKRONİZASYONU VE YÖNLENDİRME
-                        st.query_params["session_uid"] = uid_logged
-                        st.rerun()
+                        # BAŞARILI GİRİŞ: LocalStorage'a kaydet ve URL'i manipüle ederek temiz bir şekilde ana sayfaya hard-reload at
+                        components.html(f"""
+                        <script>
+                            localStorage.setItem('aslan_uid', '{uid_logged}');
+                            const params = new URLSearchParams(window.parent.location.search);
+                            params.set('session_uid', '{uid_logged}');
+                            params.delete('checked');
+                            window.parent.location.search = params.toString();
+                        </script>
+                        """, height=0, width=0)
+                        st.stop()
                 else:
                     st.error("❌ Kullanıcı verisi bulunamadı!")
             else:
@@ -250,6 +309,7 @@ if not st.session_state.user_logged_in or not st.session_state.force_login:
                     ban_data = ban_doc.to_dict()
                     ban_bitis = ban_data.get("ban_bitis_zamani")
 
+                    # Timestamp -> Datetime Güvenli Dönüşümü
                     if hasattr(ban_bitis, "to_datetime"):
                         ban_bitis = ban_bitis.to_datetime()
                     
