@@ -7,7 +7,7 @@ import firebase_admin
 from firebase_admin import credentials, auth, firestore
 import re
 from datetime import datetime, timezone, timedelta
-import time  # NAMEERROR HATASI ÇÖZÜMÜ: Time kütüphanesi geri eklendi!
+import time  # NAMEERROR HATASI ÇÖZÜMÜ: Time kütüphanesi eklendi
 import unicodedata
 
 # --- SAYFA AYARLARI (Tüm Streamlit komutlarından önce ilk sırada olmalıdır) ---
@@ -105,104 +105,56 @@ def firebase_login(email, password):
         print(f"[FIREBASE LOGIN REST API HATASI] Giriş isteği gönderilirken hata oluştu: {e}")
         return None
 
-# --- OTURUM YÖNETİMİ & TOKEN KALICILIĞI ---
+# --- OTURUM YÖNETİMİ & SESSİZ TOKEN KALICILIĞI (KUSURSUZ MİMARİ) ---
 if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = False
 if "user_data" not in st.session_state: st.session_state.user_data = None
 if "messages" not in st.session_state: st.session_state.messages = []
 if "tema" not in st.session_state: st.session_state.tema = list(TEMALAR.values())[0]
 if "valid_users_cache" not in st.session_state: st.session_state.valid_users_cache = None
 if "current_page" not in st.session_state: st.session_state.current_page = "chat"
-if "force_login" not in st.session_state: st.session_state.force_login = False
-if "storage_checked" not in st.session_state: st.session_state.storage_checked = False
 
+# JavaScript'in Streamlit ile haberleşmesi için durum bayrakları
+if "js_trigger" not in st.session_state: st.session_state.js_trigger = None
+if "js_uid" not in st.session_state: st.session_state.js_uid = None
+
+# Güvenli Çıkış (Logout) Fonksiyonu
 def logout_user():
-    for key in list(st.session_state.keys()):
-        if key != "tema":
-            del st.session_state[key]
-            
-    components.html("""
-    <script>
-        try { localStorage.removeItem('userToken'); } catch(e) {}
-    </script>
-    """, height=0, width=0)
-    
+    st.session_state.user_logged_in = False
+    st.session_state.user_data = None
     st.query_params.clear()
-    st.query_params["checked"] = "true"
-    time.sleep(0.5)
+    st.session_state.js_trigger = "logout" # JS'nin LocalStorage'ı temizlemesi için emir veriyoruz
     st.rerun()
 
+# Geçersiz Token / Banlanmış Kullanıcı Fonksiyonu
 def trigger_invalid_session():
-    for key in list(st.session_state.keys()):
-        if key != "tema":
-            del st.session_state[key]
-            
-    components.html("""
-    <script>
-        try { localStorage.removeItem('userToken'); } catch(e) {}
-    </script>
-    """, height=0, width=0)
-    
+    st.session_state.user_logged_in = False
+    st.session_state.user_data = None
     st.query_params.clear()
-    st.query_params["checked"] = "true"
-    time.sleep(0.5)
+    st.session_state.js_trigger = "logout"
     st.rerun()
 
-# Tarayıcı URL'sindeki "checked" (kontrol edildi) bayrağını yakala ve temizle
-if "checked" in st.query_params:
-    st.session_state.storage_checked = True
-    try: del st.query_params["checked"]
-    except Exception: pass
-
-# --- ADIM 1: SİTEYE İLK GİRİŞ VEYA KAPATIP AÇMA (KALICI OTURUM KONTROLÜ) ---
-if not st.session_state.user_logged_in and "session_uid" not in st.query_params and not st.session_state.storage_checked:
-    # Kullanıcıyı karşılayan güvenli yükleme ekranı
-    st.markdown("""
-    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #0f2027; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999999;">
-        <div style="width: 60px; height: 60px; border: 5px solid rgba(255, 255, 255, 0.1); border-top: 5px solid #f39c12; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        <h3 style="color: white; font-family: sans-serif; margin-top: 25px;">Hesabına giriş yapılıyor...</h3>
-    </div>
-    <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
-    """, unsafe_allow_html=True)
-    
-    # Mobil tarayıcı iframe bypass yöntemi (Gizli Link Click)
-    components.html("""
+# --- JAVASCRIPT GÖREV YÖNETİCİSİ (Arka planda sessizce çalışır) ---
+if st.session_state.js_trigger == "login":
+    # Giriş yapıldığında Token'i cihaza kaydeder
+    uid_to_save = st.session_state.js_uid
+    components.html(f"""
     <script>
-        setTimeout(function() {
-            try {
-                var token = localStorage.getItem('userToken');
-                var dest = token ? '?session_uid=' + token : '?checked=true';
-                
-                try {
-                    window.parent.location.replace(dest);
-                } catch(err1) {
-                    var link = document.createElement('a');
-                    link.href = dest;
-                    link.target = '_parent';
-                    document.body.appendChild(link);
-                    link.click();
-                }
-            } catch(err2) {
-                var fallbackLink = document.createElement('a');
-                fallbackLink.href = '?checked=true';
-                fallbackLink.target = '_parent';
-                document.body.appendChild(fallbackLink);
-                fallbackLink.click();
-            }
-        }, 300);
+        localStorage.setItem('aslan_user_token', '{uid_to_save}');
     </script>
     """, height=0, width=0)
-    
-    # JavaScript'in tamamen kilitlendiği (örn: Gizli sekme) durumlar için can simidi bekleme süresi
-    time.sleep(2.5) 
-    st.markdown("<br><br><br><br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button("🚀 Manuel Devam Et (Ekran Takılırsa Tıkla)", use_container_width=True):
-            st.session_state.storage_checked = True
-            st.rerun()
-    st.stop()
+    st.session_state.js_trigger = None
+    st.session_state.js_uid = None
 
-# --- ADIM 2: URL'DE TOKEN YAKALANDI (Firestore'dan Doğrula ve İçeri Al) ---
+elif st.session_state.js_trigger == "logout":
+    # Çıkış yapıldığında cihazdaki Token'i siler
+    components.html("""
+    <script>
+        localStorage.removeItem('aslan_user_token');
+    </script>
+    """, height=0, width=0)
+    st.session_state.js_trigger = None
+
+# --- ADIM 1: URL'DE TOKEN VAR MI KONTROLÜ (Doğrulama ve İçeri Alma) ---
 if "session_uid" in st.query_params and not st.session_state.user_logged_in:
     stored_uid = st.query_params["session_uid"]
     try:
@@ -225,11 +177,10 @@ if "session_uid" in st.query_params and not st.session_state.user_logged_in:
                     is_banned = True
             
             if not is_banned:
+                # Kullanıcı onaylandı, sisteme alınıyor
                 user_ref_temp.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
                 st.session_state.user_data = {**user_data, "uid": stored_uid}
                 st.session_state.user_logged_in = True
-                st.session_state.force_login = True
-                st.session_state.storage_checked = True
                 st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
                 
                 sohbet_list = user_data.get("sohbet_gecmisi", [])
@@ -251,7 +202,21 @@ if "session_uid" in st.query_params and not st.session_state.user_logged_in:
         trigger_invalid_session()
 
 # --- GİRİŞ VE KAYIT EKRANI ---
-if not st.session_state.user_logged_in or not st.session_state.force_login:
+if not st.session_state.user_logged_in:
+    # ADIM 2: SESSİZ OTOMATİK GİRİŞ (Siyah Ekransız Tarama)
+    # Kullanıcı giriş ekranını görür ama arka planda bu script token arar.
+    # Token bulursa sayfayı otomatik olarak ?session_uid=TOKEN ile yeniler.
+    # Tarayıcı bloke ederse hiçbir şey olmaz, kullanıcı normalce giriş ekranını kullanmaya devam eder.
+    if "session_uid" not in st.query_params:
+        components.html("""
+        <script>
+            var token = localStorage.getItem('aslan_user_token');
+            if (token && window.parent.location.search.indexOf('session_uid') === -1) {
+                window.parent.location.search = '?session_uid=' + token;
+            }
+        </script>
+        """, height=0, width=0)
+
     st.title("🦁 Aslan Parçası V16.4")
 
     if "ban_error_on_logout" in st.session_state:
@@ -301,24 +266,14 @@ if not st.session_state.user_logged_in or not st.session_state.force_login:
                             st.error("❌ Hesabınız pasifleştirilmiştir. Giriş yapamazsınız!")
                     
                     if not is_banned:
-                        db.collection("users").document(query[0].id).update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
                         uid_logged = auth_res['localId']
+                        db.collection("users").document(query[0].id).update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
                         
-                        # --- TOKEN KAYDETME VE SİSTEME GİRİŞ (Tamamen Streamlit Senkronizasyonlu) ---
-                        components.html(f"""
-                        <script>
-                            try {{ localStorage.setItem('userToken', '{uid_logged}'); }} catch(e) {{}}
-                        </script>
-                        """, height=0, width=0)
-                        
-                        st.query_params["session_uid"] = uid_logged
-                        st.session_state.user_data = {**user_data, "uid": uid_logged}
-                        st.session_state.user_logged_in = True
-                        st.session_state.force_login = True
-                        st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
-                        
-                        time.sleep(0.5) # JS'nin storage'a yazmasına minik bir fırsat tanı
-                        st.rerun()
+                        # --- BAŞARILI GİRİŞ ROTASI ---
+                        st.query_params["session_uid"] = uid_logged # Streamlit'e tokeni ver
+                        st.session_state.js_trigger = "login"       # JS'ye cihaza kaydetme emri ver
+                        st.session_state.js_uid = uid_logged
+                        st.rerun() # Sayfayı anında ana ekrana geçir
                 else:
                     st.error("❌ Kullanıcı verisi bulunamadı!")
             else:
