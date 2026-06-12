@@ -7,6 +7,7 @@ import firebase_admin
 from firebase_admin import credentials, auth, firestore
 import re
 from datetime import datetime, timezone, timedelta
+import time  # NAMEERROR HATASI ÇÖZÜMÜ: Time kütüphanesi geri eklendi!
 import unicodedata
 
 # --- SAYFA AYARLARI (Tüm Streamlit komutlarından önce ilk sırada olmalıdır) ---
@@ -104,7 +105,7 @@ def firebase_login(email, password):
         print(f"[FIREBASE LOGIN REST API HATASI] Giriş isteği gönderilirken hata oluştu: {e}")
         return None
 
-# --- OTURUM YÖNETİMİ & TOKEN KALICILIĞI (KUSURSUZ MİMARİ) ---
+# --- OTURUM YÖNETİMİ & TOKEN KALICILIĞI ---
 if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = False
 if "user_data" not in st.session_state: st.session_state.user_data = None
 if "messages" not in st.session_state: st.session_state.messages = []
@@ -115,17 +116,35 @@ if "force_login" not in st.session_state: st.session_state.force_login = False
 if "storage_checked" not in st.session_state: st.session_state.storage_checked = False
 
 def logout_user():
-    # Çıkış işlemi doğrudan tetiklendiğinde bir state bayrağı ayarlanır ve ekran baştan yüklenir.
     for key in list(st.session_state.keys()):
         if key != "tema":
             del st.session_state[key]
-    st.session_state.pending_logout = True
+            
+    components.html("""
+    <script>
+        try { localStorage.removeItem('userToken'); } catch(e) {}
+    </script>
+    """, height=0, width=0)
+    
+    st.query_params.clear()
+    st.query_params["checked"] = "true"
+    time.sleep(0.5)
     st.rerun()
 
 def trigger_invalid_session():
     for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    st.session_state.pending_logout = True
+        if key != "tema":
+            del st.session_state[key]
+            
+    components.html("""
+    <script>
+        try { localStorage.removeItem('userToken'); } catch(e) {}
+    </script>
+    """, height=0, width=0)
+    
+    st.query_params.clear()
+    st.query_params["checked"] = "true"
+    time.sleep(0.5)
     st.rerun()
 
 # Tarayıcı URL'sindeki "checked" (kontrol edildi) bayrağını yakala ve temizle
@@ -134,79 +153,54 @@ if "checked" in st.query_params:
     try: del st.query_params["checked"]
     except Exception: pass
 
-# --- ÇIKIŞ YAPMA İŞLEMİ (LOGOUT TOKEN TEMİZLİĞİ) ---
-if st.session_state.get("pending_logout", False):
-    st.markdown("<h3 style='text-align:center; color:white; margin-top:20vh;'>Çıkış yapılıyor...</h3>", unsafe_allow_html=True)
-    components.html("""
-    <script>
-        setTimeout(function() {
-            try {
-                localStorage.removeItem('userToken');
-                window.parent.location.href = window.parent.location.pathname + '?checked=true';
-            } catch(e) {}
-        }, 100);
-    </script>
-    """, height=0, width=0)
-    st.write("")
-    c1, c2, c3 = st.columns([1, 2, 1])
-    with c2:
-        if st.button("🚀 Devam Et (Ekran Takılırsa Tıkla)", use_container_width=True):
-            st.session_state.clear()
-            st.session_state.storage_checked = True
-            st.query_params.clear()
-            st.rerun()
-    st.stop()
-
-# --- GİRİŞ YAPMA İŞLEMİ (LOGIN TOKEN KAYDI) ---
-if "pending_redirect" in st.session_state:
-    uid = st.session_state.pending_redirect
-    st.markdown("<h3 style='text-align:center; color:white; margin-top:20vh;'>✅ Giriş Başarılı! Sisteme Aktarılıyorsunuz...</h3>", unsafe_allow_html=True)
-    components.html(f"""
-    <script>
-        setTimeout(function() {{
-            try {{
-                localStorage.setItem('userToken', '{uid}');
-                window.parent.location.href = window.parent.location.pathname + '?session_uid={uid}';
-            }} catch(e) {{}}
-        }}, 100);
-    </script>
-    """, height=0, width=0)
-    st.write("")
-    c1, c2, c3 = st.columns([1, 2, 1])
-    with c2:
-        if st.button("🚀 Sohbete Geç (Otomatik Yönlenmezse Tıkla)", use_container_width=True):
-            del st.session_state.pending_redirect
-            st.query_params["session_uid"] = uid
-            st.rerun()
-    st.stop()
-
 # --- ADIM 1: SİTEYE İLK GİRİŞ VEYA KAPATIP AÇMA (KALICI OTURUM KONTROLÜ) ---
 if not st.session_state.user_logged_in and "session_uid" not in st.query_params and not st.session_state.storage_checked:
-    # Siyah ekranda kalmamak için kullanıcının görebileceği açık bir başlık ve manuel geçiş butonu eklendi.
-    st.markdown("<h2 style='text-align:center; color:white; margin-top:15vh;'>🦁 Aslan Parçası V16.4</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#ccc;'>Güvenli oturum kontrol ediliyor...</p>", unsafe_allow_html=True)
+    # Kullanıcıyı karşılayan güvenli yükleme ekranı
+    st.markdown("""
+    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #0f2027; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999999;">
+        <div style="width: 60px; height: 60px; border: 5px solid rgba(255, 255, 255, 0.1); border-top: 5px solid #f39c12; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <h3 style="color: white; font-family: sans-serif; margin-top: 25px;">Hesabına giriş yapılıyor...</h3>
+    </div>
+    <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+    """, unsafe_allow_html=True)
     
+    # Mobil tarayıcı iframe bypass yöntemi (Gizli Link Click)
     components.html("""
     <script>
         setTimeout(function() {
             try {
                 var token = localStorage.getItem('userToken');
                 var dest = token ? '?session_uid=' + token : '?checked=true';
-                window.parent.location.href = window.parent.location.pathname + dest;
-            } catch(e) {
-                // Tarayıcı iframe kısıtlaması nedeniyle JavaScript engellenirse, Python arayüzündeki buton devreye girer.
+                
+                try {
+                    window.parent.location.replace(dest);
+                } catch(err1) {
+                    var link = document.createElement('a');
+                    link.href = dest;
+                    link.target = '_parent';
+                    document.body.appendChild(link);
+                    link.click();
+                }
+            } catch(err2) {
+                var fallbackLink = document.createElement('a');
+                fallbackLink.href = '?checked=true';
+                fallbackLink.target = '_parent';
+                document.body.appendChild(fallbackLink);
+                fallbackLink.click();
             }
-        }, 100);
+        }, 300);
     </script>
     """, height=0, width=0)
     
-    st.write("")
+    # JavaScript'in tamamen kilitlendiği (örn: Gizli sekme) durumlar için can simidi bekleme süresi
+    time.sleep(2.5) 
+    st.markdown("<br><br><br><br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("🔑 Manuel Giriş Yap (Ekran Takılı Kalırsa Tıkla)", use_container_width=True):
+        if st.button("🚀 Manuel Devam Et (Ekran Takılırsa Tıkla)", use_container_width=True):
             st.session_state.storage_checked = True
             st.rerun()
-    st.stop() # Kullanıcıya siyah ekran çıkmaması için üstteki menü burada donar ve kullanıcıyı bekler
+    st.stop()
 
 # --- ADIM 2: URL'DE TOKEN YAKALANDI (Firestore'dan Doğrula ve İçeri Al) ---
 if "session_uid" in st.query_params and not st.session_state.user_logged_in:
@@ -231,7 +225,6 @@ if "session_uid" in st.query_params and not st.session_state.user_logged_in:
                     is_banned = True
             
             if not is_banned:
-                # Kullanıcı aktif ve temiz, sisteme sorunsuz giriş izni veriliyor
                 user_ref_temp.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
                 st.session_state.user_data = {**user_data, "uid": stored_uid}
                 st.session_state.user_logged_in = True
@@ -311,13 +304,20 @@ if not st.session_state.user_logged_in or not st.session_state.force_login:
                         db.collection("users").document(query[0].id).update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
                         uid_logged = auth_res['localId']
                         
+                        # --- TOKEN KAYDETME VE SİSTEME GİRİŞ (Tamamen Streamlit Senkronizasyonlu) ---
+                        components.html(f"""
+                        <script>
+                            try {{ localStorage.setItem('userToken', '{uid_logged}'); }} catch(e) {{}}
+                        </script>
+                        """, height=0, width=0)
+                        
+                        st.query_params["session_uid"] = uid_logged
                         st.session_state.user_data = {**user_data, "uid": uid_logged}
                         st.session_state.user_logged_in = True
                         st.session_state.force_login = True
                         st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
                         
-                        # BAŞARILI GİRİŞ TETİKLEYİCİSİ (Ekranı yenileyip yukarıdaki UserToken kaydetme bloğunu çalıştırır)
-                        st.session_state.pending_redirect = uid_logged
+                        time.sleep(0.5) # JS'nin storage'a yazmasına minik bir fırsat tanı
                         st.rerun()
                 else:
                     st.error("❌ Kullanıcı verisi bulunamadı!")
@@ -1416,4 +1416,4 @@ else:
                     st.session_state.input_key += 1
 
             st.text_area("Mesajını yaz:", key="my_input", height=100)
-            st.button("🚀 Gönder", on_click=send_message) 
+            st.button("🚀 Gönder", on_click=send_message)
