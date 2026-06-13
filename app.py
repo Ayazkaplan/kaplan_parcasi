@@ -105,42 +105,43 @@ def firebase_login(email, password):
         print(f"[FIREBASE LOGIN REST API HATASI] Giriş isteği gönderilirken hata oluştu: {e}")
         return None
 
-# --- OTURUM YÖNETİMİ & TOKEN KALICILIĞI (SAF YAPI) ---
+# --- OTURUM YÖNETİMİ & GEÇİŞ ANAHTARI (PASSKEY) MİMARİSİ ---
 if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = False
 if "user_data" not in st.session_state: st.session_state.user_data = None
 if "messages" not in st.session_state: st.session_state.messages = []
 if "tema" not in st.session_state: st.session_state.tema = list(TEMALAR.values())[0]
 if "valid_users_cache" not in st.session_state: st.session_state.valid_users_cache = None
 if "current_page" not in st.session_state: st.session_state.current_page = "chat"
-if "js_code" not in st.session_state: st.session_state.js_code = ""
-
-# JAVASCRIPT GÖREV YÖNETİCİSİ (LocalStorage işlemleri burada güvenle tetiklenir)
-if st.session_state.js_code != "":
-    components.html(f"<script>{st.session_state.js_code}</script>", height=0, width=0)
-    st.session_state.js_code = ""
 
 def logout_user():
-    # Güvenli Çıkış (Logout) İşlemi: Hafızayı sil, Token'ı çöpe at
+    # Çıkış yapıldığında oturumu sıfırlar ve Geçiş Anahtarını LocalStorage'dan silecek bayrağı açar
     for key in list(st.session_state.keys()):
         if key != "tema":
             del st.session_state[key]
-    
-    st.session_state.js_code = "localStorage.removeItem('aslan_parsasi_token');"
     st.query_params.clear()
+    st.session_state.trigger_ls_clear = True
     st.rerun()
 
 def trigger_invalid_session():
-    # Yasaklanmış veya geçersiz token bulunursa her şeyi silip temiz at
+    # Geçersiz/Silinmiş token bulunduğunda güvenli şekilde anahtarı ve oturumu siler
     for key in list(st.session_state.keys()):
         if key != "tema":
             del st.session_state[key]
-            
-    st.session_state.js_code = "localStorage.removeItem('aslan_parsasi_token');"
     st.query_params.clear()
+    st.session_state.trigger_ls_clear = True
     st.rerun()
 
+# --- SESSİZ ARKA PLAN İŞLEMLERİ (LocalStorage Temizlik ve Kayıt) ---
+if st.session_state.get("trigger_ls_clear", False):
+    components.html("<script>localStorage.removeItem('aslan_passkey');</script>", height=0, width=0)
+    st.session_state.trigger_ls_clear = False
 
-# --- ADIM 1: SESSİZ GİRİŞ (URL'de Session_UID Taraması) ---
+if st.session_state.get("trigger_ls_save", False):
+    uid_to_save = st.session_state.get("js_uid", "")
+    components.html(f"<script>localStorage.setItem('aslan_passkey', '{uid_to_save}');</script>", height=0, width=0)
+    st.session_state.trigger_ls_save = False
+
+# --- ADIM 1: URL'DE SESSİON_UİD TARAMASI (Anahtara tıklanmışsa içeri al) ---
 if "session_uid" in st.query_params and not st.session_state.user_logged_in:
     stored_uid = st.query_params["session_uid"]
     try:
@@ -163,7 +164,7 @@ if "session_uid" in st.query_params and not st.session_state.user_logged_in:
                     is_banned = True
             
             if not is_banned:
-                # Token geçerli ve kullanıcı banlı değilse sisteme alınıyor
+                # Token Başarıyla Onaylandı: Kullanıcı sisteme giriş yapıyor!
                 user_ref_temp.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
                 st.session_state.user_data = {**user_data, "uid": stored_uid}
                 st.session_state.user_logged_in = True
@@ -187,29 +188,41 @@ if "session_uid" in st.query_params and not st.session_state.user_logged_in:
     except Exception:
         trigger_invalid_session()
 
-
 # --- GİRİŞ VE KAYIT EKRANI ---
 if not st.session_state.user_logged_in:
     
-    # ADIM 2: OTOMATİK GİRİŞ KONTROLÜ (Sayfa Kapatılıp Açıldığında Devreye Girer)
-    if "session_uid" not in st.query_params:
-        # Siyah ekran OLMADAN arka planda çok sessiz bir şekilde LocalStorage taranır
-        components.html("""
-        <script>
-            var token = localStorage.getItem('aslan_parsasi_token');
-            if (token) {
-                try { window.parent.location.search = '?session_uid=' + token; } 
-                catch(e) { window.top.location.search = '?session_uid=' + token; }
-            }
-        </script>
-        """, height=0, width=0)
-
     st.title("🦁 Aslan Parçası V16.4")
+
+    # ADIM 2: GEÇİŞ ANAHTARI (PASSKEY) GÖRSEL ARAYÜZÜ (Kilitlenme ve Çökme Yok!)
+    # Bu HTML bileşeni LocalStorage'da token bulursa otomatik yönlendirme YAPMAZ.
+    # Bunun yerine kullanıcının manuel tıklayabileceği büyük ve şık bir buton yaratır.
+    passkey_html = """
+    <div id="passkey-container" style="display: none; padding: 25px; background: rgba(255, 255, 255, 0.08); border-radius: 12px; text-align: center; border: 1.5px solid #f39c12; margin-bottom: 25px; font-family: sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+        <h3 style="color: white; margin-top: 0; font-size: 22px;">Önceki Oturum Bulundu 🔑</h3>
+        <p style="color: #ddd; font-size: 15px; margin-bottom: 20px;">Cihazınızda daha önce giriş yapılmış bir kayıtlı anahtar algılandı.</p>
+        <a id="passkey-link" href="#" target="_parent" style="display: inline-block; padding: 12px 24px; background-color: #f39c12; color: #000; font-weight: bold; text-decoration: none; border-radius: 6px; font-size: 16px; transition: 0.3s; box-shadow: 0 2px 5px rgba(243, 156, 18, 0.5);">🚀 Hesabıma Hızlı Giriş Yap</a>
+        <div style="margin-top: 20px;">
+            <button onclick="clearToken()" style="background: transparent; border: none; color: #999; cursor: pointer; text-decoration: underline; font-size: 13px; transition: 0.3s;">Bu Anahtarı Sil ve Unut</button>
+        </div>
+    </div>
+    <script>
+        var token = localStorage.getItem('aslan_passkey');
+        if (token) {
+            document.getElementById('passkey-container').style.display = 'block';
+            document.getElementById('passkey-link').href = '?session_uid=' + token;
+        }
+        function clearToken() {
+            localStorage.removeItem('aslan_passkey');
+            document.getElementById('passkey-container').style.display = 'none';
+        }
+    </script>
+    """
+    components.html(passkey_html, height=210)
 
     if "ban_error_on_logout" in st.session_state:
         st.error(st.session_state.ban_error_on_logout)
 
-    email = st.text_input("📧 E-posta:")
+    email = st.text_input("📧 E-posta (Manuel Giriş):")
     password = st.text_input("🔑 Şifre:", type="password")
 
     col1, col2 = st.columns(2)
@@ -256,16 +269,17 @@ if not st.session_state.user_logged_in:
                         uid_logged = auth_res['localId']
                         db.collection("users").document(query[0].id).update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
                         
-                        # --- TOKEN OLUŞTURMA VE İÇERİ ALMA MİMARİSİ ---
+                        # BAŞARILI MANUEL GİRİŞ (Token oluşturulur ve kaydedilmesi emredilir)
                         st.session_state.user_data = {**user_data, "uid": uid_logged}
                         st.session_state.user_logged_in = True
                         st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
                         st.query_params["session_uid"] = uid_logged
                         
-                        # JavaScript'e cihaz hafızasına token mühürleme görevi gönderiliyor
-                        st.session_state.js_code = f"localStorage.setItem('aslan_parsasi_token', '{uid_logged}');"
+                        # Cihaz hafızasına mühürleme sinyali
+                        st.session_state.js_uid = uid_logged
+                        st.session_state.trigger_ls_save = True
                         
-                        st.rerun() # Sayfayı ana ekrana yeniler, kilitlenmeye asla yer vermez.
+                        st.rerun() # Temiz bir sayfa yenilemesi yapar
                 else:
                     st.error("❌ Kullanıcı verisi bulunamadı!")
             else:
