@@ -9,6 +9,7 @@ import re
 from datetime import datetime, timezone, timedelta
 import time
 import unicodedata
+import tempfile # RENDER İÇİN YENİ GÜVENLİ DOSYA SİSTEMİ
 
 # --- SAYFA AYARLARI (Tüm Streamlit komutlarından önce ilk sırada olmalıdır) ---
 st.set_page_config(page_title="Aslan Parçası V16.4", page_icon="🦁", layout="centered")
@@ -105,7 +106,39 @@ def firebase_login(email, password):
         print(f"[FIREBASE LOGIN REST API HATASI] Giriş isteği gönderilirken hata oluştu: {e}")
         return None
 
-# --- OTURUM YÖNETİMİ & GEÇİŞ ANAHTARI (PASSKEY) MİMARİSİ ---
+# --- STREAMLIT DIRECT BRIDGE (DOĞRUDAN OKUMA) MİMARİSİ ---
+# Bu sistem, URL ve Butonla uğraşmadan direkt cihaz hafızasını Python'a çeker.
+COMP_DIR = os.path.join(tempfile.gettempdir(), "aslan_ls_component")
+os.makedirs(COMP_DIR, exist_ok=True)
+HTML_PATH = os.path.join(COMP_DIR, "index.html")
+
+with open(HTML_PATH, "w", encoding="utf-8") as f:
+    f.write("""
+    <!DOCTYPE html>
+    <html>
+    <head><script>
+      function sendMessage(type, data) {
+        window.parent.postMessage(Object.assign({isStreamlitMessage: true, type: type}, data), "*");
+      }
+      window.addEventListener("message", function(event) {
+        if (event.data.type === "streamlit:render") {
+          var val = localStorage.getItem("aslan_passkey");
+          if (!val) val = "NOT_FOUND";
+          sendMessage("streamlit:setComponentValue", {value: val});
+        }
+      });
+      window.onload = function() {
+          sendMessage("streamlit:componentReady", {apiVersion: 1});
+          sendMessage("streamlit:setFrameHeight", {height: 0});
+      };
+    </script></head>
+    <body></body>
+    </html>
+    """)
+
+get_local_storage = components.declare_component("get_local_storage", path=COMP_DIR)
+
+# --- STATE YÖNETİMİ ---
 if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = False
 if "user_data" not in st.session_state: st.session_state.user_data = None
 if "messages" not in st.session_state: st.session_state.messages = []
@@ -113,138 +146,103 @@ if "tema" not in st.session_state: st.session_state.tema = list(TEMALAR.values()
 if "valid_users_cache" not in st.session_state: st.session_state.valid_users_cache = None
 if "current_page" not in st.session_state: st.session_state.current_page = "chat"
 
-def logout_user():
-    for key in list(st.session_state.keys()):
-        if key != "tema":
-            del st.session_state[key]
-    st.query_params.clear()
-    st.session_state.trigger_ls_clear = True
-    st.rerun()
-
+# GÜVENLİ ÇIKIŞ VE İPTAL FONKSİYONLARI
 def trigger_invalid_session():
     for key in list(st.session_state.keys()):
         if key != "tema":
             del st.session_state[key]
-    st.query_params.clear()
-    st.session_state.trigger_ls_clear = True
+    st.session_state.trigger_clear_token = True
     st.rerun()
 
-# --- SESSİZ ARKA PLAN İŞLEMLERİ (LocalStorage Temizlik ve Kayıt) ---
-if st.session_state.get("trigger_ls_clear", False):
+def logout_user():
+    trigger_invalid_session()
+
+# --- SESSİZ ARKA PLAN GÖREVLİLERİ ---
+if st.session_state.get("trigger_clear_token", False):
     components.html("<script>localStorage.removeItem('aslan_passkey');</script>", height=0, width=0)
-    st.session_state.trigger_ls_clear = False
+    st.markdown("<h3 style='text-align:center; color:white; margin-top:20vh;'>Çıkış yapılıyor...</h3>", unsafe_allow_html=True)
+    st.session_state.trigger_clear_token = False
+    time.sleep(1) # JS'nin anahtarı silmesi için emin olduğumuz minik süre
+    st.rerun()
 
-if st.session_state.get("trigger_ls_save", False):
-    uid_to_save = st.session_state.get("js_uid", "")
-    components.html(f"<script>localStorage.setItem('aslan_passkey', '{uid_to_save}');</script>", height=0, width=0)
-    st.session_state.trigger_ls_save = False
+if st.session_state.get("trigger_save_token"):
+    uid = st.session_state.trigger_save_token
+    components.html(f"<script>localStorage.setItem('aslan_passkey', '{uid}');</script>", height=0, width=0)
+    st.session_state.trigger_save_token = None
+    # Anahtar cihaza gömüldü, hayatına normal devam et.
 
-# --- ADIM 1: URL'DE SESSİON_UİD TARAMASI (Anahtara tıklanmışsa içeri al) ---
-if "session_uid" in st.query_params and not st.session_state.user_logged_in:
-    stored_uid = st.query_params["session_uid"]
-    try:
-        user_ref_temp = db.collection("users").document(stored_uid)
-        user_snap = user_ref_temp.get()
-        if user_snap.exists:
-            user_data = user_snap.to_dict()
-            user_durum = user_data.get("durum", "Aktif")
-            ban_bitis = user_data.get("ban_bitis_zamani")
+# --- ADIM 1: SESSİZ VE BUTONSUZ GEÇİŞ ANAHTARI OKUMASI ---
+if not st.session_state.user_logged_in and not st.session_state.get("trigger_clear_token", False):
+    # Doğrudan cihaza soru sorar: "Anahtarın var mı?"
+    token = get_local_storage(key="token_reader_comp")
+    
+    if token is None:
+        # JS'den yanıt gelene kadar mükemmel bir yükleme ekranı göster
+        st.markdown("""
+        <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #0f2027; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999999;">
+            <div style="width: 60px; height: 60px; border: 5px solid rgba(255, 255, 255, 0.1); border-top: 5px solid #f39c12; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <h3 style="color: white; font-family: sans-serif; margin-top: 25px;">Geçiş Anahtarı Doğrulanıyor...</h3>
+        </div>
+        <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+        """, unsafe_allow_html=True)
+        st.stop()
+        
+    elif token != "NOT_FOUND":
+        # ANAHTAR BULUNDU! SIFIR BUTONLA ŞİFRESİZ GİRİŞ İŞLEMİ!
+        try:
+            user_ref_temp = db.collection("users").document(token)
+            user_snap = user_ref_temp.get()
+            if user_snap.exists:
+                user_data = user_snap.to_dict()
+                user_durum = user_data.get("durum", "Aktif")
+                ban_bitis = user_data.get("ban_bitis_zamani")
 
-            if hasattr(ban_bitis, "to_datetime"):
-                ban_bitis = ban_bitis.to_datetime()
-            
-            is_banned = False
-            if user_durum == "Pasif":
-                if ban_bitis:
-                    if ban_bitis.tzinfo is None: ban_bitis = ban_bitis.replace(tzinfo=timezone.utc)
-                    if datetime.now(timezone.utc) < ban_bitis: is_banned = True
-                else:
-                    is_banned = True
-            
-            if not is_banned:
-                user_ref_temp.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
-                st.session_state.user_data = {**user_data, "uid": stored_uid}
-                st.session_state.user_logged_in = True
-                st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
+                if hasattr(ban_bitis, "to_datetime"):
+                    ban_bitis = ban_bitis.to_datetime()
                 
-                sohbet_list = user_data.get("sohbet_gecmisi", [])
-                if isinstance(sohbet_list, list):
-                    active_messages = []
-                    last_separator_idx = -1
-                    for idx, msg in enumerate(sohbet_list):
-                        if msg.get("role") == "separator": last_separator_idx = idx
-                    if last_separator_idx != -1: active_messages = sohbet_list[last_separator_idx + 1:]
-                    else: active_messages = [m for m in sohbet_list if m.get("role") in ["user", "assistant"]]
-                    st.session_state.messages = active_messages
+                is_banned = False
+                if user_durum == "Pasif":
+                    if ban_bitis:
+                        if ban_bitis.tzinfo is None: ban_bitis = ban_bitis.replace(tzinfo=timezone.utc)
+                        if datetime.now(timezone.utc) < ban_bitis: is_banned = True
+                    else:
+                        is_banned = True
+                
+                if not is_banned:
+                    user_ref_temp.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
+                    st.session_state.user_data = {**user_data, "uid": token}
+                    st.session_state.user_logged_in = True
+                    st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
+                    
+                    sohbet_list = user_data.get("sohbet_gecmisi", [])
+                    if isinstance(sohbet_list, list):
+                        active_messages = []
+                        last_separator_idx = -1
+                        for idx, msg in enumerate(sohbet_list):
+                            if msg.get("role") == "separator": last_separator_idx = idx
+                        if last_separator_idx != -1: active_messages = sohbet_list[last_separator_idx + 1:]
+                        else: active_messages = [m for m in sohbet_list if m.get("role") in ["user", "assistant"]]
+                        st.session_state.messages = active_messages
+                    else:
+                        st.session_state.messages = []
+                    
+                    st.rerun() # Şak diye sohbet ekranına düşer
                 else:
-                    st.session_state.messages = []
+                    trigger_invalid_session()
             else:
                 trigger_invalid_session()
-        else:
+        except Exception:
             trigger_invalid_session()
-    except Exception:
-        trigger_invalid_session()
 
 # --- GİRİŞ VE KAYIT EKRANI ---
 if not st.session_state.user_logged_in:
     
     st.title("🦁 Aslan Parçası V16.4")
 
-    # ADIM 2: GEÇİŞ ANAHTARI (PASSKEY) GÖRSEL ARAYÜZÜ - "Dedektif" Javascript Eklendi!
-    passkey_html = """
-    <div id="passkey-container" style="display: none; padding: 25px; background: rgba(255, 255, 255, 0.08); border-radius: 12px; text-align: center; border: 1.5px solid #f39c12; margin-bottom: 25px; font-family: sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-        <h3 style="color: white; margin-top: 0; font-size: 22px;">Önceki Oturum Bulundu 🔑</h3>
-        <p style="color: #ddd; font-size: 15px; margin-bottom: 20px;">Cihazınızda daha önce giriş yapılmış bir kayıtlı anahtar algılandı.</p>
-        
-        <form id="auto-login-form" target="_parent" method="GET" style="margin: 0; padding: 0;">
-            <input type="hidden" name="session_uid" id="hidden_token_input" value="">
-            <button type="submit" style="width: 100%; padding: 12px 24px; background-color: #f39c12; color: #000; font-weight: bold; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: 0.3s; box-shadow: 0 2px 5px rgba(243, 156, 18, 0.5);">🚀 Hesabıma Hızlı Giriş Yap</button>
-        </form>
-        
-        <div style="margin-top: 20px;">
-            <button onclick="clearToken()" style="background: transparent; border: none; color: #999; cursor: pointer; text-decoration: underline; font-size: 13px; transition: 0.3s;">Bu Anahtarı Sil ve Unut</button>
-        </div>
-    </div>
-    
-    <script>
-        var token = localStorage.getItem('aslan_passkey');
-        if (token) {
-            document.getElementById('passkey-container').style.display = 'block';
-            document.getElementById('hidden_token_input').value = token;
-            
-            // ANA SİTENİN GERÇEK ADRESİNİ BULMA ALGORİTMASI
-            var realParentUrl = "";
-            try {
-                // Önce doğrudan parent dizinini okumayı deneriz
-                realParentUrl = window.parent.location.href;
-            } catch(e) {
-                // Mobil tarayıcı cross-origin engellerse, bizi buraya gönderen kaynağı (referrer) okuruz
-                realParentUrl = document.referrer;
-            }
-            
-            // URL içindeki önceki gereksiz parametreleri temizle
-            if (realParentUrl) {
-                realParentUrl = realParentUrl.split('?')[0].split('#')[0];
-            } else {
-                realParentUrl = "/";
-            }
-            
-            // Formun hedefini tam olarak ana siteye yönlendir
-            document.getElementById('auto-login-form').action = realParentUrl;
-        }
-        
-        function clearToken() {
-            localStorage.removeItem('aslan_passkey');
-            document.getElementById('passkey-container').style.display = 'none';
-        }
-    </script>
-    """
-    components.html(passkey_html, height=210)
-
     if "ban_error_on_logout" in st.session_state:
         st.error(st.session_state.ban_error_on_logout)
 
-    email = st.text_input("📧 E-posta (Manuel Giriş):")
+    email = st.text_input("📧 E-posta (Sisteme Kayıtlı):")
     password = st.text_input("🔑 Şifre:", type="password")
 
     col1, col2 = st.columns(2)
@@ -291,14 +289,12 @@ if not st.session_state.user_logged_in:
                         uid_logged = auth_res['localId']
                         db.collection("users").document(query[0].id).update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
                         
+                        # MÜKEMMEL GİRİŞ: Oturum oluştur, JS arkaplanına "Cihazı Mühürle" emri gönder!
                         st.session_state.user_data = {**user_data, "uid": uid_logged}
                         st.session_state.user_logged_in = True
                         st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
-                        st.query_params["session_uid"] = uid_logged
                         
-                        st.session_state.js_uid = uid_logged
-                        st.session_state.trigger_ls_save = True
-                        
+                        st.session_state.trigger_save_token = uid_logged # JS Görevlisi devraldı!
                         st.rerun() 
                 else:
                     st.error("❌ Kullanıcı verisi bulunamadı!")
@@ -1396,4 +1392,4 @@ else:
                     st.session_state.input_key += 1
 
             st.text_area("Mesajını yaz:", key="my_input", height=100)
-            st.button("🚀 Gönder", on_click=send_message)
+            st.button("🚀 Gönder", on_click=send_message) 
