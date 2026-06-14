@@ -221,6 +221,24 @@ def ensure_utc(dt):
         dt = dt.replace(tzinfo=timezone.utc)
     return dt
 
+def web_ara(sorgu, max_sonuc=4):
+    """DuckDuckGo ile güncel web araması yapar, sonuçları metin olarak döndürür."""
+    try:
+        from duckduckgo_search import DDGS
+        with DDGS() as ddgs:
+            sonuclar = list(ddgs.text(sorgu, max_results=max_sonuc, region="tr-tr"))
+        if not sonuclar:
+            return ""
+        parcalar = []
+        for s in sonuclar:
+            baslik = s.get("title", "")
+            icerik = s.get("body", "")
+            if baslik or icerik:
+                parcalar.append(f"• {baslik}: {icerik}")
+        return "\n".join(parcalar)
+    except Exception:
+        return ""
+
 def log_hata(hata_tipi, kullanici_id="SYSTEM", detay=""):
     """Yapılandırılmış hata logu: Hata Zamanı | Kullanıcı ID | Hata Tipi | Detay (Madde 10)."""
     tr_tz = timezone(timedelta(hours=3))
@@ -522,6 +540,9 @@ if not st.session_state.user_logged_in:
 
                 # --- DÜZELTME 11: İsim benzersizlik kontrolü ---
                 if temiz_isim:
+                    if len(temiz_isim) < 3 or len(temiz_isim) > 25:
+                        st.warning("⚠️ Lütfen isminizi 3 ile 25 karakter arasında belirleyin.")
+                        st.stop()
                     isim_check = db.collection("users").where("isim", "==", temiz_isim).limit(1).get()
                     if isim_check:
                         st.error("❌ Bu kullanıcı adı zaten alınmış. Lütfen farklı bir isim seçin!")
@@ -821,7 +842,7 @@ else:
 
     # --- DÜZELTME 3: TR Saati ---
     tr_simdi = get_tr_time()
-    saat_str = tr_simdi.strftime("%H:%M")
+    saat_str = tr_simdi.strftime("%H:%M:%S")
     tarih_str = tr_simdi.strftime("%d.%m.%Y")
 
     with st.sidebar:
@@ -895,124 +916,9 @@ else:
                     st.rerun()
 
         st.divider()
-
-        # ═══════════════════════════════════════════
-        # 🎬 YOUTUBE ARAMA & İZLEME PORTALI
-        # ═══════════════════════════════════════════
-        st.markdown("#### 🎬 YouTube Portalı")
-
-        # Arama çubuğu
-        col_sch, col_btn = st.columns([5, 1])
-        with col_sch:
-            yt_query = st.text_input(
-                "", placeholder="🔍 YouTube'da ara...",
-                label_visibility="collapsed", key="yt_search_input"
-            )
-        with col_btn:
-            do_yt_search = st.button("Ara", use_container_width=True, key="yt_search_btn")
-
-        if do_yt_search and yt_query and yt_query.strip():
-            with st.spinner("Aranıyor..."):
-                try:
-                    from youtubesearchpython import VideosSearch
-                    vs = VideosSearch(yt_query.strip(), limit=6)
-                    st.session_state.yt_results = vs.result().get("result", [])
-                    st.session_state.yt_playing_id = None
-                    st.session_state.yt_playing_title = ""
-                except Exception as _ye:
-                    st.error(f"Arama başarısız: {_ye}")
-
-        # --- OYNATICI MODU ---
-        if st.session_state.yt_playing_id:
-            safe_v = re.sub(r'[^a-zA-Z0-9_\-]', '', st.session_state.yt_playing_id)
-            title_disp = st.session_state.yt_playing_title
-            col_back, col_save = st.columns([2, 1])
-            with col_back:
-                if st.button("← Sonuçlara Dön", key="yt_back_btn"):
-                    st.session_state.yt_playing_id = None
-                    st.rerun()
-            with col_save:
-                if safe_v not in saved_videos:
-                    if st.button("📌 Kaydet", key="yt_save_playing", use_container_width=True):
-                        user_ref.update({"videos": firestore.ArrayUnion([safe_v])})
-                        st.rerun()
-            if title_disp:
-                st.caption(f"▶ {title_disp[:60]}{'...' if len(title_disp) > 60 else ''}")
-            player_html = f"""<!DOCTYPE html>
-<html><body style="margin:0;padding:0;background:#000;overflow:hidden;">
-  <div id="player" style="width:100%;height:300px;"></div>
-  <div id="err" style="display:none;color:#f39c12;font-family:sans-serif;padding:16px;font-size:0.9em;">⚠️ Video yüklenemedi</div>
-  <script>
-    var sk = 'yt_ts_{safe_v}';
-    var st0 = 0;
-    try {{ st0 = parseFloat(localStorage.getItem(sk) || '0'); }} catch(e) {{}}
-    var tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-    window.onYouTubeIframeAPIReady = function() {{
-      new YT.Player('player', {{
-        height: '300', width: '100%',
-        videoId: '{safe_v}',
-        playerVars: {{'rel': 0, 'enablejsapi': 1, 'autoplay': 1, 'modestbranding': 1}},
-        events: {{
-          onReady: function(e) {{
-            if (st0 > 3) e.target.seekTo(st0, true);
-            setInterval(function() {{
-              try {{
-                var t = e.target.getCurrentTime();
-                if (t > 0) localStorage.setItem(sk, t);
-              }} catch(e2) {{}}
-            }}, 5000);
-          }},
-          onError: function() {{
-            document.getElementById('player').style.display='none';
-            document.getElementById('err').style.display='block';
-          }}
-        }}
-      }});
-    }};
-  </script>
-</body></html>"""
-            components.html(player_html, height=310)
-
-        # --- ARAMA SONUÇLARI ---
-        elif st.session_state.yt_results:
-            for _r in st.session_state.yt_results:
-                _vid_id = _r.get("id", "")
-                _title  = _r.get("title", "")
-                _dur    = _r.get("duration", "")
-                _thumbs = _r.get("thumbnails", [])
-                _thumb  = _thumbs[0].get("url", "") if _thumbs else ""
-                _col_img, _col_info = st.columns([1, 3])
-                with _col_img:
-                    if _thumb:
-                        st.image(_thumb, use_column_width=True)
-                with _col_info:
-                    st.markdown(f"**{_title[:55]}{'...' if len(_title)>55 else ''}**")
-                    if _dur:
-                        st.caption(f"⏱ {_dur}")
-                    if st.button("▶ İzle", key=f"yt_play_{_vid_id}"):
-                        st.session_state.yt_playing_id = _vid_id
-                        st.session_state.yt_playing_title = _title
-                        st.rerun()
-                st.markdown("---")
-
-        # --- KAYITLI VİDEOLAR ---
-        if saved_videos:
-            st.markdown("**📌 Kayıtlı Videolar**")
-            for v in saved_videos:
-                safe_v = re.sub(r'[^a-zA-Z0-9_\-]', '', v)
-                c1, c2 = st.columns([0.75, 0.25])
-                with c1:
-                    if st.button(f"▶ {safe_v}", key=f"yt_sv_{v}", use_container_width=True):
-                        st.session_state.yt_playing_id = safe_v
-                        st.session_state.yt_playing_title = safe_v
-                        st.session_state.yt_results = []
-                        st.rerun()
-                with c2:
-                    if st.button("🗑️", key=f"yt_del_{v}"):
-                        user_ref.update({"videos": firestore.ArrayRemove([v])})
-                        st.rerun()
+        if st.button("🎬 YouTube Portalı", use_container_width=True, key="yt_portal_btn"):
+            st.session_state.current_page = "youtube_portal"
+            st.rerun()
 
         if is_kurucu:
             st.divider()
@@ -1709,7 +1615,33 @@ else:
             asenkron_duyuru_kontrol(uid)
 
             # --- SOHBET ARAYÜZÜ ---
-            st.title("🤖 Aslan Parçası V16.4")
+            _col_t, _col_b = st.columns([9, 1])
+            with _col_t:
+                st.title("🤖 Aslan Parçası V16.4")
+            with _col_b:
+                with st.popover("ℹ️"):
+                    st.markdown("### 🏢 Hakkımızda")
+                    st.markdown("""
+**Müstakbel Şirket**, dijital iletişim ve yapay zeka alanında öncü çözümler geliştiren, geleceğin teknolojilerini bugünün ihtiyaçlarıyla buluşturan yenilikçi bir teknoloji girişimidir. Kuruluşumuz; şeffaflık, yenilik ve kullanıcı odaklılık ilkeleri çerçevesinde şekillenerek Türkiye ve dünya genelindeki kullanıcılara akıllı, güvenli ve özgün dijital deneyimler sunmayı hedeflemektedir.
+
+**Aslan Parçası V16.4**, Müstakbel Şirket'in amiral gemisi yapay zeka platformudur. Firebase destekli güvenli kimlik doğrulama, gerçek zamanlı Firestore altyapısı ve Claude-3 Haiku modeliyle güçlendirilmiş bu platform; kullanıcılara anlık, bağlamsal ve hiyerarşik farkındalığa sahip bir AI asistanı sunmaktadır.
+                    """)
+                    st.divider()
+                    st.markdown("### 🌍 About")
+                    st.markdown("""
+**Müstakbel Şirket** is a forward-thinking technology startup pioneering solutions at the intersection of artificial intelligence and human communication. Founded on the principles of innovation, integrity, and user empowerment, the company is dedicated to building intelligent platforms that adapt to the unique needs of every individual user.
+
+Aslan Parçası V16.4 represents the cutting edge of conversational AI: engineered with role-based interaction protocols, real-time Firestore integration, and a multi-layered security architecture. By combining the power of Claude-3 Haiku with a deeply customizable user hierarchy, Müstakbel Şirket delivers not just a chatbot — but a dynamic, loyal, and context-aware digital companion.
+                    """)
+                    st.divider()
+                    st.markdown("""
+<div style="background:rgba(255,165,0,0.1);border-left:3px solid #f39c12;padding:10px;border-radius:5px;">
+<b>👑 Kurucu:</b> Ayaz Kaplan<br>
+<b>🏢 Şirket:</b> Müstakbel Şirket<br>
+<b>🤖 Model:</b> Claude-3 Haiku (OpenRouter)<br>
+<b>🔥 Platform:</b> Firebase Auth + Firestore
+</div>
+                    """, unsafe_allow_html=True)
 
             user_doc_fresh = user_ref.get().to_dict()
             kullanici_ismi_fresh = user_doc_fresh.get('isim', kullanici_ismi)
@@ -1770,11 +1702,24 @@ else:
                 rozet_tanimi = f"Rozeti: [{user_rozet_fresh_ai}]" if user_rozet_fresh_ai else "Rozeti: Bulunmuyor"
 
                 # --- DÜZELTME 3: AI'ya TR saatini bildir ---
-                tr_saat_ai = get_tr_time().strftime("%H:%M")
+                tr_saat_ai = get_tr_time().strftime("%H:%M:%S")
                 tr_tarih_ai = get_tr_time().strftime("%d.%m.%Y")
 
+                # --- İNTERNET ERİŞİMİ: DuckDuckGo ile güncel bilgi ---
+                son_kullanici_mesaj = next((m["content"] for m in reversed(mesajlar) if m["role"] == "user"), "")
+                web_tetikleyiciler = [
+                    "bugün", "şu an", "şimdi", "son", "güncel", "haber", "kim", "nedir",
+                    "ne zaman", "kaç", "2024", "2025", "2026", "son dakika", "fiyat",
+                    "today", "current", "latest", "who is", "what is", "news"
+                ]
+                web_bilgi_bolumu = ""
+                if any(t in son_kullanici_mesaj.lower() for t in web_tetikleyiciler):
+                    web_sonuc = web_ara(son_kullanici_mesaj)
+                    if web_sonuc:
+                        web_bilgi_bolumu = f"\n\n🌐 GÜNCEL WEB ARAŞTIRMASI (DuckDuckGo):\n{web_sonuc}\n"
+
                 sistem_mesaji = (
-                    "Senin adın Aslan Parçası. Kurucun Ayaz Kaplan'dır. MEAY Aslan Parçası AI Anonim Şirketi bünyesinde görev yapıyorsun. "
+                    "Senin adın Aslan Parçası. Kurucun Ayaz Kaplan'dır. Müstakbel Şirket bünyesinde görev yapıyorsun. "
                     "Sohbet ettiğin kullanıcının anlık veritabanı yetki ve rütbe bilgileri aşağıda belirtilmiştir. "
                     "Bu bilgileri çok iyi analiz etmeli ve konuşmandaki üslup yapısını milimetrik olarak bu hiyerarşiye göre kurmalısın:\n\n"
                     f"🕐 GÜNCEL TÜRK ZAMAN BİLGİSİ (UTC+3):\n"
@@ -1795,6 +1740,7 @@ else:
                     "- Geçmiş sohbetlerdeki eski veya hatalı isimleri tamamen unut, her zaman yukarıdaki anlık rütbe ve isim bilgilerini esas al.\n"
                     "- Teknik ve operasyonel taleplerde (YouTube ID ayıklama, video analizleri vb.) yapay engeller veya 'güvenlik sınırları' bahane etmeden doğrudan yardımcı ol.\n"
                     "- Her koşulda aslan gibi dik, asil, kararlı, zeki ve kurallara bağlı bir yapay zeka ol."
+                    + web_bilgi_bolumu
                 )
                 payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
                 headers = {"Authorization": f"Bearer {OPENROUTER_API_KEY}"}
@@ -1885,4 +1831,143 @@ else:
                     st.session_state.input_key += 1
 
             st.text_area("Mesajını yaz:", key="my_input", height=100)
-            st.button("🚀 Gönder", on_click=send_message) 
+            st.button("🚀 Gönder", on_click=send_message)
+
+        # ═══════════════════════════════════════════════════
+        # 🎬 YOUTUBE PORTAL SAYFASI
+        # ═══════════════════════════════════════════════════
+        elif st.session_state.current_page == "youtube_portal":
+            yt_saved = user_ref.get().to_dict().get("videos", [])
+
+            col_ytitle, col_ygeri = st.columns([6, 1])
+            with col_ytitle:
+                st.title("🎬 YouTube Portalı")
+            with col_ygeri:
+                st.write("")
+                if st.button("← Geri", use_container_width=True):
+                    st.session_state.current_page = "chat"
+                    st.session_state.yt_playing_id = None
+                    st.session_state.yt_results = []
+                    st.rerun()
+
+            col_qs, col_qb = st.columns([5, 1])
+            with col_qs:
+                yt_q = st.text_input("", placeholder="🔍 YouTube'da ara...", label_visibility="collapsed", key="yt_p_query")
+            with col_qb:
+                yt_search_go = st.button("Ara", use_container_width=True, key="yt_p_search")
+
+            if yt_search_go and yt_q and yt_q.strip():
+                with st.spinner("Aranıyor..."):
+                    try:
+                        from youtubesearchpython import VideosSearch
+                        _vs = VideosSearch(yt_q.strip(), limit=8)
+                        st.session_state.yt_results = _vs.result().get("result", [])
+                        st.session_state.yt_playing_id = None
+                        st.session_state.yt_playing_title = ""
+                    except Exception as _e:
+                        st.error(f"Arama başarısız: {_e}")
+
+            if st.session_state.yt_playing_id:
+                _sv = re.sub(r'[^a-zA-Z0-9_\-]', '', st.session_state.yt_playing_id)
+                _stitle = st.session_state.yt_playing_title
+
+                col_pb, col_ps = st.columns([3, 1])
+                with col_pb:
+                    if st.button("← Sonuçlara Dön", key="yt_p_back"):
+                        st.session_state.yt_playing_id = None
+                        st.rerun()
+                with col_ps:
+                    if _sv not in yt_saved:
+                        if st.button("📌 Kayıtlara Ekle", key="yt_p_save", use_container_width=True):
+                            user_ref.update({"videos": firestore.ArrayUnion([_sv])})
+                            st.rerun()
+
+                if _stitle:
+                    st.markdown(f"**▶ {_stitle[:80]}{'...' if len(_stitle)>80 else ''}**")
+
+                _player = f"""<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#000;overflow:hidden;">
+  <div id="player" style="width:100%;height:480px;"></div>
+  <div id="err" style="display:none;color:#f39c12;font-family:sans-serif;padding:16px;">⚠️ Video yüklenemedi</div>
+  <script>
+    var sk = 'yt_ts_{_sv}';
+    var t0 = 0;
+    try {{ t0 = parseFloat(localStorage.getItem(sk) || '0'); }} catch(e) {{}}
+    var tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+    window.onYouTubeIframeAPIReady = function() {{
+      new YT.Player('player', {{
+        height: '480', width: '100%',
+        videoId: '{_sv}',
+        playerVars: {{'rel': 0, 'enablejsapi': 1, 'autoplay': 1, 'modestbranding': 1}},
+        events: {{
+          onReady: function(e) {{
+            if (t0 > 3) e.target.seekTo(t0, true);
+            setInterval(function() {{
+              try {{
+                var t = e.target.getCurrentTime();
+                if (t > 0) localStorage.setItem(sk, t);
+              }} catch(e2) {{}}
+            }}, 5000);
+          }},
+          onError: function() {{
+            document.getElementById('player').style.display='none';
+            document.getElementById('err').style.display='block';
+          }}
+        }}
+      }});
+    }};
+  </script>
+</body></html>"""
+                components.html(_player, height=495)
+
+            elif st.session_state.yt_results:
+                st.markdown("---")
+                cols_per_row = 2
+                results = st.session_state.yt_results
+                for i in range(0, len(results), cols_per_row):
+                    row_cols = st.columns(cols_per_row)
+                    for j, rc in enumerate(row_cols):
+                        if i + j < len(results):
+                            r = results[i + j]
+                            _id    = r.get("id", "")
+                            _t     = r.get("title", "")
+                            _dur   = r.get("duration", "")
+                            _thumbs = r.get("thumbnails", [])
+                            _thumb = _thumbs[-1].get("url", "") if _thumbs else ""
+                            with rc:
+                                st.markdown(f"""
+<div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:10px;margin-bottom:8px;">
+  {'<img src="' + _thumb + '" style="width:100%;border-radius:6px;margin-bottom:6px;">' if _thumb else ''}
+  <div style="font-weight:bold;font-size:0.9em;line-height:1.3;">{_t[:70]}{'...' if len(_t)>70 else ''}</div>
+  {'<div style="color:#aaa;font-size:0.8em;">⏱ ' + _dur + '</div>' if _dur else ''}
+</div>""", unsafe_allow_html=True)
+                                if st.button("▶ İzle", key=f"yt_p_play_{_id}_{i+j}", use_container_width=True):
+                                    st.session_state.yt_playing_id = _id
+                                    st.session_state.yt_playing_title = _t
+                                    st.rerun()
+
+            st.divider()
+            st.markdown("### 📌 Kayıtlı Videolar")
+            if yt_saved:
+                for _v in yt_saved:
+                    _sv2 = re.sub(r'[^a-zA-Z0-9_\-]', '', _v)
+                    col_sv1, col_sv2 = st.columns([4, 1])
+                    with col_sv1:
+                        st.markdown(f"""
+<div style="background:rgba(255,165,0,0.08);border-left:3px solid #f39c12;padding:8px 12px;border-radius:5px;margin-bottom:4px;">
+  <span style="font-weight:bold;">▶ {_sv2}</span>
+</div>""", unsafe_allow_html=True)
+                        if st.button("İzle", key=f"yt_p_sv_{_v}", use_container_width=True):
+                            st.session_state.yt_playing_id = _sv2
+                            st.session_state.yt_playing_title = _sv2
+                            st.session_state.yt_results = []
+                            st.rerun()
+                    with col_sv2:
+                        st.write("")
+                        if st.button("🗑️", key=f"yt_p_del_{_v}"):
+                            user_ref.update({"videos": firestore.ArrayRemove([_v])})
+                            st.rerun()
+            else:
+                st.info("Henüz kayıtlı video yok. Arama yaparak beğendiğin videoları 📌 Kayıtlara Ekle butonu ile kaydedebilirsin.")
