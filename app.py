@@ -28,39 +28,40 @@ st.markdown("""
   .notranslate { translate: no; }
   font[style*="vertical-align"] { display: none !important; }
 
-  /* ── ℹ️ Bilgi Butonu — Sağ Üst Köşe Sabit ── */
-  div[data-testid="stPopover"] {
+  /* ── ℹ️ Bilgi Butonu — Sağ Üst Köşe Sabit (mobil dahil) ── */
+  div[data-testid="stPopover"],
+  [data-testid="stPopover"] {
     position: fixed !important;
-    top: 56px !important;
-    right: 14px !important;
-    z-index: 9990 !important;
-  }
-  div[data-testid="stPopover"] > button {
-    background: rgba(255,255,255,0.07) !important;
-    border: 1px solid rgba(255,255,255,0.18) !important;
-    border-radius: 50% !important;
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 9999 !important;
+    margin: 0 !important;
     padding: 0 !important;
-    font-size: 1.05rem !important;
-    line-height: 1 !important;
+  }
+  div[data-testid="stPopover"] > button,
+  [data-testid="stPopover"] > button {
+    background: rgba(30,30,50,0.92) !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
+    border-radius: 50% !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    font-size: 1rem !important;
+    line-height: 36px !important;
+    text-align: center !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.55) !important;
+    cursor: pointer !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.4) !important;
-    cursor: pointer !important;
-    transition: background 0.2s !important;
+    transition: background 0.2s, transform 0.15s !important;
   }
-  div[data-testid="stPopover"] > button:hover {
-    background: rgba(255,255,255,0.14) !important;
-  }
-  /* Mobil uyum */
-  @media (max-width: 640px) {
-    div[data-testid="stPopover"] {
-      top: 52px !important;
-      right: 8px !important;
-    }
+  div[data-testid="stPopover"] > button:hover,
+  [data-testid="stPopover"] > button:hover {
+    background: rgba(60,60,90,0.97) !important;
+    transform: scale(1.08) !important;
   }
 </style>
 """, unsafe_allow_html=True)
@@ -445,6 +446,7 @@ if "yt_playing_channel" not in st.session_state: st.session_state.yt_playing_cha
 if "yt_last_id" not in st.session_state: st.session_state.yt_last_id = None
 if "yt_last_title" not in st.session_state: st.session_state.yt_last_title = ""
 if "yt_last_channel" not in st.session_state: st.session_state.yt_last_channel = ""
+if "yt_ts_dict" not in st.session_state: st.session_state.yt_ts_dict = {}
 
 def trigger_invalid_session():
     for key in list(st.session_state.keys()):
@@ -1967,18 +1969,22 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
         elif st.session_state.current_page == "youtube_portal":
             yt_saved = user_ref.get().to_dict().get("videos", [])
 
-            # ─── SAYFA YENİLENME / URL PARAM ile VİDEO GERİ YÜKLEME ──
+            # ─── SAYFA YENİLENME / URL PARAM ile VİDEO & TIMESTAMP GERİ YÜKLEME ──
             _qp = st.query_params
             _qp_vid = _qp.get("ytv", "")
             _qp_ts  = int(_qp.get("ytt", "0") or "0")
-            if _qp_vid and not st.session_state.yt_playing_id:
+            if _qp_vid:
                 _qp_vid_safe = re.sub(r'[^a-zA-Z0-9_\-]', '', _qp_vid)
                 if _qp_vid_safe:
-                    st.session_state.yt_playing_id      = _qp_vid_safe
-                    st.session_state.yt_playing_title   = st.session_state.get("yt_last_title", _qp_vid_safe)
-                    st.session_state.yt_playing_channel = st.session_state.get("yt_last_channel", "")
-                    st.query_params.clear()
-                    st.rerun()
+                    # Timestamp'i session_state sözlüğüne kaydet
+                    if _qp_ts > 0:
+                        st.session_state.yt_ts_dict[_qp_vid_safe] = _qp_ts
+                    if not st.session_state.yt_playing_id:
+                        st.session_state.yt_playing_id      = _qp_vid_safe
+                        st.session_state.yt_playing_title   = st.session_state.get("yt_last_title", _qp_vid_safe)
+                        st.session_state.yt_playing_channel = st.session_state.get("yt_last_channel", "")
+                        st.query_params.clear()
+                        st.rerun()
 
             # ─── HEADER ───────────────────────────────────────────────
             _yh1, _yh2 = st.columns([7, 1])
@@ -2067,77 +2073,68 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
   {f'<div style="font-size:0.8em;color:#aaa;margin-top:4px;">📺 {_pch}</div>' if _pch else ''}
 </div>""", unsafe_allow_html=True)
 
-                _player_html = f"""<!DOCTYPE html>
-<html>
-<head>
-<style>
-  * {{ margin:0; padding:0; box-sizing:border-box; }}
-  body {{ background:#000; overflow:hidden; }}
-  #yt-player {{ width:100%; height:490px; }}
-  #yt-err {{
-    display:none; background:#111; color:#f39c12;
-    font-family:sans-serif; height:490px;
-    flex-direction:column; align-items:center;
-    justify-content:center; gap:12px; font-size:1rem;
+                # ── session_state'teki kayıtlı timestamp'i al ──
+                _start_ts = int(st.session_state.yt_ts_dict.get(_safe_vid, 0))
+
+                # ── st.components.v1.iframe — sabit key ile re-render önlenir ──
+                _embed_url = (
+                    f"https://www.youtube.com/embed/{_safe_vid}"
+                    f"?autoplay=1&rel=0&modestbranding=1&playsinline=1"
+                    f"&enablejsapi=1&start={_start_ts}"
+                )
+                st.components.v1.iframe(_embed_url, key="yt_player_main", height=490, scrolling=False)
+
+                # ── JS Köprüsü: YouTube postMessage olaylarını dinle, pozisyon kaydet ──
+                # components.html, Streamlit ile aynı origin'den yüklendiği için
+                # window.parent.addEventListener ile YouTube'un gönderdiği mesajları yakalar.
+                _ts_bridge = f"""<script>
+(function() {{
+  var VID = '{_safe_vid}';
+  var SK  = 'ytpos_' + VID;
+
+  /* Startup: localStorage'daki son pozisyonu URL params'a yaz */
+  try {{
+    var lsT = parseFloat(localStorage.getItem(SK) || '0') || 0;
+    if (lsT > 5) {{
+      var u0 = new URL(window.parent.location.href);
+      if (!u0.searchParams.get('ytt')) {{
+        u0.searchParams.set('ytv', VID);
+        u0.searchParams.set('ytt', String(Math.floor(lsT)));
+        window.parent.history.replaceState(null, '', u0.toString());
+      }}
+    }}
+  }} catch(e) {{}}
+
+  /* Runtime: YouTube IFrame API postMessage olaylarını yakala */
+  function onMsg(evt) {{
+    if (!evt.data) return;
+    try {{
+      var d = (typeof evt.data === 'string') ? JSON.parse(evt.data) : evt.data;
+      var t = null;
+      if (d.event === 'infoDelivery' && d.info && d.info.currentTime !== undefined) {{
+        t = d.info.currentTime;
+      }} else if (d.info && typeof d.info === 'object' && d.info.currentTime !== undefined) {{
+        t = d.info.currentTime;
+      }}
+      if (t !== null && t > 0) {{
+        localStorage.setItem(SK, String(t));
+        try {{
+          var u = new URL(window.parent.location.href);
+          u.searchParams.set('ytv', VID);
+          u.searchParams.set('ytt', String(Math.floor(t)));
+          window.parent.history.replaceState(null, '', u.toString());
+        }} catch(ue) {{}}
+      }}
+    }} catch(ex) {{}}
   }}
-  #yt-err a {{ color:#3ea6ff; }}
-</style>
-</head>
-<body>
-  <div id="yt-player"></div>
-  <div id="yt-err">
-    ⚠️ Video bu sayfada yüklenemedi.
-    <a href="https://youtu.be/{_safe_vid}" target="_blank">YouTube'da aç ↗</a>
-  </div>
-  <script>
-    var SK = 'ytpos_{_safe_vid}';
-    var savedT = 0;
-    try {{ savedT = parseFloat(localStorage.getItem(SK) || '0') || 0; }} catch(e) {{}}
 
-    var tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-
-    var ytPlayer;
-    window.onYouTubeIframeAPIReady = function() {{
-      ytPlayer = new YT.Player('yt-player', {{
-        height: '490', width: '100%',
-        videoId: '{_safe_vid}',
-        playerVars: {{
-          autoplay: 1, rel: 0, modestbranding: 1,
-          enablejsapi: 1, playsinline: 1
-        }},
-        events: {{
-          onReady: function(e) {{
-            if (savedT > 5) e.target.seekTo(savedT, true);
-            setInterval(function() {{
-              try {{
-                var t = ytPlayer.getCurrentTime();
-                if (t > 0) {{
-                  localStorage.setItem(SK, String(t));
-                  /* URL params ile de sakla — sayfa yenilenmesine karşı */
-                  try {{
-                    var u = new URL(window.parent.location.href);
-                    u.searchParams.set('ytv', '{_safe_vid}');
-                    u.searchParams.set('ytt', String(Math.floor(t)));
-                    window.parent.history.replaceState(null, '', u.toString());
-                  }} catch(ue) {{}}
-                }}
-              }} catch(ex) {{}}
-            }}, 5000);
-          }},
-          onError: function() {{
-            document.getElementById('yt-player').style.display = 'none';
-            var el = document.getElementById('yt-err');
-            el.style.display = 'flex';
-          }}
-        }}
-      }});
-    }};
-  </script>
-</body>
-</html>"""
-                components.html(_player_html, height=500, scrolling=False)
+  /* window.parent — Streamlit sayfası (same-origin), YouTube mesajlarını alır */
+  try {{ window.parent.addEventListener('message', onMsg, false); }} catch(e) {{}}
+  /* Doğrudan window — bazı Streamlit versiyonlarında iç frame olabilir */
+  try {{ window.addEventListener('message', onMsg, false); }} catch(e) {{}}
+}})();
+</script>"""
+                components.html(_ts_bridge, height=0, scrolling=False)
 
             # ─── ARAMA SONUÇLARI — KART GRİD ──────────────────────────
             elif st.session_state.yt_results:
