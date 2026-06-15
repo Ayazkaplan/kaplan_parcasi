@@ -28,40 +28,37 @@ st.markdown("""
   .notranslate { translate: no; }
   font[style*="vertical-align"] { display: none !important; }
 
-  /* ── ℹ️ Bilgi Butonu — Sağ Üst Köşe Sabit (mobil dahil) ── */
-  div[data-testid="stPopover"],
-  [data-testid="stPopover"] {
+  /* ── ℹ️ Bilgi Butonu — sağ üst köşe, tıklanabilir ── */
+  div[data-testid="stPopover"] {
     position: fixed !important;
     top: 10px !important;
     right: 10px !important;
     z-index: 9999 !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: 44px !important;
     margin: 0 !important;
     padding: 0 !important;
+    pointer-events: auto !important;
   }
-  div[data-testid="stPopover"] > button,
-  [data-testid="stPopover"] > button {
-    background: rgba(30,30,50,0.92) !important;
-    border: 1px solid rgba(255,255,255,0.22) !important;
+  div[data-testid="stPopover"] button:first-child {
+    background: rgba(20,20,40,0.9) !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
     border-radius: 50% !important;
     width: 36px !important;
     height: 36px !important;
     min-width: 36px !important;
     min-height: 36px !important;
+    max-width: 36px !important;
+    max-height: 36px !important;
     padding: 0 !important;
     font-size: 1rem !important;
-    line-height: 36px !important;
-    text-align: center !important;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.55) !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5) !important;
     cursor: pointer !important;
-    display: flex !important;
+    pointer-events: auto !important;
+    display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    transition: background 0.2s, transform 0.15s !important;
-  }
-  div[data-testid="stPopover"] > button:hover,
-  [data-testid="stPopover"] > button:hover {
-    background: rgba(60,60,90,0.97) !important;
-    transform: scale(1.08) !important;
   }
 </style>
 """, unsafe_allow_html=True)
@@ -965,7 +962,11 @@ else:
 
         if st.button("İsmi Güncelle"):
             temiz_yeni_isim = yeni_isim.strip()
-            if not is_kurucu and emoji_var_mi(temiz_yeni_isim):
+            if len(temiz_yeni_isim) < 3:
+                st.warning("⚠️ Kullanıcı adı en az **3 karakter** olmalıdır.")
+            elif len(temiz_yeni_isim) > 25:
+                st.warning("⚠️ Kullanıcı adı en fazla **25 karakter** olabilir.")
+            elif not is_kurucu and emoji_var_mi(temiz_yeni_isim):
                 st.warning("⚠️ İsminizde emoji kullanamazsınız.")
             elif temiz_yeni_isim != kullanici_ismi:
                 # İsim benzersizlik kontrolü (kendi ismini tutmak serbesttir)
@@ -1647,6 +1648,76 @@ else:
             st.error(f"Yöneticiler yüklenirken hata oluştu: {e}")
 
     else:
+        # ─── KALICI MİNİ OYNATICI — her sayfada render edilir, taşınabilir ───────
+        # window.parent.document'a iframe enjekte eder; React tree dışında kaldığı
+        # için Streamlit rerun'ları videonun durmasına neden olmaz.
+        _gp_vid = ""
+        _gp_ts  = 0
+        if st.session_state.get("yt_playing_id"):
+            _gp_vid = re.sub(r'[^a-zA-Z0-9_\-]', '', st.session_state.yt_playing_id)
+            _gp_ts  = int(st.session_state.yt_ts_dict.get(_gp_vid, 0))
+        _gp_portal = (st.session_state.current_page == "youtube_portal")
+        components.html(f"""<script>
+(function() {{
+  var VID      = '{_gp_vid}';
+  var START_TS = {_gp_ts};
+  var IS_PORTAL = {'true' if _gp_portal else 'false'};
+  var pDoc     = window.parent.document;
+  if (!pDoc) return;
+
+  /* ── DOM elemanını bir kez oluştur ── */
+  if (!pDoc.getElementById('yt-gp-cont')) {{
+    var cont = pDoc.createElement('div');
+    cont.id = 'yt-gp-cont';
+    cont.style.cssText = 'position:fixed;bottom:16px;right:16px;width:288px;height:162px;' +
+      'z-index:8800;border-radius:12px;overflow:hidden;box-shadow:0 6px 28px rgba(0,0,0,0.7);' +
+      'display:none;background:#000;';
+
+    var fr = pDoc.createElement('iframe');
+    fr.id  = 'yt-gp-frame';
+    fr.style.cssText = 'width:100%;height:100%;border:none;';
+    fr.allow = 'autoplay;encrypted-media;fullscreen';
+    fr.allowFullscreen = true;
+    cont.appendChild(fr);
+
+    var cb = pDoc.createElement('button');
+    cb.textContent = '✕';
+    cb.style.cssText = 'position:absolute;top:4px;right:6px;background:rgba(0,0,0,0.7);' +
+      'color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:0.7rem;' +
+      'cursor:pointer;z-index:9;line-height:22px;padding:0;text-align:center;';
+    cb.onclick = function() {{
+      cont.style.display = 'none';
+      window.parent._ytGpClosed = true;
+    }};
+    cont.appendChild(cb);
+    pDoc.body.appendChild(cont);
+  }}
+
+  var cont  = pDoc.getElementById('yt-gp-cont');
+  var frame = pDoc.getElementById('yt-gp-frame');
+
+  /* Portal sayfasında mini oynatıcıyı gizle (tam boy oynatıcı aktif) */
+  if (IS_PORTAL) {{ cont.style.display = 'none'; return; }}
+
+  /* Video yoksa veya kullanıcı kapattıysa gizle */
+  if (!VID || window.parent._ytGpClosed) {{ cont.style.display = 'none'; return; }}
+
+  /* Hedef src */
+  var targetBase = 'https://www.youtube.com/embed/' + VID;
+  var targetSrc  = targetBase + '?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&start=' + START_TS;
+
+  /* Aynı video zaten oynuyorsa src'ye dokunma — kesintisiz devam eder */
+  var curBase = (frame.src || '').split('?')[0];
+  if (curBase !== targetBase) {{
+    frame.src = targetSrc;
+  }}
+
+  cont.style.display = 'block';
+  window.parent._ytGpClosed = false;
+}})();
+</script>""", height=0, scrolling=False)
+        # ────────────────────────────────────────────────────────────────────────
+
         if st.session_state.current_page == "chat":
 
             # --- DÜZELTME 6: Anlık Ban Kontrolü (fragment ile) ---
@@ -2006,9 +2077,9 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                         st.session_state.yt_last_id      = re.sub(r'[^a-zA-Z0-9_\-]', '', st.session_state.yt_playing_id)
                         st.session_state.yt_last_title   = st.session_state.yt_playing_title
                         st.session_state.yt_last_channel = st.session_state.get("yt_playing_channel", "")
-                    st.session_state.current_page    = "chat"
-                    st.session_state.yt_playing_id   = None
-                    st.session_state.yt_results      = []
+                        # yt_playing_id SIFIRLAMA — mini-player arka planda çalmaya devam eder
+                    st.session_state.current_page = "chat"
+                    st.session_state.yt_results   = []
                     st.rerun()
 
             st.markdown("<hr style='border:none;border-top:1px solid rgba(255,255,255,0.08);margin:10px 0 14px;'>", unsafe_allow_html=True)
@@ -2073,68 +2144,83 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
   {f'<div style="font-size:0.8em;color:#aaa;margin-top:4px;">📺 {_pch}</div>' if _pch else ''}
 </div>""", unsafe_allow_html=True)
 
-                # ── session_state'teki kayıtlı timestamp'i al ──
+                # ── kayıtlı timestamp: session_state > localStorage (JS tarafı okur) ──
                 _start_ts = int(st.session_state.yt_ts_dict.get(_safe_vid, 0))
 
-                # ── st.components.v1.iframe — sabit key ile re-render önlenir ──
-                _embed_url = (
-                    f"https://www.youtube.com/embed/{_safe_vid}"
-                    f"?autoplay=1&rel=0&modestbranding=1&playsinline=1"
-                    f"&enablejsapi=1&start={_start_ts}"
-                )
-                st.components.v1.iframe(_embed_url, key="yt_player_main", height=490, scrolling=False)
-
-                # ── JS Köprüsü: YouTube postMessage olaylarını dinle, pozisyon kaydet ──
-                # components.html, Streamlit ile aynı origin'den yüklendiği için
-                # window.parent.addEventListener ile YouTube'un gönderdiği mesajları yakalar.
-                _ts_bridge = f"""<script>
-(function() {{
-  var VID = '{_safe_vid}';
-  var SK  = 'ytpos_' + VID;
-
-  /* Startup: localStorage'daki son pozisyonu URL params'a yaz */
-  try {{
-    var lsT = parseFloat(localStorage.getItem(SK) || '0') || 0;
-    if (lsT > 5) {{
-      var u0 = new URL(window.parent.location.href);
-      if (!u0.searchParams.get('ytt')) {{
-        u0.searchParams.set('ytv', VID);
-        u0.searchParams.set('ytt', String(Math.floor(lsT)));
-        window.parent.history.replaceState(null, '', u0.toString());
-      }}
-    }}
-  }} catch(e) {{}}
-
-  /* Runtime: YouTube IFrame API postMessage olaylarını yakala */
-  function onMsg(evt) {{
-    if (!evt.data) return;
-    try {{
-      var d = (typeof evt.data === 'string') ? JSON.parse(evt.data) : evt.data;
-      var t = null;
-      if (d.event === 'infoDelivery' && d.info && d.info.currentTime !== undefined) {{
-        t = d.info.currentTime;
-      }} else if (d.info && typeof d.info === 'object' && d.info.currentTime !== undefined) {{
-        t = d.info.currentTime;
-      }}
-      if (t !== null && t > 0) {{
-        localStorage.setItem(SK, String(t));
-        try {{
-          var u = new URL(window.parent.location.href);
-          u.searchParams.set('ytv', VID);
-          u.searchParams.set('ytt', String(Math.floor(t)));
-          window.parent.history.replaceState(null, '', u.toString());
-        }} catch(ue) {{}}
-      }}
-    }} catch(ex) {{}}
+                # ── Tam boyutlu portal oynatıcı — components.html (IFrame API destekli) ──
+                _player_html = f"""<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ background:#000; overflow:hidden; }}
+  #ytp {{ width:100%; height:490px; }}
+  #ytp-err {{
+    display:none; background:#111; color:#f39c12;
+    font-family:sans-serif; height:490px;
+    flex-direction:column; align-items:center;
+    justify-content:center; gap:12px; font-size:0.95rem;
   }}
+  #ytp-err a {{ color:#3ea6ff; }}
+</style>
+</head>
+<body>
+  <div id="ytp"></div>
+  <div id="ytp-err">
+    ⚠️ Video yüklenemedi.
+    <a href="https://youtu.be/{_safe_vid}" target="_blank">YouTube'da aç ↗</a>
+  </div>
+  <script>
+    var SK = 'ytpos_{_safe_vid}';
+    var startT = {_start_ts};
+    try {{
+      var lsT = parseFloat(localStorage.getItem(SK) || '0') || 0;
+      if (lsT > startT + 2) startT = lsT;
+    }} catch(e) {{}}
 
-  /* window.parent — Streamlit sayfası (same-origin), YouTube mesajlarını alır */
-  try {{ window.parent.addEventListener('message', onMsg, false); }} catch(e) {{}}
-  /* Doğrudan window — bazı Streamlit versiyonlarında iç frame olabilir */
-  try {{ window.addEventListener('message', onMsg, false); }} catch(e) {{}}
-}})();
-</script>"""
-                components.html(_ts_bridge, height=0, scrolling=False)
+    var tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+
+    var ytP;
+    window.onYouTubeIframeAPIReady = function() {{
+      ytP = new YT.Player('ytp', {{
+        height:'490', width:'100%',
+        videoId:'{_safe_vid}',
+        playerVars:{{
+          autoplay:1, rel:0, modestbranding:1,
+          enablejsapi:1, playsinline:1,
+          start: Math.floor(startT)
+        }},
+        events:{{
+          onReady: function(e) {{
+            if (startT > 5) e.target.seekTo(startT, true);
+            setInterval(function() {{
+              try {{
+                var t = ytP.getCurrentTime();
+                if (t > 0) {{
+                  localStorage.setItem(SK, String(t));
+                  try {{
+                    var u = new URL(window.parent.location.href);
+                    u.searchParams.set('ytv', '{_safe_vid}');
+                    u.searchParams.set('ytt', String(Math.floor(t)));
+                    window.parent.history.replaceState(null, '', u.toString());
+                  }} catch(ue) {{}}
+                }}
+              }} catch(ex) {{}}
+            }}, 5000);
+          }},
+          onError: function() {{
+            document.getElementById('ytp').style.display = 'none';
+            document.getElementById('ytp-err').style.display = 'flex';
+          }}
+        }}
+      }});
+    }};
+  </script>
+</body>
+</html>"""
+                components.html(_player_html, height=495, scrolling=False)
 
             # ─── ARAMA SONUÇLARI — KART GRİD ──────────────────────────
             elif st.session_state.yt_results:
