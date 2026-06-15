@@ -20,6 +20,9 @@ st.markdown("""
 <meta name="google" content="notranslate">
 <meta http-equiv="Content-Language" content="tr">
 <style>
+  /* 3 Nokta Streamlit Menüsünü Tamamen Gizle (Bilgi Tuşu İçin) */
+  [data-testid="stHeader"] { display: none !important; }
+
   .goog-te-banner-frame, .goog-te-menu-value, #goog-gt-tt,
   .goog-tooltip, .goog-tooltip:hover, .goog-te-balloon-frame,
   div#goog-gt-tt, .VIpgJd-ZVi9od-ORHb-OEVmcd,
@@ -28,12 +31,12 @@ st.markdown("""
   .notranslate { translate: no; }
   font[style*="vertical-align"] { display: none !important; }
 
-  /* ── ℹ️ Bilgi Butonu — sağ üst köşe, tıklanabilir ── */
+  /* ── ℹ️ Bilgi Butonu — sağ üst köşe, biraz daha aşağıda ── */
   div[data-testid="stPopover"] {
     position: fixed !important;
-    top: 10px !important;
-    right: 10px !important;
-    z-index: 9999 !important;
+    top: 55px !important; /* TIKLANABİLİR OLMASI İÇİN AŞAĞI ALINDI */
+    right: 15px !important;
+    z-index: 999999 !important;
     width: auto !important;
     height: auto !important;
     max-width: 44px !important;
@@ -126,9 +129,7 @@ TEMALAR = {
 
 # --- FIREBASE BAŞLATMA ---
 if not firebase_admin._apps:
-    # Öncelik 1: GOOGLE_APPLICATION_CREDENTIALS secret'ı (JSON içeriği olarak)
     gac_env = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    # Öncelik 2: Yerel dosya yolları (geliştirme ortamı için)
     secret_path = "/etc/secrets/firebase-key.json"
     local_path = "firebase-key.json"
 
@@ -160,62 +161,32 @@ def normalize_text(text):
     return re.sub(r'[^a-zA-Z0-9]', '', text.lower())
 
 def kufur_var_mi(text):
-    """
-    Küfür filtresi — kelime sınırı (word boundary) tabanlı, yalnızca ağır hakaret
-    ve küfürleri yakalar. Günlük dilde geçen masum kelimeleri engellemez.
-    """
     clean_text = normalize_text(text)
-
-    # Değişken yazım / birleşik kelime varyantları için substring eşleşmesi
     substring_list = [
         "amk", "amq", "amcik", "aminakoy", "aminakoyim", "aminakoyayim",
         "orospucocugu", "orspucocugu", "orospucuk",
         "sikerim", "sikeyim", "sikis", "siksok",
-        "gotek", "gotlek",
-        "piclik",
-        "yavsak", "yavsaklik",
-        "serefsiz",
-        "ibnelik",
-        "kahpece",
-        "gavatlik",
-        "dalyarak",
-        "kancik",
-        "fuck", "fuuck", "fck", "f u c k",
-        "btch", "b1tch",
-        "asshole", "ashole",
-        "motherfucker", "mofo",
-        "scheisse", "scheiße",
-        "arschloch", "schlampe", "wichser", "hurensohn", "fotze", "ficken",
-        "sharmouta", "sharmuta", "kussemmak",
-        "putain", "connard",
+        "gotek", "gotlek", "piclik", "yavsak", "yavsaklik",
+        "serefsiz", "ibnelik", "kahpece", "gavatlik", "dalyarak", "kancik",
+        "fuck", "fuuck", "fck", "f u c k", "btch", "b1tch",
+        "asshole", "ashole", "motherfucker", "mofo",
+        "scheisse", "scheiße", "arschloch", "schlampe", "wichser", "hurensohn", "fotze", "ficken",
+        "sharmouta", "sharmuta", "kussemmak", "putain", "connard",
     ]
-
-    # Bağımsız kelime olarak geçtiğinde tetiklenen liste (yanlış pozitifi önler)
     word_list = [
-        "amina", "orospu",
-        "sik", "got",
-        "pic", "picin",
-        "ibne", "kahpe", "gavat",
-        "yarrak", "yarak",
-        "dangalak", "gerzek", "gerizekali",
-        "bok",
-        "pust",
+        "amina", "orospu", "sik", "got", "pic", "picin",
+        "ibne", "kahpe", "gavat", "yarrak", "yarak",
+        "dangalak", "gerzek", "gerizekali", "bok", "pust",
         "bitch", "cunt", "whore", "slut", "dick", "cock",
-        "bastard",
-        "nigger", "nigga",
-        "faggot", "fag",
-        "retard",
+        "bastard", "nigger", "nigga", "faggot", "fag", "retard",
         "puta", "puto", "cabron", "maricon", "merde",
     ]
-
     for word in substring_list:
         if word in clean_text:
             return True
-
     for word in word_list:
         if re.search(r'(?<![a-z])' + re.escape(word) + r'(?![a-z])', clean_text):
             return True
-
     return False
 
 def emoji_var_mi(text):
@@ -230,22 +201,18 @@ def get_styled_user_name(u_name, u_color, u_glow, u_tag, u_rozet):
     glow_css = f"text-shadow: 0 0 10px {color_val}, 0 0 20px {color_val}, 0 0 30px {color_val};" if u_glow else ""
     tag_html = ""
     if u_tag:
-        # Tag da aynı renk ve parlaklık efektiyle gösterilir
         tag_html = f'<span style="font-size:0.8em; color:{color_val}; {glow_css} margin-right:5px;">[{u_tag}]</span>'
     isim_html = f'<span style="color:{color_val}; {glow_css} font-weight:bold;">{u_name}</span>'
     rozet_html = ""
     if u_rozet:
-        # Rozet de aynı parlaklık efektiyle gösterilir
         rozet_html = f'<span style="margin-left:5px; filter: drop-shadow(0 0 6px {color_val});">{u_rozet}</span>' if u_glow else f'<span style="margin-left:5px;">{u_rozet}</span>'
     return f"{tag_html}{isim_html}{rozet_html}"
 
 def get_tr_time():
-    """Türkiye saatini (UTC+3) döndürür."""
     tr_tz = timezone(timedelta(hours=3))
     return datetime.now(tr_tz)
 
 def ensure_utc(dt):
-    """Firestore veya yerel tarih nesnesini UTC-aware hale getirir (Madde 2: Saat Senkronizasyonu)."""
     if dt is None:
         return None
     if hasattr(dt, 'to_datetime'):
@@ -255,7 +222,6 @@ def ensure_utc(dt):
     return dt
 
 def web_ara(sorgu, max_sonuc=4):
-    """DuckDuckGo ile güncel web araması yapar, sonuçları metin olarak döndürür."""
     try:
         from duckduckgo_search import DDGS
         with DDGS() as ddgs:
@@ -273,7 +239,6 @@ def web_ara(sorgu, max_sonuc=4):
         return ""
 
 def youtube_ara(sorgu, max_sonuc=12):
-    """YouTube InnerTube API ile arama — API key veya proxies gerektirmez, requests.post ile temiz bağlantı."""
     try:
         payload = {
             "context": {
@@ -345,13 +310,11 @@ def youtube_ara(sorgu, max_sonuc=12):
         return []
 
 def log_hata(hata_tipi, kullanici_id="SYSTEM", detay=""):
-    """Yapılandırılmış hata logu: Hata Zamanı | Kullanıcı ID | Hata Tipi | Detay (Madde 10)."""
     tr_tz = timezone(timedelta(hours=3))
     zaman = datetime.now(tr_tz).strftime("%Y-%m-%d %H:%M:%S")
     print(f"[HATA] Zaman: {zaman} | Kullanıcı ID: {kullanici_id} | Hata Tipi: {hata_tipi} | Detay: {detay}")
 
 def firebase_hata_cevir(hata_kodu):
-    """Firebase hata kodlarını Türkçe ve açıklayıcı mesajlara çevirir (Madde 11)."""
     hata_map = {
         "EMAIL_NOT_FOUND": "Bu e-posta adresiyle kayıtlı bir hesap bulunamadı.",
         "INVALID_PASSWORD": "Girilen şifre hatalı. Lütfen tekrar deneyin.",
@@ -391,10 +354,6 @@ def firebase_login(email, password):
         return None, "NETWORK_ERROR"
 
 def sifre_kaydet_firebase(uid, yeni_sifre):
-    """
-    Şifre sıfırlama sonrası yeni şifreyi Firebase'e displayName alanına yazar.
-    Firebase Auth şifreleri hash'ler, biz display_name'i workaround olarak kullanıyoruz.
-    """
     try:
         auth.update_user(uid, display_name=f"__pwd__{yeni_sifre}")
         db.collection("users").document(uid).update({"gizli_bilgi": yeni_sifre})
@@ -540,7 +499,6 @@ if not st.session_state.user_logged_in and not st.session_state.get("trigger_cle
 # --- GİRİŞ VE KAYIT EKRANI ---
 if not st.session_state.user_logged_in:
 
-    # --- ŞİFRE SIFIRLAMA TOKEN KONTROLÜ ---
     _reset_token = st.query_params.get("reset_token", "")
     if _reset_token:
         st.title("🔑 Şifre Sıfırlama")
@@ -648,15 +606,14 @@ if not st.session_state.user_logged_in:
                 clean_email = email.strip().lower()
                 temiz_isim = isim_input.strip()
 
-                # --- DÜZELTME 11: İsim benzersizlik kontrolü ---
-                if temiz_isim:
-                    if len(temiz_isim) < 3 or len(temiz_isim) > 25:
-                        st.warning("⚠️ Lütfen isminizi 3 ile 25 karakter arasında belirleyin.")
-                        st.stop()
-                    isim_check = db.collection("users").where("isim", "==", temiz_isim).limit(1).get()
-                    if isim_check:
-                        st.error("❌ Bu kullanıcı adı zaten alınmış. Lütfen farklı bir isim seçin!")
-                        st.stop()
+                if not temiz_isim or len(temiz_isim) < 3 or len(temiz_isim) > 25:
+                    st.warning("⚠️ Lütfen isminizi 3 ile 25 karakter arasında belirleyin.")
+                    st.stop()
+                    
+                isim_check = db.collection("users").where("isim", "==", temiz_isim).limit(1).get()
+                if isim_check:
+                    st.error("❌ Bu kullanıcı adı zaten alınmış. Lütfen farklı bir isim seçin!")
+                    st.stop()
 
                 ban_doc = db.collection("banlanan_emails").document(clean_email).get()
                 if ban_doc.exists:
@@ -969,7 +926,6 @@ else:
             elif not is_kurucu and emoji_var_mi(temiz_yeni_isim):
                 st.warning("⚠️ İsminizde emoji kullanamazsınız.")
             elif temiz_yeni_isim != kullanici_ismi:
-                # İsim benzersizlik kontrolü (kendi ismini tutmak serbesttir)
                 isim_check = db.collection("users").where("isim", "==", temiz_yeni_isim).limit(1).get()
                 if isim_check:
                     st.error("❌ Bu kullanıcı adı zaten alınmış!")
@@ -1530,7 +1486,6 @@ else:
                         "rozet": rozet_val.strip(),
                         "is_admin": is_admin_flag
                     }
-                    # --- DÜZELTME 1: Yöneticilik alındığında stil sıfırlama ---
                     if not is_admin_flag and target_data.get("is_admin", False):
                         update_payload["isim_rengi"] = "#FFFFFF"
                         update_payload["ismin_parlakligi"] = False
@@ -1578,7 +1533,6 @@ else:
                                 c_y, c_n = st.columns(2)
                                 with c_y:
                                     if st.button("Evet", key=f"demote_yes_{a_id}", type="primary", use_container_width=True):
-                                        # --- DÜZELTME 1: Yöneticilikten çıkarınca stil sıfırla ---
                                         db.collection("users").document(a_id).update({
                                             "is_admin": False,
                                             "isim_rengi": "#FFFFFF",
@@ -1648,9 +1602,7 @@ else:
             st.error(f"Yöneticiler yüklenirken hata oluştu: {e}")
 
     else:
-        # ─── KALICI MİNİ OYNATICI — her sayfada render edilir, taşınabilir ───────
-        # window.parent.document'a iframe enjekte eder; React tree dışında kaldığı
-        # için Streamlit rerun'ları videonun durmasına neden olmaz.
+        # ─── KALICI MİNİ OYNATICI — her sayfada render edilir, GÖRÜNMEZ SES MODU ───────
         _gp_vid = ""
         _gp_ts  = 0
         if st.session_state.get("yt_playing_id"):
@@ -1665,62 +1617,45 @@ else:
   var pDoc     = window.parent.document;
   if (!pDoc) return;
 
-  /* ── DOM elemanını bir kez oluştur ── */
+  /* ── DOM elemanını bir kez oluştur (Tamamen Görünmez) ── */
   if (!pDoc.getElementById('yt-gp-cont')) {{
     var cont = pDoc.createElement('div');
     cont.id = 'yt-gp-cont';
-    cont.style.cssText = 'position:fixed;bottom:16px;right:16px;width:288px;height:162px;' +
-      'z-index:8800;border-radius:12px;overflow:hidden;box-shadow:0 6px 28px rgba(0,0,0,0.7);' +
-      'display:none;background:#000;';
+    /* Tamamen görünmez, tıklanamaz, hayalet kutu */
+    cont.style.cssText = 'position:fixed;width:1px;height:1px;top:-9999px;left:-9999px;opacity:0;pointer-events:none;z-index:-99;';
 
     var fr = pDoc.createElement('iframe');
     fr.id  = 'yt-gp-frame';
     fr.style.cssText = 'width:100%;height:100%;border:none;';
-    fr.allow = 'autoplay;encrypted-media;fullscreen';
-    fr.allowFullscreen = true;
+    fr.allow = 'autoplay;encrypted-media;';
     cont.appendChild(fr);
-
-    var cb = pDoc.createElement('button');
-    cb.textContent = '✕';
-    cb.style.cssText = 'position:absolute;top:4px;right:6px;background:rgba(0,0,0,0.7);' +
-      'color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:0.7rem;' +
-      'cursor:pointer;z-index:9;line-height:22px;padding:0;text-align:center;';
-    cb.onclick = function() {{
-      cont.style.display = 'none';
-      window.parent._ytGpClosed = true;
-    }};
-    cont.appendChild(cb);
     pDoc.body.appendChild(cont);
   }}
 
-  var cont  = pDoc.getElementById('yt-gp-cont');
   var frame = pDoc.getElementById('yt-gp-frame');
 
-  /* Portal sayfasında mini oynatıcıyı gizle (tam boy oynatıcı aktif) */
-  if (IS_PORTAL) {{ cont.style.display = 'none'; return; }}
+  /* Portal sayfasındaysak veya video yoksa, arkadaki gizli iframe'i tamamen boşalt (çift sesi önler) */
+  if (IS_PORTAL || !VID) {{
+      if (frame.src !== '') {{
+          frame.src = ''; 
+      }}
+      return;
+  }}
 
-  /* Video yoksa veya kullanıcı kapattıysa gizle */
-  if (!VID || window.parent._ytGpClosed) {{ cont.style.display = 'none'; return; }}
-
-  /* Hedef src */
+  /* Portalda DEĞİLSEK ve video varsa, arka planda görünmez olarak çalmaya devam et */
   var targetBase = 'https://www.youtube.com/embed/' + VID;
   var targetSrc  = targetBase + '?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&start=' + START_TS;
 
-  /* Aynı video zaten oynuyorsa src'ye dokunma — kesintisiz devam eder */
   var curBase = (frame.src || '').split('?')[0];
   if (curBase !== targetBase) {{
     frame.src = targetSrc;
   }}
-
-  cont.style.display = 'block';
-  window.parent._ytGpClosed = false;
 }})();
 </script>""", height=0, scrolling=False)
         # ────────────────────────────────────────────────────────────────────────
 
         if st.session_state.current_page == "chat":
 
-            # --- DÜZELTME 6: Anlık Ban Kontrolü (fragment ile) ---
             @st.fragment(run_every=10)
             def ban_kontrol_fragment(current_uid):
                 try:
@@ -1801,7 +1736,7 @@ else:
             # --- SOHBET ARAYÜZÜ ---
             st.title("🤖 Aslan Parçası V16.4")
 
-            # ── Bilgi Butonu — CSS ile sağ üst köşeye sabitlendi ──
+            # ── Bilgi Butonu ──
             with st.popover("ℹ️"):
                 st.markdown("## 🏢 Hakkımızda")
                 st.markdown("""
@@ -1902,11 +1837,9 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                 tag_tanimi = f"Tagı: [{user_tag_fresh_ai}]" if user_tag_fresh_ai else "Tagı: Bulunmuyor"
                 rozet_tanimi = f"Rozeti: [{user_rozet_fresh_ai}]" if user_rozet_fresh_ai else "Rozeti: Bulunmuyor"
 
-                # --- DÜZELTME 3: AI'ya TR saatini bildir ---
                 tr_saat_ai = get_tr_time().strftime("%H:%M:%S")
                 tr_tarih_ai = get_tr_time().strftime("%d.%m.%Y")
 
-                # --- İNTERNET ERİŞİMİ: DuckDuckGo ile güncel bilgi ---
                 son_kullanici_mesaj = next((m["content"] for m in reversed(mesajlar) if m["role"] == "user"), "")
                 web_tetikleyiciler = [
                     "bugün", "şu an", "şimdi", "son", "güncel", "haber", "kim", "nedir",
@@ -1971,7 +1904,6 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                     if kufur_var_mi(val):
                         test_id = f"kufur_{int(datetime.now(timezone.utc).timestamp())}_{uid}"
 
-                        # --- DÜZELTME 9: Raporda kurucu/kullanıcı tag, renk, rozet bilgisi ---
                         rapor_color = u_color_fresh
                         rapor_glow = u_glow_fresh
                         rapor_tag = u_tag_fresh
@@ -2040,14 +1972,12 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
         elif st.session_state.current_page == "youtube_portal":
             yt_saved = user_ref.get().to_dict().get("videos", [])
 
-            # ─── SAYFA YENİLENME / URL PARAM ile VİDEO & TIMESTAMP GERİ YÜKLEME ──
             _qp = st.query_params
             _qp_vid = _qp.get("ytv", "")
             _qp_ts  = int(_qp.get("ytt", "0") or "0")
             if _qp_vid:
                 _qp_vid_safe = re.sub(r'[^a-zA-Z0-9_\-]', '', _qp_vid)
                 if _qp_vid_safe:
-                    # Timestamp'i session_state sözlüğüne kaydet
                     if _qp_ts > 0:
                         st.session_state.yt_ts_dict[_qp_vid_safe] = _qp_ts
                     if not st.session_state.yt_playing_id:
@@ -2077,7 +2007,6 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                         st.session_state.yt_last_id      = re.sub(r'[^a-zA-Z0-9_\-]', '', st.session_state.yt_playing_id)
                         st.session_state.yt_last_title   = st.session_state.yt_playing_title
                         st.session_state.yt_last_channel = st.session_state.get("yt_playing_channel", "")
-                        # yt_playing_id SIFIRLAMA — mini-player arka planda çalmaya devam eder
                     st.session_state.current_page = "chat"
                     st.session_state.yt_results   = []
                     st.rerun()
@@ -2144,10 +2073,8 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
   {f'<div style="font-size:0.8em;color:#aaa;margin-top:4px;">📺 {_pch}</div>' if _pch else ''}
 </div>""", unsafe_allow_html=True)
 
-                # ── kayıtlı timestamp: session_state > localStorage (JS tarafı okur) ──
                 _start_ts = int(st.session_state.yt_ts_dict.get(_safe_vid, 0))
 
-                # ── Tam boyutlu portal oynatıcı — components.html (IFrame API destekli) ──
                 _player_html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -2282,7 +2209,6 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
 
             # ─── HOŞ GELDİN EKRANI ────────────────────────────────────
             else:
-                # Son izlenen videoyu öner
                 if st.session_state.get("yt_last_id"):
                     _lid   = st.session_state.yt_last_id
                     _ltit  = st.session_state.yt_last_title or _lid
