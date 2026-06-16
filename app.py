@@ -41,25 +41,35 @@ st.markdown("""
   }
 
   /* Sidebar hamburger menü butonunu görünür yap */
-  [data-testid="collapsedControl"] {
+  [data-testid="collapsedControl"],
+  [data-testid="stSidebarCollapsedControl"],
+  button[data-testid="baseButton-header"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
     position: fixed !important;
-    top: 15px !important;
-    left: 15px !important;
+    top: 12px !important;
+    left: 12px !important;
     z-index: 999999 !important;
-    background: rgba(20,20,40,0.75) !important;
+    background: rgba(20,20,40,0.8) !important;
     border-radius: 50% !important;
     padding: 10px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    width: 44px !important;
+    height: 44px !important;
     border: 1px solid rgba(255,255,255,0.15) !important;
     cursor: pointer !important;
-    box-shadow: 0 2px 15px rgba(0,0,0,0.4) !important;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.5) !important;
     transition: all 0.2s ease !important;
+    color: white !important;
+    font-size: 1.2rem !important;
   }
-  [data-testid="collapsedControl"]:hover {
-    background: rgba(40,40,80,0.9) !important;
-    border-color: rgba(255,215,0,0.3) !important;
+  [data-testid="collapsedControl"]:hover,
+  [data-testid="stSidebarCollapsedControl"]:hover,
+  button[data-testid="baseButton-header"]:hover {
+    background: rgba(40,40,80,0.95) !important;
+    border-color: rgba(255,215,0,0.4) !important;
     transform: scale(1.05) !important;
   }
 
@@ -71,15 +81,15 @@ st.markdown("""
   .notranslate { translate: no; }
   font[style*="vertical-align"] { display: none !important; }
 
-  /* ── ℹ️ Bilgi Butonu — sağ üst köşe ── */
+  /* ── ℹ️ Bilgi Butonu — tam sağ üst köşe ── */
   div[data-testid="stPopover"] {
     position: fixed !important;
-    top: 15px !important;
-    right: 15px !important;
+    top: 10px !important;
+    right: 10px !important;
     z-index: 999998 !important;
     width: auto !important;
     height: auto !important;
-    max-width: 48px !important;
+    max-width: 44px !important;
     margin: 0 !important;
     padding: 0 !important;
     pointer-events: auto !important;
@@ -88,14 +98,14 @@ st.markdown("""
     background: rgba(20,20,40,0.85) !important;
     border: 1px solid rgba(255,255,255,0.25) !important;
     border-radius: 50% !important;
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    min-height: 42px !important;
-    max-width: 42px !important;
-    max-height: 42px !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    max-width: 40px !important;
+    max-height: 40px !important;
     padding: 0 !important;
-    font-size: 1.2rem !important;
+    font-size: 1.1rem !important;
     box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
     cursor: pointer !important;
     pointer-events: auto !important;
@@ -112,7 +122,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Google Translate JS engeli — components.html ile (script çalışması garantili)
+# Google Translate JS engeli
 components.html("""
 <script>
   var m1 = document.createElement('meta');
@@ -896,7 +906,6 @@ else:
     }}
     .avatar {{ width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }}
     .header-box {{ font-weight: bold; margin-bottom: 5px; }}
-    /* Dokunmatik ekran optimizasyonu */
     button, [role="button"],
     .stButton > button,
     [data-testid="baseButton-secondary"],
@@ -905,7 +914,6 @@ else:
         -webkit-tap-highlight-color: transparent !important;
         cursor: pointer !important;
     }}
-    /* Mobil (≤768px) düzeltmeleri */
     @media (max-width: 768px) {{
         .assistant-box, .user-box {{
             padding: 10px !important;
