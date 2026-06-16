@@ -17,7 +17,7 @@ st.set_page_config(
     page_title="Aslan Parçası V16.4",
     page_icon="🦁",
     layout="centered",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="auto"
 )
 
 # --- GOOGLE TRANSLATE ENGELLEME + GLOBAL UI TWEAKS ---
@@ -41,7 +41,7 @@ st.markdown("""
     left: -9999px !important;
   }
 
-  /* === SİDEBAR HAMBURGER BUTONU === */
+  /* === SİDEBAR HAMBURGER BUTONU - ZORLA GÖSTER === */
   [data-testid="collapsedControl"] {
     display: flex !important;
     visibility: visible !important;
@@ -120,7 +120,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- SİDEBAR HAMBURGER BUTONUNU ZORLA GÖSTER ---
+# --- SİDEBAR HAMBURGER BUTONUNU ZORLA GÖSTER (JS) ---
 components.html("""
 <script>
   (function() {
@@ -151,6 +151,7 @@ components.html("""
     if (!showHamburger()) {
       setTimeout(showHamburger, 500);
       setTimeout(showHamburger, 1500);
+      setTimeout(showHamburger, 3000);
     }
     var obs = new MutationObserver(function() { showHamburger(); });
     obs.observe(document.body, { childList: true, subtree: true });
