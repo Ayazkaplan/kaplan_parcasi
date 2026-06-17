@@ -475,7 +475,8 @@ def trigger_invalid_session():
         if key not in ["tema", "tema_rengi", "yt_audio_playing", "yt_iframe_mounted", 
                        "yt_iframe_vid", "yt_resume_time", "yt_ts_dict", "yt_playing_id",
                        "yt_playing_title", "yt_playing_channel", "global_player_container",
-                       "global_player_rendered", "global_player_rendered_vid"]:
+                       "global_player_rendered", "global_player_rendered_vid",
+                       "ban_error_on_logout"]:
             del st.session_state[key]
     st.session_state.trigger_clear_token = True
     st.rerun()
@@ -568,6 +569,7 @@ if not st.session_state.user_logged_in and not st.session_state.get("trigger_cle
                         st.session_state.messages = []
                     st.rerun()
                 else:
+                    st.session_state.ban_error_on_logout = "❌ Hesabınız pasifleştirildiği için giriş yapılamıyor!"
                     trigger_invalid_session()
             else:
                 trigger_invalid_session()
@@ -1826,7 +1828,7 @@ else:
         # ─── SOHBET SAYFASI ────────────────────────────────────────────
         if st.session_state.current_page == "chat":
 
-            @st.fragment(run_every=10)
+            @st.fragment(run_every=3)
             def ban_kontrol_fragment(current_uid):
                 try:
                     kontrol_snap = db.collection("users").document(current_uid).get()
@@ -1850,7 +1852,7 @@ else:
 
             ban_kontrol_fragment(uid)
 
-            @st.fragment(run_every=15)
+            @st.fragment(run_every=5)
             def asenkron_duyuru_kontrol(current_uid):
                 now_ts = time.time()
                 if "last_duyuru_fetch_time" not in st.session_state:
@@ -1858,7 +1860,7 @@ else:
                 if "cached_okunmamis_duyurular" not in st.session_state:
                     st.session_state.cached_okunmamis_duyurular = []
 
-                if now_ts - st.session_state.last_duyuru_fetch_time > 30:
+                if now_ts - st.session_state.last_duyuru_fetch_time > 5:
                     try:
                         fresh_user_snap = db.collection("users").document(current_uid).get()
                         if fresh_user_snap.exists:
