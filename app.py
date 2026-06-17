@@ -430,7 +430,6 @@ if "yt_iframe_mounted" not in st.session_state: st.session_state.yt_iframe_mount
 if "yt_iframe_vid" not in st.session_state: st.session_state.yt_iframe_vid = ""
 if "yt_audio_playing" not in st.session_state: st.session_state.yt_audio_playing = False
 if "yt_resume_time" not in st.session_state: st.session_state.yt_resume_time = 0
-# Global oynatıcı container'ı
 if "global_player_container" not in st.session_state: st.session_state.global_player_container = None
 
 def trigger_invalid_session():
@@ -831,7 +830,7 @@ else:
         st.session_state.current_page = "chat"
         st.rerun()
 
-    # --- CSS ENJEKSİYONU (Mobil Düzeltme + Dokunmatik + Dinamik Bilgi Butonu) ---
+    # --- CSS ENJEKSİYONU ---
     st.markdown(f"""
     <style>
     *, *::before, *::after {{ box-sizing: border-box !important; }}
@@ -897,7 +896,6 @@ else:
         cursor: pointer !important;
     }}
     
-    /* === DİNAMİK BİLGİ BUTONU RENGİ (TEMAYA GÖRE) === */
     div[data-testid="stPopover"] button:first-child {{
         background: {st.session_state.tema_rengi} !important;
     }}
@@ -947,7 +945,6 @@ else:
 
     isim_stili = get_styled_user_name(kullanici_ismi, u_color, u_glow, u_tag, u_rozet)
 
-    # --- SAAT FORMATI OPTİMİZASYONU (%H:%M) ---
     @st.fragment(run_every=60)
     def saat_gosterici():
         tr_simdi = get_tr_time()
@@ -1114,7 +1111,6 @@ else:
         _gvid = re.sub(r'[^a-zA-Z0-9_\-]', '', st.session_state.yt_playing_id)
         _gts = int(st.session_state.yt_ts_dict.get(_gvid, 0))
         
-        # Her zaman güncel video ID ile render et
         with st.session_state.global_player_container:
             components.html(
                 f"""
@@ -1168,7 +1164,6 @@ else:
                         }});
                     }};
                     
-                    // Kullanıcı oynatıcıda play tuşuna basınca GLOBAL_PLAY mesajı gelir
                     window.addEventListener('message', function(event) {{
                         if (event.data === 'GLOBAL_PLAY') {{
                             try {{
@@ -2100,7 +2095,7 @@ else:
 
                 _start_ts = int(st.session_state.yt_ts_dict.get(_safe_vid, 0))
 
-                # ─── PORTAL OYNATICI (GÖRSEL + SES) ──
+                # ─── PORTAL OYNATICI (GÖRSEL, SES YOK - mute KALDIRILDI) ──
                 if not st.session_state.yt_iframe_mounted:
                     st.session_state.yt_iframe_mounted = True
                     
@@ -2155,11 +2150,10 @@ else:
                 }}, 5000);
               }},
               onStateChange: function(event) {{
-                // Kullanıcı play tuşuna basınca global player'a bildir
-                if (event.data === 1) {{ // PLAYING
+                if (event.data === 1) {{
                   window.parent.postMessage('GLOBAL_PLAY', '*');
                 }}
-                if (event.data === 2) {{ // PAUSED
+                if (event.data === 2) {{
                   window.parent.postMessage('GLOBAL_PAUSE', '*');
                 }}
               }}
