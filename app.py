@@ -1115,7 +1115,7 @@ else:
                     """,
                     height=0,
                     width=0,
-                    key=f"yt_audio_{_vid}_{_ts}"  # Benzersiz key
+                    key=f"yt_audio_{_vid}_{_ts}"
                 )
             st.session_state.yt_iframe_mounted = True
             st.session_state.yt_iframe_vid = _vid
@@ -1995,20 +1995,19 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                 if _qp_vid_safe:
                     if _qp_ts > 0:
                         st.session_state.yt_ts_dict[_qp_vid_safe] = _qp_ts
-                    # Eğer zaten bir video çalıyorsa ve farklı bir video açılmak isteniyorsa
-                    if st.session_state.yt_audio_playing and st.session_state.yt_playing_id and st.session_state.yt_playing_id != _qp_vid_safe:
-                        st.error(f"❌ Şu anda başka bir video çalıyor! (ID: {st.session_state.yt_playing_id})")
-                        st.info("Lütfen önce mevcut videoyu durdurun veya aynı videoyu seçin.")
-                        st.stop()
-                    if not st.session_state.yt_playing_id:
-                        st.session_state.yt_playing_id      = _qp_vid_safe
-                        st.session_state.yt_playing_title   = st.session_state.get("yt_last_title", _qp_vid_safe)
-                        st.session_state.yt_playing_channel = st.session_state.get("yt_last_channel", "")
-                        st.session_state.yt_iframe_vid      = _qp_vid_safe
-                        st.session_state.yt_iframe_mounted  = False
-                        st.session_state.yt_audio_playing = True
-                        st.query_params.clear()
-                        st.rerun()
+                    
+                    # Önce eski videoyu durdur (state'leri sıfırla)
+                    st.session_state.yt_audio_playing = False
+                    st.session_state.yt_iframe_mounted = False
+                    
+                    # Yeni videoyu ayarla
+                    st.session_state.yt_playing_id      = _qp_vid_safe
+                    st.session_state.yt_playing_title   = st.session_state.get("yt_last_title", _qp_vid_safe)
+                    st.session_state.yt_playing_channel = st.session_state.get("yt_last_channel", "")
+                    st.session_state.yt_iframe_vid      = _qp_vid_safe
+                    st.session_state.yt_audio_playing = True
+                    st.query_params.clear()
+                    st.rerun()
 
             # ─── HEADER ───────────────────────────────────────────────
             _yh1, _yh2 = st.columns([7, 1])
@@ -2196,7 +2195,6 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
             if st.session_state.yt_results:
                 st.markdown("---")
                 st.markdown("### 📋 Arama Sonuçları")
-                st.warning("⚠️ Bir video zaten oynatılıyor! Yeni bir video açmak için önce mevcut videoyu durdurun.")
                 _yres = st.session_state.yt_results
                 _COLS = 3
                 for _ri in range(0, len(_yres), _COLS):
@@ -2242,8 +2240,16 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
         {_views_line}
       </div>
     </div>""", unsafe_allow_html=True)
-                            # İzle butonu devre dışı (zaten video oynuyor)
-                            st.button("▶ İzle (Engellendi)", key=f"ytplay_disabled_{_rid}_{_ridx}", use_container_width=True, disabled=True)
+                            if st.button("▶ İzle", key=f"ytplay_{_rid}_{_ridx}", use_container_width=True):
+                                # Önce eski videoyu durdur
+                                st.session_state.yt_audio_playing = False
+                                st.session_state.yt_iframe_mounted = False
+                                st.session_state.yt_playing_id      = _rid
+                                st.session_state.yt_playing_title   = _rtitle
+                                st.session_state.yt_playing_channel = _rch
+                                st.session_state.yt_iframe_vid = _rid
+                                st.session_state.yt_audio_playing = True
+                                st.rerun()
 
             # ─── HOŞ GELDİN EKRANI ────────────────────────────────────
             elif not st.session_state.yt_results:
@@ -2268,17 +2274,15 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
     </div>""", unsafe_allow_html=True)
                     with _rc2:
                         if st.button("▶ Devam Et", key="yt_resume_btn", use_container_width=True):
-                            # Eğer zaten bir video çalıyorsa hata ver
-                            if st.session_state.yt_audio_playing:
-                                st.error(f"❌ Şu anda başka bir video çalıyor! (ID: {st.session_state.yt_playing_id})")
-                            else:
-                                st.session_state.yt_playing_id      = _lid
-                                st.session_state.yt_playing_title   = _ltit
-                                st.session_state.yt_playing_channel = _lch
-                                st.session_state.yt_iframe_vid = _lid
-                                st.session_state.yt_iframe_mounted = False
-                                st.session_state.yt_audio_playing = True
-                                st.rerun()
+                            # Önce eski videoyu durdur
+                            st.session_state.yt_audio_playing = False
+                            st.session_state.yt_iframe_mounted = False
+                            st.session_state.yt_playing_id      = _lid
+                            st.session_state.yt_playing_title   = _ltit
+                            st.session_state.yt_playing_channel = _lch
+                            st.session_state.yt_iframe_vid = _lid
+                            st.session_state.yt_audio_playing = True
+                            st.rerun()
                     st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
 
                 st.markdown("""
@@ -2324,17 +2328,16 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                             _sbc1, _sbc2 = st.columns([3, 1])
                             with _sbc1:
                                 if st.button("▶ İzle", key=f"ytsv_play_{_svraw}_{_svidx}", use_container_width=True):
-                                    if st.session_state.yt_audio_playing:
-                                        st.error(f"❌ Şu anda başka bir video çalıyor! (ID: {st.session_state.yt_playing_id})")
-                                    else:
-                                        st.session_state.yt_playing_id      = _svid
-                                        st.session_state.yt_playing_title   = _svid
-                                        st.session_state.yt_playing_channel = ""
-                                        st.session_state.yt_results         = []
-                                        st.session_state.yt_iframe_vid = _svid
-                                        st.session_state.yt_iframe_mounted = False
-                                        st.session_state.yt_audio_playing = True
-                                        st.rerun()
+                                    # Önce eski videoyu durdur
+                                    st.session_state.yt_audio_playing = False
+                                    st.session_state.yt_iframe_mounted = False
+                                    st.session_state.yt_playing_id      = _svid
+                                    st.session_state.yt_playing_title   = _svid
+                                    st.session_state.yt_playing_channel = ""
+                                    st.session_state.yt_results         = []
+                                    st.session_state.yt_iframe_vid = _svid
+                                    st.session_state.yt_audio_playing = True
+                                    st.rerun()
                             with _sbc2:
                                 if st.button("🗑️", key=f"ytsv_del_{_svraw}_{_svidx}"):
                                     user_ref.update({"videos": firestore.ArrayRemove([_svraw])})
