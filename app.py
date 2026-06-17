@@ -54,7 +54,6 @@ st.markdown("""
     pointer-events: auto !important;
   }
   div[data-testid="stPopover"] button:first-child {
-    background: rgba(20,20,40,0.85) !important;
     border: 1px solid rgba(255,255,255,0.25) !important;
     border-radius: 50% !important;
     width: 40px !important;
@@ -74,7 +73,6 @@ st.markdown("""
     transition: all 0.2s ease !important;
   }
   div[data-testid="stPopover"] button:first-child:hover {
-    background: rgba(40,40,80,0.95) !important;
     transform: scale(1.05) !important;
     border-color: rgba(255,215,0,0.5) !important;
   }
@@ -140,6 +138,15 @@ TEMALAR = {
     "🌲 Orman Derinliği": "linear-gradient(135deg, #061700, #142f10, #2c4a2c)",
     "💻 Teknoloji": "linear-gradient(135deg, #000428, #004e92)",
     "🌌 Uzay": "linear-gradient(135deg, #0f0c29, #302b63, #24243e)"
+}
+
+# --- TEMA RENK HARİTASI (Bilgi butonu için) ---
+TEMA_RENKLERI = {
+    "linear-gradient(135deg, #0f2027, #203a43, #2c5364)": "rgba(44, 83, 100, 0.85)",  # Aslan İni
+    "linear-gradient(135deg, #1a0000, #4a0000, #8b0000)": "rgba(139, 0, 0, 0.85)",    # Kraliyet
+    "linear-gradient(135deg, #061700, #142f10, #2c4a2c)": "rgba(44, 74, 44, 0.85)",   # Orman
+    "linear-gradient(135deg, #000428, #004e92)": "rgba(0, 78, 146, 0.85)",            # Teknoloji
+    "linear-gradient(135deg, #0f0c29, #302b63, #24243e)": "rgba(36, 36, 62, 0.85)"    # Uzay
 }
 
 # --- FIREBASE BAŞLATMA ---
@@ -408,6 +415,7 @@ if "user_logged_in" not in st.session_state: st.session_state.user_logged_in = F
 if "user_data" not in st.session_state: st.session_state.user_data = None
 if "messages" not in st.session_state: st.session_state.messages = []
 if "tema" not in st.session_state: st.session_state.tema = list(TEMALAR.values())[0]
+if "tema_rengi" not in st.session_state: st.session_state.tema_rengi = TEMA_RENKLERI.get(list(TEMALAR.values())[0], "rgba(20,20,40,0.85)")
 if "valid_users_cache" not in st.session_state: st.session_state.valid_users_cache = None
 if "current_page" not in st.session_state: st.session_state.current_page = "chat"
 if "yt_results" not in st.session_state: st.session_state.yt_results = []
@@ -420,15 +428,18 @@ if "yt_last_channel" not in st.session_state: st.session_state.yt_last_channel =
 if "yt_ts_dict" not in st.session_state: st.session_state.yt_ts_dict = {}
 if "yt_iframe_mounted" not in st.session_state: st.session_state.yt_iframe_mounted = False
 if "yt_iframe_vid" not in st.session_state: st.session_state.yt_iframe_vid = ""
+if "yt_audio_playing" not in st.session_state: st.session_state.yt_audio_playing = False
 
 def trigger_invalid_session():
     for key in list(st.session_state.keys()):
-        if key != "tema":
+        if key not in ["tema", "tema_rengi", "yt_audio_playing"]:
             del st.session_state[key]
     st.session_state.trigger_clear_token = True
     st.rerun()
 
 def logout_user():
+    # YouTube sesi durdur
+    st.session_state.yt_audio_playing = False
     trigger_invalid_session()
 
 # --- SESSİZ ARKA PLAN GÖREVLİLERİ ---
@@ -493,6 +504,7 @@ if not st.session_state.user_logged_in and not st.session_state.get("trigger_cle
                     st.session_state.user_data = {**user_data, "uid": token}
                     st.session_state.user_logged_in = True
                     st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
+                    st.session_state.tema_rengi = TEMA_RENKLERI.get(st.session_state.tema, "rgba(20,20,40,0.85)")
 
                     sohbet_list = user_data.get("sohbet_gecmisi", [])
                     if isinstance(sohbet_list, list):
@@ -608,6 +620,7 @@ if not st.session_state.user_logged_in:
                         st.session_state.user_data = {**user_data, "uid": uid_logged}
                         st.session_state.user_logged_in = True
                         st.session_state.tema = user_data.get("tema", list(TEMALAR.values())[0])
+                        st.session_state.tema_rengi = TEMA_RENKLERI.get(st.session_state.tema, "rgba(20,20,40,0.85)")
                         st.session_state.trigger_save_token = uid_logged
                         st.rerun()
                 else:
@@ -793,6 +806,7 @@ else:
         st.session_state.messages = []
 
     st.session_state.tema = user_doc.get("tema", list(TEMALAR.values())[0])
+    st.session_state.tema_rengi = TEMA_RENKLERI.get(st.session_state.tema, "rgba(20,20,40,0.85)")
 
     is_kurucu = user_doc.get('email') == KURUCU_EMAIL
     is_admin_user = user_doc.get("is_admin", False)
@@ -808,7 +822,7 @@ else:
         st.session_state.current_page = "chat"
         st.rerun()
 
-    # --- CSS ENJEKSİYONU (Mobil Düzeltme + Dokunmatik) ---
+    # --- CSS ENJEKSİYONU (Mobil Düzeltme + Dokunmatik + Dinamik Bilgi Butonu) ---
     st.markdown(f"""
     <style>
     *, *::before, *::after {{ box-sizing: border-box !important; }}
@@ -873,6 +887,12 @@ else:
         -webkit-tap-highlight-color: transparent !important;
         cursor: pointer !important;
     }}
+    
+    /* === DİNAMİK BİLGİ BUTONU RENGİ (TEMAYA GÖRE) === */
+    div[data-testid="stPopover"] button:first-child {{
+        background: {st.session_state.tema_rengi} !important;
+    }}
+    
     @media (max-width: 768px) {{
         .assistant-box, .user-box {{
             padding: 10px !important;
@@ -918,12 +938,16 @@ else:
 
     isim_stili = get_styled_user_name(kullanici_ismi, u_color, u_glow, u_tag, u_rozet)
 
-    tr_simdi = get_tr_time()
-    saat_str = tr_simdi.strftime("%H:%M:%S")
-    tarih_str = tr_simdi.strftime("%d.%m.%Y")
+    # --- SAAT FORMATI OPTİMİZASYONU (%H:%M) ---
+    @st.fragment(run_every=60)
+    def saat_gosterici():
+        tr_simdi = get_tr_time()
+        saat_str = tr_simdi.strftime("%H:%M")
+        tarih_str = tr_simdi.strftime("%d.%m.%Y")
+        st.markdown(f"<div style='text-align:center; color:#f39c12; font-size:0.9em;'>🕐 {saat_str} | 📅 {tarih_str} (TR)</div>", unsafe_allow_html=True)
 
     with st.sidebar:
-        st.markdown(f"<div style='text-align:center; color:#f39c12; font-size:0.9em;'>🕐 {saat_str} | 📅 {tarih_str} (TR)</div>", unsafe_allow_html=True)
+        saat_gosterici()
         st.markdown("### 👤 Profil Ayarları")
         yeni_isim = st.text_input("Yeni İsim:", value=kullanici_ismi, max_chars=25)
 
@@ -956,8 +980,10 @@ else:
         secilen_tema_adi = st.selectbox("Arka Plan:", list(TEMALAR.keys()), index=list(TEMALAR.keys()).index(mevcut_tema_key))
 
         if st.button("💾 Temayı Kaydet"):
-            user_ref.update({"tema": TEMALAR[secilen_tema_adi]})
-            st.session_state.tema = TEMALAR[secilen_tema_adi]
+            yeni_tema = TEMALAR[secilen_tema_adi]
+            user_ref.update({"tema": yeni_tema})
+            st.session_state.tema = yeni_tema
+            st.session_state.tema_rengi = TEMA_RENKLERI.get(yeni_tema, "rgba(20,20,40,0.85)")
             st.success("✅ Tema kaydedildi!")
             st.rerun()
 
@@ -1068,6 +1094,16 @@ else:
             if toplam_temizlenen > 0:
                 st.toast(f"🧹 Otomatik Arındırma: {temizlenen_ghost} hayalet, {temizlenen_duplicate} mükerrer kayıt temizlendi!")
             return valid_users
+
+    # --- KESİNTİSİZ YOUTUBE SES (DOM'un üstünde, görünmez) ---
+    if st.session_state.yt_audio_playing and st.session_state.get("yt_playing_id"):
+        _vid = re.sub(r'[^a-zA-Z0-9_\-]', '', st.session_state.yt_playing_id)
+        _ts = int(st.session_state.yt_ts_dict.get(_vid, 0))
+        components.html(f"""
+        <div id="yt-audio-container" style="position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-9999;">
+          <iframe id="yt-audio-frame" width="1" height="1" src="https://www.youtube.com/embed/{_vid}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&start={_ts}" frameborder="0" allow="autoplay;encrypted-media;" style="width:1px;height:1px;border:none;"></iframe>
+        </div>
+        """, height=0, width=0)
 
     # --- SAYFA YÖNLENDİRME ---
     if st.session_state.current_page == "admin_main" and is_kurucu:
@@ -1694,7 +1730,7 @@ else:
             # --- SOHBET ARAYÜZÜ ---
             st.title("🤖 Aslan Parçası V16.4")
 
-            # ── Bilgi Butonu ──
+            # ── Bilgi Butonu (Dinamik renk CSS ile veriliyor) ──
             with st.popover("ℹ️"):
                 st.markdown("## 🏢 Hakkımızda")
                 st.markdown("""
@@ -1795,7 +1831,7 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                 tag_tanimi = f"Tagı: [{user_tag_fresh_ai}]" if user_tag_fresh_ai else "Tagı: Bulunmuyor"
                 rozet_tanimi = f"Rozeti: [{user_rozet_fresh_ai}]" if user_rozet_fresh_ai else "Rozeti: Bulunmuyor"
 
-                tr_saat_ai = get_tr_time().strftime("%H:%M:%S")
+                tr_saat_ai = get_tr_time().strftime("%H:%M")
                 tr_tarih_ai = get_tr_time().strftime("%d.%m.%Y")
 
                 son_kullanici_mesaj = next((m["content"] for m in reversed(mesajlar) if m["role"] == "user"), "")
@@ -1944,6 +1980,8 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                         st.session_state.yt_playing_channel = st.session_state.get("yt_last_channel", "")
                         st.session_state.yt_iframe_vid      = _qp_vid_safe
                         st.session_state.yt_iframe_mounted  = False
+                        # Ses oynatmayı başlat
+                        st.session_state.yt_audio_playing = True
                         st.query_params.clear()
                         st.rerun()
 
@@ -2045,6 +2083,8 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                 # ─── TEKİL İFRAME: SADECE BİR KERE OLUŞTUR ──────────
                 if not st.session_state.yt_iframe_mounted:
                     st.session_state.yt_iframe_mounted = True
+                    # Ses oynatmayı başlat
+                    st.session_state.yt_audio_playing = True
                     
                     _player_html = f"""<!DOCTYPE html>
     <html>
@@ -2181,6 +2221,8 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                                 st.session_state.yt_playing_channel = _rch
                                 st.session_state.yt_iframe_vid = _rid
                                 st.session_state.yt_iframe_mounted = False
+                                # Ses oynatmayı başlat
+                                st.session_state.yt_audio_playing = True
                                 st.rerun()
 
             # ─── HOŞ GELDİN EKRANI ────────────────────────────────────
@@ -2211,6 +2253,7 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                             st.session_state.yt_playing_channel = _lch
                             st.session_state.yt_iframe_vid = _lid
                             st.session_state.yt_iframe_mounted = False
+                            st.session_state.yt_audio_playing = True
                             st.rerun()
                     st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
 
@@ -2263,6 +2306,7 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                                     st.session_state.yt_results         = []
                                     st.session_state.yt_iframe_vid = _svid
                                     st.session_state.yt_iframe_mounted = False
+                                    st.session_state.yt_audio_playing = True
                                     st.rerun()
                             with _sbc2:
                                 if st.button("🗑️", key=f"ytsv_del_{_svraw}_{_svidx}"):
