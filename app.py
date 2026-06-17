@@ -334,8 +334,30 @@ components.html("""
 
     // İlk çalıştırma + MutationObserver ile yeni butonları da yakala
     setTimeout(function() { injectIcons(); }, 500);
-    var btnObs = new MutationObserver(function() { setTimeout(injectIcons, 100); });
+    var btnObs = new MutationObserver(function() {
+      setTimeout(injectIcons, 100);
+      // Avatar tıklama: profil yuvarlağına tıklayınca gizli file uploader açılır
+      var avatar = pd.querySelector('.profil-avatar-wrap img');
+      if (avatar && !avatar.dataset.clickBound) {
+        avatar.dataset.clickBound = '1';
+        avatar.addEventListener('click', function() {
+          var uploader = pd.querySelector('[data-testid="stFileUploader"] input[type="file"]');
+          if (uploader) uploader.click();
+        });
+      }
+    });
     btnObs.observe(pd.body || pd.documentElement, { childList: true, subtree: true });
+    // İlk avatar setup
+    setTimeout(function() {
+      var avatar = pd.querySelector('.profil-avatar-wrap img');
+      if (avatar && !avatar.dataset.clickBound) {
+        avatar.dataset.clickBound = '1';
+        avatar.addEventListener('click', function() {
+          var uploader = pd.querySelector('[data-testid="stFileUploader"] input[type="file"]');
+          if (uploader) uploader.click();
+        });
+      }
+    }, 1000);
   })();
 </script>
 """, height=0, width=0)
@@ -1248,15 +1270,27 @@ else:
 
         else:
             # ═══ NORMAL MENÜ ═══
-            # --- PROFİL FOTOĞRAFI (yuvarlak avatar) ---
+            # --- PROFİL FOTOĞRAFI (yuvarlak avatar - tıklanabilir) ---
             mevcut_foto = user_doc.get("profil_foto", "")
             if mevcut_foto:
                 avatar_src = f"data:image/jpeg;base64,{mevcut_foto}"
             else:
                 avatar_src = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
-            st.markdown(f'<div style="text-align:center; margin-bottom:8px;"><img src="{avatar_src}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid #f39c12;"/></div>', unsafe_allow_html=True)
 
-            foto_dosya = st.file_uploader("Profil fotoğrafı değiştir:", type=["jpg", "jpeg", "png", "webp"], key="profil_foto_upload", label_visibility="collapsed")
+            # Tıklanabilir avatar (CSS + JS avatar click handler global script'te)
+            st.markdown("""<style>
+            .profil-avatar-wrap { text-align:center; margin-bottom:8px; cursor:pointer; }
+            .profil-avatar-wrap img { width:70px; height:70px; border-radius:50%; object-fit:cover; border:2px solid #f39c12; transition: opacity 0.2s; }
+            .profil-avatar-wrap img:hover { opacity:0.7; }
+            .profil-avatar-wrap .avatar-hint { font-size:0.7em; color:#888; margin-top:4px; }
+            </style>""", unsafe_allow_html=True)
+
+            st.markdown(f'<div class="profil-avatar-wrap"><img src="{avatar_src}"/><div class="avatar-hint">Değiştirmek için tıkla</div></div>', unsafe_allow_html=True)
+
+            # Gizli file uploader (CSS ile görünmez)
+            if "foto_upload_key" not in st.session_state:
+                st.session_state.foto_upload_key = 0
+            foto_dosya = st.file_uploader("Profil fotoğrafı", type=["jpg", "jpeg", "png", "webp"], key=f"profil_foto_upload_{st.session_state.foto_upload_key}", label_visibility="collapsed")
             if foto_dosya is not None:
                 if foto_dosya.size > 5 * 1024 * 1024:
                     st.error("❌ Dosya boyutu 5MB'dan küçük olmalıdır.")
@@ -1264,13 +1298,17 @@ else:
                     foto_bytes = foto_dosya.read()
                     foto_b64 = resize_profile_photo(foto_bytes)
                     user_ref.update({"profil_foto": foto_b64})
-                    st.success("✅ Profil fotoğrafı güncellendi!")
+                    st.session_state.foto_upload_key += 1
                     st.rerun()
+
+            # Uploader'ı CSS ile gizle
+            st.markdown("""<style>
+            [data-testid="stFileUploader"] { position:absolute !important; width:1px !important; height:1px !important; overflow:hidden !important; opacity:0 !important; pointer-events:none !important; }
+            </style>""", unsafe_allow_html=True)
 
             if mevcut_foto:
                 if st.button("Fotoğrafı Kaldır", key="remove_profile_photo", use_container_width=True):
                     user_ref.update({"profil_foto": ""})
-                    st.success("✅ Profil fotoğrafı kaldırıldı.")
                     st.rerun()
 
             st.markdown(f"<div style='text-align:center;'>{isim_stili}</div>", unsafe_allow_html=True)
