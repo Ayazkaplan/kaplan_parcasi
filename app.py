@@ -430,13 +430,12 @@ if "yt_iframe_mounted" not in st.session_state: st.session_state.yt_iframe_mount
 if "yt_iframe_vid" not in st.session_state: st.session_state.yt_iframe_vid = ""
 if "yt_audio_playing" not in st.session_state: st.session_state.yt_audio_playing = False
 if "yt_resume_time" not in st.session_state: st.session_state.yt_resume_time = 0
-# --- GLOBAL AUDIO STATE'LERİ ---
-if "global_audio_mounted" not in st.session_state: st.session_state.global_audio_mounted = False
-if "global_audio_vid" not in st.session_state: st.session_state.global_audio_vid = ""
 
 def trigger_invalid_session():
     for key in list(st.session_state.keys()):
-        if key not in ["tema", "tema_rengi", "yt_audio_playing", "yt_iframe_mounted", "yt_iframe_vid", "yt_resume_time", "global_audio_mounted", "global_audio_vid"]:
+        if key not in ["tema", "tema_rengi", "yt_audio_playing", "yt_iframe_mounted", 
+                       "yt_iframe_vid", "yt_resume_time", "yt_ts_dict", "yt_playing_id",
+                       "yt_playing_title", "yt_playing_channel"]:
             del st.session_state[key]
     st.session_state.trigger_clear_token = True
     st.rerun()
@@ -445,8 +444,8 @@ def logout_user():
     st.session_state.yt_audio_playing = False
     st.session_state.yt_iframe_mounted = False
     st.session_state.yt_playing_id = None
-    st.session_state.global_audio_mounted = False
-    st.session_state.global_audio_vid = ""
+    st.session_state.yt_playing_title = ""
+    st.session_state.yt_playing_channel = ""
     trigger_invalid_session()
 
 # --- SESSİZ ARKA PLAN GÖREVLİLERİ ---
@@ -1105,59 +1104,45 @@ else:
     # ═══════════════════════════════════════════════════
     # 🌍 GLOBAL YOUTUBE SES OYNATICI (TÜM SAYFALARDA AKTİF)
     # ═══════════════════════════════════════════════════
-    global_audio_container = st.empty()
-    
     if st.session_state.yt_audio_playing and st.session_state.get("yt_playing_id"):
         _gvid = re.sub(r'[^a-zA-Z0-9_\-]', '', st.session_state.yt_playing_id)
         _gts = int(st.session_state.yt_ts_dict.get(_gvid, 0))
         
-        # Eğer iframe değiştiyse veya ilk kez yükleniyorsa
-        if not st.session_state.global_audio_mounted or st.session_state.global_audio_vid != _gvid:
-            with global_audio_container:
-                components.html(
-                    f"""
-                    <div id="global-yt-audio" style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:9999;">
-                        <iframe 
-                            id="global-yt-frame"
-                            width="1" 
-                            height="1" 
-                            src="https://www.youtube.com/embed/{_gvid}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&start={_gts}"
-                            frameborder="0"
-                            allow="autoplay;encrypted-media"
-                            style="width:1px;height:1px;border:none;"
-                        ></iframe>
-                    </div>
-                    <script>
-                        // Pozisyon takibi için localStorage'a kaydet
-                        setInterval(function() {{
-                            try {{
-                                var SK = 'ytpos_{_gvid}';
-                                var iframe = document.getElementById('global-yt-frame');
-                                if (iframe && iframe.contentWindow) {{
-                                    // localStorage'a zaman damgası yaz
-                                    var t = localStorage.getItem(SK);
-                                    if (t) {{
-                                        var u = new URL(window.parent.location.href);
-                                        u.searchParams.set('ytv', '{_gvid}');
-                                        u.searchParams.set('ytt', String(Math.floor(parseFloat(t))));
-                                        window.parent.history.replaceState(null, '', u.toString());
-                                    }}
-                                }}
-                            }} catch(e) {{}}
-                        }}, 5000);
-                    </script>
-                    """,
-                    height=0,
-                    width=0
-                )
-            st.session_state.global_audio_mounted = True
-            st.session_state.global_audio_vid = _gvid
-    else:
-        # Ses durduysa container'ı temizle
-        if st.session_state.global_audio_mounted:
-            global_audio_container.empty()
-            st.session_state.global_audio_mounted = False
-            st.session_state.global_audio_vid = ""
+        # Her rerun'da yeniden oluştur ama aynı ID ile
+        components.html(
+            f"""
+            <div id="global-yt-audio" style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:99999;">
+                <iframe 
+                    id="global-yt-frame-{_gvid}"
+                    width="1" 
+                    height="1" 
+                    src="https://www.youtube.com/embed/{_gvid}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&start={_gts}"
+                    frameborder="0"
+                    allow="autoplay;encrypted-media"
+                    style="width:1px;height:1px;border:none;"
+                ></iframe>
+            </div>
+            <script>
+                var SK = 'ytpos_{_gvid}';
+                setInterval(function() {{
+                    try {{
+                        var savedTime = localStorage.getItem(SK);
+                        if (savedTime) {{
+                            var t = parseFloat(savedTime);
+                            if (t > 0) {{
+                                var u = new URL(window.parent.location.href);
+                                u.searchParams.set('ytv', '{_gvid}');
+                                u.searchParams.set('ytt', String(Math.floor(t)));
+                                window.parent.history.replaceState(null, '', u.toString());
+                            }}
+                        }}
+                    }} catch(e) {{}}
+                }}, 3000);
+            </script>
+            """,
+            height=0,
+            width=0
+        )
 
     # --- SAYFA YÖNLENDİRME ---
     if st.session_state.current_page == "admin_main" and is_kurucu:
@@ -2029,16 +2014,13 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                     if _qp_ts > 0:
                         st.session_state.yt_ts_dict[_qp_vid_safe] = _qp_ts
                     
-                    # Global player'ı temizle
-                    st.session_state.global_audio_mounted = False
-                    st.session_state.global_audio_vid = ""
-                    
                     # Yeni videoyu ayarla
                     st.session_state.yt_playing_id      = _qp_vid_safe
                     st.session_state.yt_playing_title   = st.session_state.get("yt_last_title", _qp_vid_safe)
                     st.session_state.yt_playing_channel = st.session_state.get("yt_last_channel", "")
                     st.session_state.yt_iframe_vid      = _qp_vid_safe
                     st.session_state.yt_audio_playing = True
+                    st.session_state.yt_iframe_mounted = False
                     st.query_params.clear()
                     st.rerun()
 
@@ -2066,7 +2048,7 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                     st.session_state.current_page = "chat"
                     st.session_state.yt_results   = []
                     st.session_state.yt_iframe_mounted = False
-                    # Sesi KESME! Global player devam eder
+                    # SES DEVAM EDER (yt_audio_playing korunur)
                     st.rerun()
 
             st.markdown("<hr style='border:none;border-top:1px solid rgba(255,255,255,0.08);margin:10px 0 14px;'>", unsafe_allow_html=True)
@@ -2099,10 +2081,6 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                 _ptitle   = st.session_state.yt_playing_title
                 _pch      = st.session_state.get("yt_playing_channel", "")
 
-                if st.session_state.yt_iframe_vid != _safe_vid:
-                    st.session_state.yt_iframe_vid = _safe_vid
-                    st.session_state.yt_iframe_mounted = False
-
                 _pb1, _pb2, _pb3 = st.columns([3, 2, 2])
                 with _pb1:
                     if st.button("← Sonuçlara Dön", key="yt_geri_sonuc"):
@@ -2111,7 +2089,7 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                         st.session_state.yt_last_channel = _pch
                         st.session_state.yt_playing_id   = None
                         st.session_state.yt_iframe_mounted = False
-                        # Sesi KESME!
+                        # SES DEVAM EDER
                         st.rerun()
                 with _pb2:
                     if _safe_vid not in yt_saved:
@@ -2140,7 +2118,7 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
 
                 _start_ts = int(st.session_state.yt_ts_dict.get(_safe_vid, 0))
 
-                # ─── TEKİL İFRAME - OTOMATİK OYNATMA YOK ──
+                # ─── PORTAL OYNATICI (GÖRSEL) ──
                 if not st.session_state.yt_iframe_mounted:
                     st.session_state.yt_iframe_mounted = True
                     
@@ -2194,6 +2172,8 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
             events:{{
               onReady: function(e) {{
                 if (startT > 5) e.target.seekTo(startT, true);
+                // Ses seviyesini 0 yap - SES GLOBAL PLAYER'DAN GELİYOR
+                e.target.setVolume(0);
                 setInterval(function() {{
                   try {{
                     var t = ytP.getCurrentTime();
@@ -2223,7 +2203,7 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                 else:
                     st.markdown(f"""
     <div style="height:495px;background:#000;border-radius:8px;overflow:hidden;">
-      <iframe id="yt-gp-frame" src="https://www.youtube.com/embed/{_safe_vid}?autoplay=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&start={_start_ts}" style="width:100%;height:100%;border:none;display:block;"></iframe>
+      <iframe src="https://www.youtube.com/embed/{_safe_vid}?autoplay=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&start={_start_ts}" style="width:100%;height:100%;border:none;display:block;"></iframe>
     </div>
     """, unsafe_allow_html=True)
 
@@ -2277,15 +2257,14 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
       </div>
     </div>""", unsafe_allow_html=True)
                             if st.button("▶ İzle", key=f"ytplay_{_rid}_{_ridx}", use_container_width=True):
-                                # Global player'ı temizle
-                                st.session_state.global_audio_mounted = False
-                                st.session_state.global_audio_vid = ""
-                                st.session_state.yt_audio_playing = False
+                                # Önce eski oynatıcıyı durdur
                                 st.session_state.yt_iframe_mounted = False
+                                st.session_state.yt_iframe_vid = ""
+                                
+                                # Yeni videoyu ayarla
                                 st.session_state.yt_playing_id      = _rid
                                 st.session_state.yt_playing_title   = _rtitle
                                 st.session_state.yt_playing_channel = _rch
-                                st.session_state.yt_iframe_vid = _rid
                                 st.session_state.yt_audio_playing = True
                                 st.rerun()
 
@@ -2312,14 +2291,11 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
     </div>""", unsafe_allow_html=True)
                     with _rc2:
                         if st.button("▶ Devam Et", key="yt_resume_btn", use_container_width=True):
-                            st.session_state.global_audio_mounted = False
-                            st.session_state.global_audio_vid = ""
-                            st.session_state.yt_audio_playing = False
                             st.session_state.yt_iframe_mounted = False
+                            st.session_state.yt_iframe_vid = ""
                             st.session_state.yt_playing_id      = _lid
                             st.session_state.yt_playing_title   = _ltit
                             st.session_state.yt_playing_channel = _lch
-                            st.session_state.yt_iframe_vid = _lid
                             st.session_state.yt_audio_playing = True
                             st.rerun()
                     st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
@@ -2367,15 +2343,12 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                             _sbc1, _sbc2 = st.columns([3, 1])
                             with _sbc1:
                                 if st.button("▶ İzle", key=f"ytsv_play_{_svraw}_{_svidx}", use_container_width=True):
-                                    st.session_state.global_audio_mounted = False
-                                    st.session_state.global_audio_vid = ""
-                                    st.session_state.yt_audio_playing = False
                                     st.session_state.yt_iframe_mounted = False
+                                    st.session_state.yt_iframe_vid = ""
                                     st.session_state.yt_playing_id      = _svid
                                     st.session_state.yt_playing_title   = _svid
                                     st.session_state.yt_playing_channel = ""
                                     st.session_state.yt_results         = []
-                                    st.session_state.yt_iframe_vid = _svid
                                     st.session_state.yt_audio_playing = True
                                     st.rerun()
                             with _sbc2:
