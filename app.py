@@ -31,6 +31,15 @@ st.markdown("""
     z-index: 999997 !important;
   }
 
+  /* === ÜST BOŞLUK KALDIR === */
+  [data-testid="stAppViewBlockContainer"],
+  .block-container {
+    padding-top: 1rem !important;
+  }
+  [data-testid="stAppViewContainer"] > section > div.block-container {
+    padding-top: 1rem !important;
+  }
+
   /* === GOOGLE TRANSLATE ENGELLEME === */
   .goog-te-banner-frame, .goog-te-menu-value, #goog-gt-tt,
   .goog-tooltip, .goog-tooltip:hover, .goog-te-balloon-frame,
@@ -1149,34 +1158,49 @@ else:
                             fe.style.zIndex = '99990';
                             fe.style.border = '0';
                             fe.style.background = 'transparent';
+                            fe.style.willChange = 'top, left, width, height';
                         }}
                         function getAnchor() {{
                             try {{ return window.parent.document.getElementById('ap-portal-anchor'); }}
                             catch(e) {{ return null; }}
                         }}
+                        var _lastTop = '', _lastLeft = '', _lastW = '', _lastH = '';
+                        var _hidden = false;
                         function place() {{
                             if (!fe) return;
                             var a = getAnchor();
                             if (a) {{
                                 var r = a.getBoundingClientRect();
-                                fe.style.top = Math.max(r.top, 0) + 'px';
-                                fe.style.left = r.left + 'px';
-                                fe.style.width = r.width + 'px';
-                                fe.style.height = r.height + 'px';
-                                fe.style.opacity = '1';
-                                fe.style.pointerEvents = 'auto';
+                                var nTop = Math.max(r.top, 0) + 'px';
+                                var nLeft = r.left + 'px';
+                                var nW = r.width + 'px';
+                                var nH = r.height + 'px';
+                                if (nTop !== _lastTop || nLeft !== _lastLeft || nW !== _lastW || nH !== _lastH) {{
+                                    fe.style.top = nTop;
+                                    fe.style.left = nLeft;
+                                    fe.style.width = nW;
+                                    fe.style.height = nH;
+                                    _lastTop = nTop; _lastLeft = nLeft; _lastW = nW; _lastH = nH;
+                                }}
+                                if (_hidden) {{
+                                    fe.style.opacity = '1';
+                                    fe.style.pointerEvents = 'auto';
+                                    _hidden = false;
+                                }}
                             }} else {{
-                                // Sohbet ekranı: video gizli, ses arka planda devam eder
-                                fe.style.top = '-9999px';
-                                fe.style.left = '-9999px';
-                                fe.style.width = '1px';
-                                fe.style.height = '1px';
-                                fe.style.opacity = '0';
-                                fe.style.pointerEvents = 'none';
+                                if (!_hidden) {{
+                                    fe.style.top = '-9999px';
+                                    fe.style.left = '-9999px';
+                                    fe.style.width = '1px';
+                                    fe.style.height = '1px';
+                                    fe.style.opacity = '0';
+                                    fe.style.pointerEvents = 'none';
+                                    _hidden = true;
+                                }}
                             }}
+                            requestAnimationFrame(place);
                         }}
-                        place();
-                        setInterval(place, 250);
+                        requestAnimationFrame(place);
 
                         var tag = document.createElement('script');
                         tag.src = 'https://www.youtube.com/iframe_api';
@@ -2143,6 +2167,7 @@ else:
                 st.markdown(
                     "<div id='ap-portal-anchor' "
                     "style='width:100%;height:430px;border-radius:10px;background:#000;"
+                    "position:sticky;top:0;z-index:99989;"
                     "display:flex;align-items:center;justify-content:center;color:#555;"
                     "font-size:0.9em;'>🎬 Oynatıcı yükleniyor...</div>"
                     "<div style='font-size:0.78em;color:#888;margin:8px 0 2px;'>"
