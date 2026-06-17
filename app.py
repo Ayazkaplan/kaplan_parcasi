@@ -1673,7 +1673,10 @@ else:
                         with col_info:
                             _u_foto = u_data.get("profil_foto", "")
                             if _u_foto:
-                                st.markdown(f'<img src="data:image/jpeg;base64,{_u_foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid #f39c12;float:left;margin-right:10px;"/>', unsafe_allow_html=True)
+                                _u_foto_src = f"data:image/jpeg;base64,{_u_foto}"
+                            else:
+                                _u_foto_src = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                            st.markdown(f'<img src="{_u_foto_src}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid #f39c12;float:left;margin-right:10px;"/>', unsafe_allow_html=True)
                             _u_color = u_data.get("isim_rengi", "#FFFFFF")
                             _u_glow = u_data.get("ismin_parlakligi", False)
                             _u_tag = u_data.get("tag", "")
@@ -2130,47 +2133,51 @@ else:
         # ─── SOHBET SAYFASI ────────────────────────────────────────────
         if st.session_state.current_page == "chat":
 
-            # --- ARKA PLAN KONTROL (görünmez fragment — UI render etmez) ---
-            @st.fragment(run_every=5)
-            def arka_plan_kontrol(current_uid):
-                try:
-                    snap = db.collection("users").document(current_uid).get()
-                    if not snap.exists:
-                        return
-                    doc = snap.to_dict()
+            # --- ARKA PLAN KONTROL (tamamen görünmez — kullanıcı deneyimini etkilemez) ---
+            _bg_container = st.container()
+            with _bg_container:
+                st.markdown('<div style="display:none !important; height:0; overflow:hidden;"></div>', unsafe_allow_html=True)
 
-                    # Ban kontrolü
-                    kontrol_durum = doc.get("durum", "Aktif")
-                    if kontrol_durum == "Pasif":
-                        ban_b = doc.get("ban_bitis_zamani")
-                        if hasattr(ban_b, "to_datetime"):
-                            ban_b = ban_b.to_datetime()
-                        if ban_b:
-                            if ban_b.tzinfo is None: ban_b = ban_b.replace(tzinfo=timezone.utc)
-                            if datetime.now(timezone.utc) < ban_b:
-                                st.session_state.ban_error_on_logout = "❌ Hesabınız yönetici tarafından pasifleştirildi!"
+                @st.fragment(run_every=15)
+                def arka_plan_kontrol(current_uid):
+                    try:
+                        snap = db.collection("users").document(current_uid).get()
+                        if not snap.exists:
+                            return
+                        doc = snap.to_dict()
+
+                        # Ban kontrolü
+                        kontrol_durum = doc.get("durum", "Aktif")
+                        if kontrol_durum == "Pasif":
+                            ban_b = doc.get("ban_bitis_zamani")
+                            if hasattr(ban_b, "to_datetime"):
+                                ban_b = ban_b.to_datetime()
+                            if ban_b:
+                                if ban_b.tzinfo is None: ban_b = ban_b.replace(tzinfo=timezone.utc)
+                                if datetime.now(timezone.utc) < ban_b:
+                                    st.session_state.ban_error_on_logout = "❌ Hesabınız yönetici tarafından pasifleştirildi!"
+                                    logout_user()
+                            else:
+                                st.session_state.ban_error_on_logout = "❌ Hesabınız yönetici tarafından pasif duruma getirilmiştir!"
                                 logout_user()
-                        else:
-                            st.session_state.ban_error_on_logout = "❌ Hesabınız yönetici tarafından pasif duruma getirilmiştir!"
-                            logout_user()
 
-                    # Duyuru kontrolü — sadece veri güncelle, UI render etme
-                    yeni_duyurular = doc.get("okunmamis_duyurular", [])
-                    eski_duyuru_ids = st.session_state.get("cached_duyuru_ids", set())
-                    yeni_duyuru_ids = set()
-                    for d in yeni_duyurular:
-                        if isinstance(d, dict):
-                            yeni_duyuru_ids.add(d.get("id", d.get("metin", "")))
-                        else:
-                            yeni_duyuru_ids.add(str(d))
-                    if yeni_duyuru_ids != eski_duyuru_ids:
-                        st.session_state.cached_duyuru_ids = yeni_duyuru_ids
-                        st.session_state.cached_okunmamis_duyurular = yeni_duyurular
-                        st.rerun()
-                except Exception:
-                    pass
+                        # Duyuru kontrolü — sadece veri güncelle, UI render etme
+                        yeni_duyurular = doc.get("okunmamis_duyurular", [])
+                        eski_duyuru_ids = st.session_state.get("cached_duyuru_ids", set())
+                        yeni_duyuru_ids = set()
+                        for d in yeni_duyurular:
+                            if isinstance(d, dict):
+                                yeni_duyuru_ids.add(d.get("id", d.get("metin", "")))
+                            else:
+                                yeni_duyuru_ids.add(str(d))
+                        if yeni_duyuru_ids != eski_duyuru_ids:
+                            st.session_state.cached_duyuru_ids = yeni_duyuru_ids
+                            st.session_state.cached_okunmamis_duyurular = yeni_duyurular
+                            st.rerun()
+                    except Exception:
+                        pass
 
-            arka_plan_kontrol(uid)
+                arka_plan_kontrol(uid)
 
             # --- DUYURU UI (fragment dışında, sadece session_state'ten oku) ---
             okunmamis = st.session_state.get("cached_okunmamis_duyurular", [])
