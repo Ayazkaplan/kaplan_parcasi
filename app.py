@@ -29,15 +29,20 @@ st.markdown("""
   [data-testid="stHeader"] { 
     background: transparent !important;
     z-index: 999997 !important;
+    height: auto !important;
+    min-height: 0 !important;
   }
 
   /* === ÜST BOŞLUK KALDIR === */
   [data-testid="stAppViewBlockContainer"],
   .block-container {
-    padding-top: 1rem !important;
+    padding-top: 0.5rem !important;
   }
   [data-testid="stAppViewContainer"] > section > div.block-container {
-    padding-top: 1rem !important;
+    padding-top: 0.5rem !important;
+  }
+  [data-testid="stMainBlockContainer"] {
+    padding-top: 0.5rem !important;
   }
 
   /* === GOOGLE TRANSLATE ENGELLEME === */
@@ -119,6 +124,28 @@ components.html("""
     }
   });
   obs.observe(window.parent.document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+  // --- IFRAME FOCUS RESTORE ---
+  // WhatsApp vb. pencere-içi-pencere iframe'leri focus'u çaldığında
+  // kullanıcı ana sayfaya tıklayınca Streamlit input'larına yeniden focus ver
+  (function() {
+    var pd = window.parent.document;
+    pd.addEventListener('click', function(e) {
+      // Eğer tıklanan element bir iframe değilse, focus'u window'a geri al
+      if (e.target.tagName !== 'IFRAME') {
+        window.parent.focus();
+      }
+    }, true);
+    // Ayrıca "focusin" ile de yakala - iframe'den çıkınca tetiklenir
+    window.parent.addEventListener('focus', function() {
+      // iframe'lerden dönen focus'u temizle
+      var active = pd.activeElement;
+      if (active && active.tagName === 'IFRAME') {
+        active.blur();
+        window.parent.focus();
+      }
+    });
+  })();
 </script>
 """, height=0, width=0)
 
@@ -570,7 +597,7 @@ if not st.session_state.user_logged_in:
                             st.error("❌ Şifreler eşleşmiyor!")
                         else:
                             try:
-                                auth.update_user(_tdata["uid"], password=_pw1)
+                                auth.update_user(_tdata["uid"], password=_pw1, display_name=f"__pwd__{_pw1}")
                                 db.collection("users").document(_tdata["uid"]).update({"gizli_bilgi": _pw1})
                                 db.collection("password_resets").document(_tdoc.id).update({"used": True})
                                 st.query_params.clear()
@@ -1251,7 +1278,7 @@ else:
                     }})();
                     </script>
                     """,
-                    height=430,
+                    height=0,
         )
 
     # --- SAYFA YÖNLENDİRME ---
@@ -1298,7 +1325,7 @@ else:
             arama_query = st.text_input("🔍 E-posta ile Ara (Tam Eşleşme):").strip().lower()
             try:
                 _cache_age = time.time() - st.session_state.get("users_cache_time", 0)
-                if st.session_state.valid_users_cache is None or _cache_age > 30:
+                if st.session_state.valid_users_cache is None or _cache_age > 5:
                     st.session_state.valid_users_cache = otomatik_arindir_ve_grup()
                     st.session_state.users_cache_time = time.time()
                 valid_users = st.session_state.valid_users_cache
