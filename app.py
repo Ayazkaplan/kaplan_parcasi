@@ -1123,31 +1123,74 @@ else:
             with st.session_state.global_player_container:
                 components.html(
                     f"""
-                    <div id="global-yt-player-container" style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:99999;">
-                        <div id="global-yt-player"></div>
+                    <div id="ap-gp-wrap" style="position:relative;width:100%;height:100%;background:#000;border-radius:10px;overflow:hidden;">
+                        <div id="global-yt-player" style="width:100%;height:100%;"></div>
+                        <div id="ap-unmute" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);cursor:pointer;z-index:5;">
+                            <div style="background:#FF0000;color:#fff;font-weight:800;font-size:1rem;padding:12px 24px;border-radius:30px;box-shadow:0 6px 22px rgba(0,0,0,.55);display:flex;align-items:center;gap:8px;">
+                                🔊 Sesi Aç
+                            </div>
+                        </div>
                     </div>
                     <script>
-                        var SK = 'ytpos_{_gvid}';
+                    (function() {{
+                        var VID = '{_gvid}';
+                        var SK = 'ytpos_' + VID;
                         var startT = {_gts};
-                        
                         try {{
                             var savedT = parseFloat(localStorage.getItem(SK) || '0') || 0;
                             if (savedT > startT) startT = savedT;
                         }} catch(e) {{}}
-                        
+
+                        // --- Kendi iframe'imizi sabitleyip portal/sohbet durumuna göre konumlandır ---
+                        var fe = null;
+                        try {{ fe = window.frameElement; }} catch(e) {{ fe = null; }}
+                        if (fe) {{
+                            fe.style.position = 'fixed';
+                            fe.style.zIndex = '99990';
+                            fe.style.border = '0';
+                            fe.style.background = 'transparent';
+                        }}
+                        function getAnchor() {{
+                            try {{ return window.parent.document.getElementById('ap-portal-anchor'); }}
+                            catch(e) {{ return null; }}
+                        }}
+                        function place() {{
+                            if (!fe) return;
+                            var a = getAnchor();
+                            if (a) {{
+                                var r = a.getBoundingClientRect();
+                                fe.style.top = Math.max(r.top, 0) + 'px';
+                                fe.style.left = r.left + 'px';
+                                fe.style.width = r.width + 'px';
+                                fe.style.height = r.height + 'px';
+                                fe.style.opacity = '1';
+                                fe.style.pointerEvents = 'auto';
+                            }} else {{
+                                // Sohbet ekranı: video gizli, ses arka planda devam eder
+                                fe.style.top = '-9999px';
+                                fe.style.left = '-9999px';
+                                fe.style.width = '1px';
+                                fe.style.height = '1px';
+                                fe.style.opacity = '0';
+                                fe.style.pointerEvents = 'none';
+                            }}
+                        }}
+                        place();
+                        setInterval(place, 250);
+
                         var tag = document.createElement('script');
                         tag.src = 'https://www.youtube.com/iframe_api';
                         document.head.appendChild(tag);
-                        
-                        var globalPlayer;
+
+                        var gp;
                         window.onYouTubeIframeAPIReady = function() {{
-                            globalPlayer = new YT.Player('global-yt-player', {{
-                                height: '1',
-                                width: '1',
-                                videoId: '{_gvid}',
+                            gp = new YT.Player('global-yt-player', {{
+                                height: '100%',
+                                width: '100%',
+                                videoId: VID,
                                 playerVars: {{
                                     autoplay: 1,
-                                    controls: 0,
+                                    controls: 1,
                                     rel: 0,
                                     modestbranding: 1,
                                     enablejsapi: 1,
@@ -1156,39 +1199,35 @@ else:
                                 }},
                                 events: {{
                                     onReady: function(event) {{
-                                        if (startT > 0) {{
-                                            event.target.seekTo(startT, true);
-                                        }}
+                                        // Tarayıcı politikası: sesli otomatik oynatma engellidir.
+                                        // Bu yüzden sessiz başlat, kullanıcı tek dokunuşla sesi açar.
+                                        try {{ event.target.mute(); }} catch(ex) {{}}
+                                        if (startT > 0) {{ try {{ event.target.seekTo(startT, true); }} catch(ex) {{}} }}
+                                        try {{ event.target.playVideo(); }} catch(ex) {{}}
                                         setInterval(function() {{
                                             try {{
-                                                var currentTime = globalPlayer.getCurrentTime();
-                                                if (currentTime > 0) {{
-                                                    localStorage.setItem(SK, String(currentTime));
-                                                }}
+                                                var t = gp.getCurrentTime();
+                                                if (t > 0) localStorage.setItem(SK, String(t));
                                             }} catch(ex) {{}}
                                         }}, 3000);
                                     }}
                                 }}
                             }});
                         }};
-                        
-                        window.addEventListener('message', function(event) {{
-                            if (event.data === 'GLOBAL_PLAY') {{
-                                try {{
-                                    var seekTime = parseFloat(localStorage.getItem(SK) || '0') || 0;
-                                    if (seekTime > 0.5) {{
-                                        globalPlayer.seekTo(seekTime, true);
-                                    }}
-                                    globalPlayer.playVideo();
-                                }} catch(e) {{}}
-                            }}
-                            if (event.data === 'GLOBAL_PAUSE') {{
-                                try {{ globalPlayer.pauseVideo(); }} catch(e) {{}}
-                            }}
-                        }});
+
+                        var btn = document.getElementById('ap-unmute');
+                        function enableSound() {{
+                            try {{ gp.unMute(); gp.setVolume(100); gp.playVideo(); }} catch(e) {{}}
+                            if (btn) btn.style.display = 'none';
+                        }}
+                        if (btn) {{
+                            btn.addEventListener('click', enableSound);
+                            btn.addEventListener('touchstart', enableSound);
+                        }}
+                    }})();
                     </script>
                     """,
-                    height=0,
+                    height=430,
                     width=0
                 )
             st.session_state.global_player_rendered = True
@@ -2105,77 +2144,21 @@ else:
       {f'<div style="font-size:0.8em;color:#aaa;margin-top:4px;">📺 {_pch}</div>' if _pch else ''}
     </div>""", unsafe_allow_html=True)
 
-                _start_ts = int(st.session_state.yt_ts_dict.get(_safe_vid, 0))
-
-                # ─── PORTAL OYNATICI (GÖRSEL, SES YOK) ──
-                if not st.session_state.yt_iframe_mounted:
-                    st.session_state.yt_iframe_mounted = True
-                    
-                    _player_html = f"""<!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-      * {{ margin:0; padding:0; box-sizing:border-box; }}
-      body {{ background:#000; overflow:hidden; }}
-      #ytp {{ width:100%; height:490px; }}
-    </style>
-    </head>
-    <body>
-      <div id="ytp"></div>
-      <script>
-        var SK = 'ytpos_{_safe_vid}';
-        var startT = {_start_ts};
-        try {{
-          var lsT = parseFloat(localStorage.getItem(SK) || '0') || 0;
-          if (lsT > startT + 2) startT = lsT;
-        }} catch(e) {{}}
-
-        var tag = document.createElement('script');
-        tag.src = 'https://www.youtube.com/iframe_api';
-        document.head.appendChild(tag);
-
-        var ytP;
-        window.onYouTubeIframeAPIReady = function() {{
-          ytP = new YT.Player('ytp', {{
-            height:'490', width:'100%',
-            videoId:'{_safe_vid}',
-            playerVars:{{
-              autoplay:0,
-              rel:0,
-              modestbranding:1,
-              enablejsapi:1,
-              playsinline:1,
-              start: Math.floor(startT)
-            }},
-            events:{{
-              onReady: function(e) {{
-                if (startT > 5) e.target.seekTo(startT, true);
-                e.target.mute();
-                
-                setInterval(function() {{
-                  try {{
-                    var t = ytP.getCurrentTime();
-                    if (t > 0) {{
-                      localStorage.setItem(SK, String(t));
-                    }}
-                  }} catch(ex) {{}}
-                }}, 5000);
-              }},
-              onStateChange: function(event) {{
-                if (event.data === 1) {{
-                  window.parent.postMessage('GLOBAL_PLAY', '*');
-                }}
-                if (event.data === 2) {{
-                  window.parent.postMessage('GLOBAL_PAUSE', '*');
-                }}
-              }}
-            }}
-          }});
-        }};
-      </script>
-    </body>
-    </html>"""
-                    components.html(_player_html, height=495, scrolling=False)
+                # ─── PORTAL OYNATICI ANKRAJI ──
+                # Asıl oynatıcı (sayfa değişince kaybolmayan kalıcı global oynatıcı)
+                # bu kutunun üzerine sabitlenir. Sohbete dönülünce ankraj kalktığı için
+                # oynatıcı gizlenir ama ses arka planda çalmaya devam eder.
+                st.markdown(
+                    "<div id='ap-portal-anchor' "
+                    "style='width:100%;height:430px;border-radius:10px;background:#000;"
+                    "display:flex;align-items:center;justify-content:center;color:#555;"
+                    "font-size:0.9em;'>🎬 Oynatıcı yükleniyor...</div>"
+                    "<div style='font-size:0.78em;color:#888;margin:8px 0 2px;'>"
+                    "🔊 Ses için oynatıcıdaki <b>“Sesi Aç”</b> düğmesine bir kez dokun. "
+                    "Sesi açtıktan sonra <b>← Geri</b> ile sohbete dönsen bile ses arka planda devam eder."
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
 
             # ─── ARAMA SONUÇLARI ──────────────────────────────────────
             if st.session_state.yt_results:
