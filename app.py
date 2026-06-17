@@ -1108,36 +1108,85 @@ else:
         _gvid = re.sub(r'[^a-zA-Z0-9_\-]', '', st.session_state.yt_playing_id)
         _gts = int(st.session_state.yt_ts_dict.get(_gvid, 0))
         
-        # Her rerun'da yeniden oluştur ama aynı ID ile
         components.html(
             f"""
             <div id="global-yt-audio" style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:99999;">
-                <iframe 
-                    id="global-yt-frame-{_gvid}"
-                    width="1" 
-                    height="1" 
-                    src="https://www.youtube.com/embed/{_gvid}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&start={_gts}"
-                    frameborder="0"
-                    allow="autoplay;encrypted-media"
-                    style="width:1px;height:1px;border:none;"
-                ></iframe>
+                <div id="global-yt-player"></div>
             </div>
             <script>
                 var SK = 'ytpos_{_gvid}';
-                setInterval(function() {{
-                    try {{
-                        var savedTime = localStorage.getItem(SK);
-                        if (savedTime) {{
-                            var t = parseFloat(savedTime);
-                            if (t > 0) {{
-                                var u = new URL(window.parent.location.href);
-                                u.searchParams.set('ytv', '{_gvid}');
-                                u.searchParams.set('ytt', String(Math.floor(t)));
-                                window.parent.history.replaceState(null, '', u.toString());
+                var startT = {_gts};
+                
+                // localStorage'dan son pozisyonu al
+                try {{
+                    var savedT = parseFloat(localStorage.getItem(SK) || '0') || 0;
+                    if (savedT > startT) startT = savedT;
+                }} catch(e) {{}}
+                
+                // YouTube IFrame API'yi yükle
+                var tag = document.createElement('script');
+                tag.src = 'https://www.youtube.com/iframe_api';
+                document.head.appendChild(tag);
+                
+                var globalPlayer;
+                window.onYouTubeIframeAPIReady = function() {{
+                    globalPlayer = new YT.Player('global-yt-player', {{
+                        height: '1',
+                        width: '1',
+                        videoId: '{_gvid}',
+                        playerVars: {{
+                            autoplay: 0,
+                            controls: 0,
+                            rel: 0,
+                            modestbranding: 1,
+                            enablejsapi: 1,
+                            playsinline: 1,
+                            start: Math.floor(startT)
+                        }},
+                        events: {{
+                            onReady: function(event) {{
+                                // Pozisyona git
+                                if (startT > 0) {{
+                                    event.target.seekTo(startT, true);
+                                }}
+                                
+                                // Pozisyon takibi
+                                setInterval(function() {{
+                                    try {{
+                                        var currentTime = globalPlayer.getCurrentTime();
+                                        if (currentTime > 0) {{
+                                            localStorage.setItem(SK, String(currentTime));
+                                            // URL'yi güncelle
+                                            try {{
+                                                var u = new URL(window.parent.location.href);
+                                                u.searchParams.set('ytv', '{_gvid}');
+                                                u.searchParams.set('ytt', String(Math.floor(currentTime)));
+                                                window.parent.history.replaceState(null, '', u.toString());
+                                            }} catch(ue) {{}}
+                                        }}
+                                    }} catch(ex) {{}}
+                                }}, 3000);
                             }}
                         }}
-                    }} catch(e) {{}}
-                }}, 3000);
+                    }});
+                }};
+                
+                // Streamlit'ten mesaj dinle (play kontrolü için)
+                window.addEventListener('message', function(event) {{
+                    if (event.data === 'GLOBAL_PLAY') {{
+                        try {{ 
+                            // localStorage'dan pozisyonu al ve oradan başlat
+                            var seekTime = parseFloat(localStorage.getItem(SK) || '0') || 0;
+                            if (seekTime > 0.5) {{
+                                globalPlayer.seekTo(seekTime, true);
+                            }}
+                            globalPlayer.playVideo(); 
+                        }} catch(e) {{}}
+                    }}
+                    if (event.data === 'GLOBAL_PAUSE') {{
+                        try {{ globalPlayer.pauseVideo(); }} catch(e) {{}}
+                    }}
+                }});
             </script>
             """,
             height=0,
@@ -2014,7 +2063,6 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                     if _qp_ts > 0:
                         st.session_state.yt_ts_dict[_qp_vid_safe] = _qp_ts
                     
-                    # Yeni videoyu ayarla
                     st.session_state.yt_playing_id      = _qp_vid_safe
                     st.session_state.yt_playing_title   = st.session_state.get("yt_last_title", _qp_vid_safe)
                     st.session_state.yt_playing_channel = st.session_state.get("yt_last_channel", "")
@@ -2048,7 +2096,6 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                     st.session_state.current_page = "chat"
                     st.session_state.yt_results   = []
                     st.session_state.yt_iframe_mounted = False
-                    # SES DEVAM EDER (yt_audio_playing korunur)
                     st.rerun()
 
             st.markdown("<hr style='border:none;border-top:1px solid rgba(255,255,255,0.08);margin:10px 0 14px;'>", unsafe_allow_html=True)
@@ -2068,10 +2115,6 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                     _ysonuc = youtube_ara(_yt_q.strip(), max_sonuc=12)
                     if _ysonuc:
                         st.session_state.yt_results = _ysonuc
-                        st.session_state.yt_playing_id = None
-                        st.session_state.yt_playing_title = ""
-                        st.session_state.yt_playing_channel = ""
-                        st.session_state.yt_iframe_mounted = False
                     else:
                         st.warning("⚠️ Sonuç bulunamadı. Farklı bir terim deneyin.")
 
@@ -2089,7 +2132,6 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                         st.session_state.yt_last_channel = _pch
                         st.session_state.yt_playing_id   = None
                         st.session_state.yt_iframe_mounted = False
-                        # SES DEVAM EDER
                         st.rerun()
                 with _pb2:
                     if _safe_vid not in yt_saved:
@@ -2118,7 +2160,7 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
 
                 _start_ts = int(st.session_state.yt_ts_dict.get(_safe_vid, 0))
 
-                # ─── PORTAL OYNATICI (GÖRSEL) ──
+                # ─── PORTAL OYNATICI (GÖRSEL, SES YOK) ──
                 if not st.session_state.yt_iframe_mounted:
                     st.session_state.yt_iframe_mounted = True
                     
@@ -2172,8 +2214,8 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
             events:{{
               onReady: function(e) {{
                 if (startT > 5) e.target.seekTo(startT, true);
-                // Ses seviyesini 0 yap - SES GLOBAL PLAYER'DAN GELİYOR
-                e.target.setVolume(0);
+                // Portal oynatıcı sessiz - ses global player'dan gelecek
+                e.target.mute();
                 setInterval(function() {{
                   try {{
                     var t = ytP.getCurrentTime();
@@ -2200,12 +2242,6 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
     </body>
     </html>"""
                     components.html(_player_html, height=495, scrolling=False)
-                else:
-                    st.markdown(f"""
-    <div style="height:495px;background:#000;border-radius:8px;overflow:hidden;">
-      <iframe src="https://www.youtube.com/embed/{_safe_vid}?autoplay=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&start={_start_ts}" style="width:100%;height:100%;border:none;display:block;"></iframe>
-    </div>
-    """, unsafe_allow_html=True)
 
             # ─── ARAMA SONUÇLARI ──────────────────────────────────────
             if st.session_state.yt_results:
@@ -2257,15 +2293,22 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
       </div>
     </div>""", unsafe_allow_html=True)
                             if st.button("▶ İzle", key=f"ytplay_{_rid}_{_ridx}", use_container_width=True):
-                                # Önce eski oynatıcıyı durdur
                                 st.session_state.yt_iframe_mounted = False
                                 st.session_state.yt_iframe_vid = ""
-                                
-                                # Yeni videoyu ayarla
                                 st.session_state.yt_playing_id      = _rid
                                 st.session_state.yt_playing_title   = _rtitle
                                 st.session_state.yt_playing_channel = _rch
                                 st.session_state.yt_audio_playing = True
+                                
+                                # GLOBAL PLAYER'I BAŞLAT
+                                components.html("""
+                                <script>
+                                    setTimeout(function() {
+                                        window.postMessage('GLOBAL_PLAY', '*');
+                                    }, 800);
+                                </script>
+                                """, height=0, width=0)
+                                
                                 st.rerun()
 
             # ─── HOŞ GELDİN EKRANI ────────────────────────────────────
@@ -2297,6 +2340,16 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                             st.session_state.yt_playing_title   = _ltit
                             st.session_state.yt_playing_channel = _lch
                             st.session_state.yt_audio_playing = True
+                            
+                            # GLOBAL PLAYER'I BAŞLAT
+                            components.html("""
+                            <script>
+                                setTimeout(function() {
+                                    window.postMessage('GLOBAL_PLAY', '*');
+                                }, 800);
+                            </script>
+                            """, height=0, width=0)
+                            
                             st.rerun()
                     st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
 
@@ -2350,6 +2403,16 @@ Müstakbel Şirket; yazılım mühendisleri, yapay zeka araştırmacıları, ür
                                     st.session_state.yt_playing_channel = ""
                                     st.session_state.yt_results         = []
                                     st.session_state.yt_audio_playing = True
+                                    
+                                    # GLOBAL PLAYER'I BAŞLAT
+                                    components.html("""
+                                    <script>
+                                        setTimeout(function() {
+                                            window.postMessage('GLOBAL_PLAY', '*');
+                                        }, 800);
+                                    </script>
+                                    """, height=0, width=0)
+                                    
                                     st.rerun()
                             with _sbc2:
                                 if st.button("🗑️", key=f"ytsv_del_{_svraw}_{_svidx}"):
