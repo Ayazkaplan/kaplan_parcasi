@@ -26,7 +26,7 @@ st.markdown("""
 <meta http-equiv="Content-Language" content="tr">
 
 <style>
-  /* === STREAMLIT 3 NOKTA MENÜSÜNÜ GÖSTER (GİZLEME) === */
+  /* === STREAMLIT 3 NOKTA MENÜSÜNÜ GÖSTER === */
   [data-testid="stHeader"] { 
     display: block !important;
     visibility: visible !important;
@@ -42,7 +42,7 @@ st.markdown("""
     background: transparent !important;
   }
 
-  /* === SİDEBAR HAMBURGER BUTONU - GÖRÜNSÜN === */
+  /* === SİDEBAR HAMBURGER BUTONU - SOL ÜST === */
   [data-testid="collapsedControl"] {
     display: flex !important;
     visibility: visible !important;
@@ -80,10 +80,10 @@ st.markdown("""
   .notranslate { translate: no; }
   font[style*="vertical-align"] { display: none !important; }
 
-  /* === ℹ️ BİLGİ BUTONU — 3 NOKTA MENÜSÜNÜN ALTINA === */
+  /* === ℹ️ BİLGİ BUTONU - SAĞ ÜST === */
   div[data-testid="stPopover"] {
     position: fixed !important;
-    top: 55px !important;
+    top: 15px !important;
     right: 15px !important;
     z-index: 999998 !important;
     width: auto !important;
