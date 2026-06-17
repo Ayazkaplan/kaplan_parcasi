@@ -1671,6 +1671,9 @@ else:
                     with st.container(border=True):
                         col_info, col_sec, col_act = st.columns([4, 3, 3])
                         with col_info:
+                            _u_foto = u_data.get("profil_foto", "")
+                            if _u_foto:
+                                st.markdown(f'<img src="data:image/jpeg;base64,{_u_foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid #f39c12;float:left;margin-right:10px;"/>', unsafe_allow_html=True)
                             _u_color = u_data.get("isim_rengi", "#FFFFFF")
                             _u_glow = u_data.get("ismin_parlakligi", False)
                             _u_tag = u_data.get("tag", "")
@@ -1733,7 +1736,7 @@ else:
                                     with c_confirm:
                                         if st.button("Onayla", key=f"confirm_ban_{u_id}", use_container_width=True):
                                             ban_bitis_zamani = datetime.now(timezone.utc) + timedelta(minutes=ban_sure)
-                                            db.collection("users").document(u_id).update({"durum": "Pasif", "ban_bitis_zamani": ban_bitis_zamani})
+                                            db.collection("users").document(u_id).update({"durum": "Pasif", "ban_bitis_zamani": ban_bitis_zamani, "profil_foto": ""})
                                             db.collection("banlanan_emails").document(u_email).set({"ban_bitis_zamani": ban_bitis_zamani, "email": u_email})
                                             st.session_state[f"show_ban_{u_id}"] = False
                                             st.session_state.valid_users_cache = None
@@ -2153,8 +2156,15 @@ else:
 
                     # Duyuru kontrolü — sadece veri güncelle, UI render etme
                     yeni_duyurular = doc.get("okunmamis_duyurular", [])
-                    eski_duyurular = st.session_state.get("cached_okunmamis_duyurular", [])
-                    if yeni_duyurular != eski_duyurular:
+                    eski_duyuru_ids = st.session_state.get("cached_duyuru_ids", set())
+                    yeni_duyuru_ids = set()
+                    for d in yeni_duyurular:
+                        if isinstance(d, dict):
+                            yeni_duyuru_ids.add(d.get("id", d.get("metin", "")))
+                        else:
+                            yeni_duyuru_ids.add(str(d))
+                    if yeni_duyuru_ids != eski_duyuru_ids:
+                        st.session_state.cached_duyuru_ids = yeni_duyuru_ids
                         st.session_state.cached_okunmamis_duyurular = yeni_duyurular
                         st.rerun()
                 except Exception:
@@ -2285,6 +2295,8 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
 
                 tag_tanimi = f"Tagı: [{user_tag_fresh_ai}]" if user_tag_fresh_ai else "Tagı: Bulunmuyor"
                 rozet_tanimi = f"Rozeti: [{user_rozet_fresh_ai}]" if user_rozet_fresh_ai else "Rozeti: Bulunmuyor"
+                user_foto_ai = current_doc.get("profil_foto", "")
+                foto_tanimi = "Profil Fotoğrafı: Var (yüklenmiş)" if user_foto_ai else "Profil Fotoğrafı: Henüz belirlenmemiş"
 
                 tr_saat_ai = get_tr_time().strftime("%H:%M")
                 tr_tarih_ai = get_tr_time().strftime("%d.%m.%Y")
@@ -2301,7 +2313,8 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                     f"- Kullanıcı Adı: {current_name}\n"
                     f"- Sistem Rolü/Hiyerarşisi: {rol_tanimi}\n"
                     f"- {tag_tanimi}\n"
-                    f"- {rozet_tanimi}\n\n"
+                    f"- {rozet_tanimi}\n"
+                    f"- {foto_tanimi}\n\n"
                     f"📢 HITAP VE DURUŞ TALİMATLARI:\n"
                     f"1. Karşındaki kişiye uygun hitap şekli: {hitap_tarzi}\n"
                     f"2. Benimsemen gereken üslup yapısı: {uslub}\n"
