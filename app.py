@@ -16,8 +16,7 @@ import tempfile
 st.set_page_config(
     page_title="Aslan Parçası V16.4",
     page_icon="🦁",
-    layout="centered",
-    initial_sidebar_state="auto"
+    layout="centered"
 )
 
 # --- GOOGLE TRANSLATE ENGELLEME + GLOBAL UI TWEAKS ---
@@ -43,36 +42,6 @@ st.markdown("""
     background: transparent !important;
   }
 
-  /* === SİDEBAR HAMBURGER BUTONU - SOL ÜST === */
-  [data-testid="collapsedControl"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: fixed !important;
-    top: 12px !important;
-    left: 12px !important;
-    right: auto !important;
-    z-index: 999999 !important;
-    background: rgba(20,20,40,0.8) !important;
-    border-radius: 50% !important;
-    padding: 10px !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
-    width: 44px !important;
-    height: 44px !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    cursor: pointer !important;
-    box-shadow: 0 2px 15px rgba(0,0,0,0.5) !important;
-    transition: all 0.2s ease !important;
-    color: white !important;
-    font-size: 1.2rem !important;
-  }
-  [data-testid="collapsedControl"]:hover {
-    background: rgba(40,40,80,0.95) !important;
-    border-color: rgba(255,215,0,0.4) !important;
-    transform: scale(1.05) !important;
-  }
-
   /* === GOOGLE TRANSLATE ENGELLEME === */
   .goog-te-banner-frame, .goog-te-menu-value, #goog-gt-tt,
   .goog-tooltip, .goog-tooltip:hover, .goog-te-balloon-frame,
@@ -82,10 +51,10 @@ st.markdown("""
   .notranslate { translate: no; }
   font[style*="vertical-align"] { display: none !important; }
 
-  /* === ℹ️ BİLGİ BUTONU - 3 NOKTA MENÜSÜNÜN ALTINA === */
+  /* === ℹ️ BİLGİ BUTONU - SAĞ ÜST, 3 NOKTA ALTINDA === */
   div[data-testid="stPopover"] {
     position: fixed !important;
-    top: 60px !important;
+    top: 50px !important;
     right: 15px !important;
     z-index: 999998 !important;
     width: auto !important;
@@ -122,46 +91,6 @@ st.markdown("""
   }
 </style>
 """, unsafe_allow_html=True)
-
-# --- SİDEBAR HAMBURGER BUTONUNU ZORLA GÖSTER (JS) ---
-components.html("""
-<script>
-  (function() {
-    function showHamburger() {
-      var btn = document.querySelector('[data-testid="collapsedControl"]');
-      if (btn) {
-        btn.style.display = 'flex !important';
-        btn.style.visibility = 'visible !important';
-        btn.style.opacity = '1 !important';
-        btn.style.position = 'fixed !important';
-        btn.style.top = '12px !important';
-        btn.style.left = '12px !important';
-        btn.style.right = 'auto !important';
-        btn.style.zIndex = '999999 !important';
-        btn.style.background = 'rgba(20,20,40,0.8) !important';
-        btn.style.borderRadius = '50% !important';
-        btn.style.padding = '10px !important';
-        btn.style.width = '44px !important';
-        btn.style.height = '44px !important';
-        btn.style.border = '1px solid rgba(255,255,255,0.15) !important';
-        btn.style.cursor = 'pointer !important';
-        btn.style.boxShadow = '0 2px 15px rgba(0,0,0,0.5) !important';
-        btn.style.color = 'white !important';
-        btn.style.fontSize = '1.2rem !important';
-        return true;
-      }
-      return false;
-    }
-    if (!showHamburger()) {
-      setTimeout(showHamburger, 500);
-      setTimeout(showHamburger, 1500);
-      setTimeout(showHamburger, 3000);
-    }
-    var obs = new MutationObserver(function() { showHamburger(); });
-    obs.observe(document.body, { childList: true, subtree: true });
-  })();
-</script>
-""", height=0, width=0)
 
 # Google Translate JS engeli
 components.html("""
@@ -880,15 +809,6 @@ else:
     is_admin_user = user_doc.get("is_admin", False)
     saved_videos = user_doc.get("videos", [])
     kullanici_ismi = user_doc.get('isim')
-
-    # YETKİ KONTROLLERİ
-    if st.session_state.current_page in ["admin_main", "admin_users", "admin_role_management"] and not is_kurucu:
-        st.session_state.current_page = "chat"
-        st.rerun()
-
-    if st.session_state.current_page == "admin_announcement" and not (is_kurucu or is_admin_user):
-        st.session_state.current_page = "chat"
-        st.rerun()
 
     # --- CSS ENJEKSİYONU (Mobil Düzeltme + Dokunmatik) ---
     st.markdown(f"""
