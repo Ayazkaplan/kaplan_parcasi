@@ -431,12 +431,15 @@ if "yt_iframe_vid" not in st.session_state: st.session_state.yt_iframe_vid = ""
 if "yt_audio_playing" not in st.session_state: st.session_state.yt_audio_playing = False
 if "yt_resume_time" not in st.session_state: st.session_state.yt_resume_time = 0
 if "global_player_container" not in st.session_state: st.session_state.global_player_container = None
+if "global_player_rendered" not in st.session_state: st.session_state.global_player_rendered = False
+if "global_player_rendered_vid" not in st.session_state: st.session_state.global_player_rendered_vid = None
 
 def trigger_invalid_session():
     for key in list(st.session_state.keys()):
         if key not in ["tema", "tema_rengi", "yt_audio_playing", "yt_iframe_mounted", 
                        "yt_iframe_vid", "yt_resume_time", "yt_ts_dict", "yt_playing_id",
-                       "yt_playing_title", "yt_playing_channel", "global_player_container"]:
+                       "yt_playing_title", "yt_playing_channel", "global_player_container",
+                       "global_player_rendered", "global_player_rendered_vid"]:
             del st.session_state[key]
     st.session_state.trigger_clear_token = True
     st.rerun()
@@ -448,6 +451,8 @@ def logout_user():
     st.session_state.yt_playing_title = ""
     st.session_state.yt_playing_channel = ""
     st.session_state.global_player_container = None
+    st.session_state.global_player_rendered = False
+    st.session_state.global_player_rendered_vid = None
     trigger_invalid_session()
 
 # --- SESSİZ ARKA PLAN GÖREVLİLERİ ---
@@ -1111,82 +1116,88 @@ else:
         _gvid = re.sub(r'[^a-zA-Z0-9_\-]', '', st.session_state.yt_playing_id)
         _gts = int(st.session_state.yt_ts_dict.get(_gvid, 0))
         
-        with st.session_state.global_player_container:
-            components.html(
-                f"""
-                <div id="global-yt-player-container" style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:99999;">
-                    <div id="global-yt-player"></div>
-                </div>
-                <script>
-                    var SK = 'ytpos_{_gvid}';
-                    var startT = {_gts};
-                    
-                    try {{
-                        var savedT = parseFloat(localStorage.getItem(SK) || '0') || 0;
-                        if (savedT > startT) startT = savedT;
-                    }} catch(e) {{}}
-                    
-                    var tag = document.createElement('script');
-                    tag.src = 'https://www.youtube.com/iframe_api';
-                    document.head.appendChild(tag);
-                    
-                    var globalPlayer;
-                    window.onYouTubeIframeAPIReady = function() {{
-                        globalPlayer = new YT.Player('global-yt-player', {{
-                            height: '1',
-                            width: '1',
-                            videoId: '{_gvid}',
-                            playerVars: {{
-                                autoplay: 0,
-                                controls: 0,
-                                rel: 0,
-                                modestbranding: 1,
-                                enablejsapi: 1,
-                                playsinline: 1,
-                                start: Math.floor(startT)
-                            }},
-                            events: {{
-                                onReady: function(event) {{
-                                    if (startT > 0) {{
-                                        event.target.seekTo(startT, true);
+        # SADECE video değiştiğinde veya ilk kez render et
+        if (not st.session_state.get("global_player_rendered") or 
+            st.session_state.get("global_player_rendered_vid") != _gvid):
+            
+            with st.session_state.global_player_container:
+                components.html(
+                    f"""
+                    <div id="global-yt-player-container" style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:99999;">
+                        <div id="global-yt-player"></div>
+                    </div>
+                    <script>
+                        var SK = 'ytpos_{_gvid}';
+                        var startT = {_gts};
+                        
+                        try {{
+                            var savedT = parseFloat(localStorage.getItem(SK) || '0') || 0;
+                            if (savedT > startT) startT = savedT;
+                        }} catch(e) {{}}
+                        
+                        var tag = document.createElement('script');
+                        tag.src = 'https://www.youtube.com/iframe_api';
+                        document.head.appendChild(tag);
+                        
+                        var globalPlayer;
+                        window.onYouTubeIframeAPIReady = function() {{
+                            globalPlayer = new YT.Player('global-yt-player', {{
+                                height: '1',
+                                width: '1',
+                                videoId: '{_gvid}',
+                                playerVars: {{
+                                    autoplay: 1,
+                                    controls: 0,
+                                    rel: 0,
+                                    modestbranding: 1,
+                                    enablejsapi: 1,
+                                    playsinline: 1,
+                                    start: Math.floor(startT)
+                                }},
+                                events: {{
+                                    onReady: function(event) {{
+                                        if (startT > 0) {{
+                                            event.target.seekTo(startT, true);
+                                        }}
+                                        setInterval(function() {{
+                                            try {{
+                                                var currentTime = globalPlayer.getCurrentTime();
+                                                if (currentTime > 0) {{
+                                                    localStorage.setItem(SK, String(currentTime));
+                                                }}
+                                            }} catch(ex) {{}}
+                                        }}, 3000);
                                     }}
-                                    event.target.mute();
-                                    setInterval(function() {{
-                                        try {{
-                                            var currentTime = globalPlayer.getCurrentTime();
-                                            if (currentTime > 0) {{
-                                                localStorage.setItem(SK, String(currentTime));
-                                            }}
-                                        }} catch(ex) {{}}
-                                    }}, 3000);
                                 }}
+                            }});
+                        }};
+                        
+                        window.addEventListener('message', function(event) {{
+                            if (event.data === 'GLOBAL_PLAY') {{
+                                try {{
+                                    var seekTime = parseFloat(localStorage.getItem(SK) || '0') || 0;
+                                    if (seekTime > 0.5) {{
+                                        globalPlayer.seekTo(seekTime, true);
+                                    }}
+                                    globalPlayer.playVideo();
+                                }} catch(e) {{}}
+                            }}
+                            if (event.data === 'GLOBAL_PAUSE') {{
+                                try {{ globalPlayer.pauseVideo(); }} catch(e) {{}}
                             }}
                         }});
-                    }};
-                    
-                    window.addEventListener('message', function(event) {{
-                        if (event.data === 'GLOBAL_PLAY') {{
-                            try {{
-                                var seekTime = parseFloat(localStorage.getItem(SK) || '0') || 0;
-                                if (seekTime > 0.5) {{
-                                    globalPlayer.seekTo(seekTime, true);
-                                }}
-                                globalPlayer.unMute();
-                                globalPlayer.playVideo();
-                            }} catch(e) {{}}
-                        }}
-                        if (event.data === 'GLOBAL_PAUSE') {{
-                            try {{ globalPlayer.pauseVideo(); }} catch(e) {{}}
-                        }}
-                    }});
-                </script>
-                """,
-                height=0,
-                width=0
-            )
+                    </script>
+                    """,
+                    height=0,
+                    width=0
+                )
+            st.session_state.global_player_rendered = True
+            st.session_state.global_player_rendered_vid = _gvid
     else:
         if st.session_state.global_player_container is not None:
             st.session_state.global_player_container.empty()
+            st.session_state.global_player_rendered = False
+            st.session_state.global_player_rendered_vid = None
 
     # --- SAYFA YÖNLENDİRME ---
     if st.session_state.current_page == "admin_main" and is_kurucu:
@@ -1998,6 +2009,7 @@ else:
                     st.session_state.yt_playing_channel = st.session_state.get("yt_last_channel", "")
                     st.session_state.yt_iframe_vid      = _qp_vid_safe
                     st.session_state.yt_iframe_mounted = False
+                    st.session_state.global_player_rendered = False  # 🔥 YENİ VİDEO İÇİN SIFIRLA
                     st.query_params.clear()
                     st.rerun()
 
@@ -2220,6 +2232,7 @@ else:
                                 st.session_state.yt_playing_id      = _rid
                                 st.session_state.yt_playing_title   = _rtitle
                                 st.session_state.yt_playing_channel = _rch
+                                st.session_state.global_player_rendered = False  # 🔥 YENİ VİDEO İÇİN SIFIRLA
                                 st.rerun()
 
             # ─── HOŞ GELDİN EKRANI ────────────────────────────────────
@@ -2250,6 +2263,7 @@ else:
                             st.session_state.yt_playing_id      = _lid
                             st.session_state.yt_playing_title   = _ltit
                             st.session_state.yt_playing_channel = _lch
+                            st.session_state.global_player_rendered = False  # 🔥 YENİ VİDEO İÇİN SIFIRLA
                             st.rerun()
                     st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
 
@@ -2302,6 +2316,7 @@ else:
                                     st.session_state.yt_playing_title   = _svid
                                     st.session_state.yt_playing_channel = ""
                                     st.session_state.yt_results         = []
+                                    st.session_state.global_player_rendered = False  # 🔥 YENİ VİDEO İÇİN SIFIRLA
                                     st.rerun()
                             with _sbc2:
                                 if st.button("🗑️", key=f"ytsv_del_{_svraw}_{_svidx}"):
@@ -2312,4 +2327,4 @@ else:
                                     st.rerun()
             else:
                 st.markdown("<hr style='border:none;border-top:1px solid rgba(255,255,255,0.08);margin:16px 0 12px;'>", unsafe_allow_html=True)
-                st.info("Henüz kayıtlı video yok.")
+                st.info("Henüz kayıtlı video yok.") 
