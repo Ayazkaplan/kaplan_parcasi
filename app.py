@@ -25,21 +25,10 @@ st.markdown("""
 <meta http-equiv="Content-Language" content="tr">
 
 <style>
-  /* === STREAMLIT 3 NOKTA MENÜSÜNÜ GÖSTER === */
+  /* === STREAMLIT HEADER VE SIDEBAR DÜZELTMESİ === */
   [data-testid="stHeader"] { 
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    height: auto !important;
-    min-height: auto !important;
-    width: auto !important;
-    overflow: visible !important;
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
     background: transparent !important;
+    z-index: 999997 !important;
   }
 
   /* === GOOGLE TRANSLATE ENGELLEME === */
@@ -809,6 +798,15 @@ else:
     is_admin_user = user_doc.get("is_admin", False)
     saved_videos = user_doc.get("videos", [])
     kullanici_ismi = user_doc.get('isim')
+
+    # YETKİ KONTROLLERİ
+    if st.session_state.current_page in ["admin_main", "admin_users", "admin_role_management"] and not is_kurucu:
+        st.session_state.current_page = "chat"
+        st.rerun()
+
+    if st.session_state.current_page == "admin_announcement" and not (is_kurucu or is_admin_user):
+        st.session_state.current_page = "chat"
+        st.rerun()
 
     # --- CSS ENJEKSİYONU (Mobil Düzeltme + Dokunmatik) ---
     st.markdown(f"""
