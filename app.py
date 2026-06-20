@@ -1368,79 +1368,29 @@ else:
         box-sizing: border-box !important;
         width: fit-content;
     }}
-    /* User Container Select Button Overlay */
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-bubble-container-marker) {{
-        position: relative !important;
-        transition: opacity 0.2s ease !important;
-    }}
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-bubble-container-marker):hover {{
-        opacity: 0.94 !important;
-        cursor: pointer !important;
-    }}
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-bubble-container-marker) > div.element-container:has(div[data-testid="stButton"]) {{
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
+    div.msg-ops-container-user {{
+        display: flex !important;
+        justify-content: flex-end !important;
+        margin-top: -8px !important;
+        margin-bottom: 12px !important;
+        padding-right: 50px !important;
         width: 100% !important;
-        height: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        z-index: 10 !important;
     }}
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-bubble-container-marker) > div.element-container:has(div[data-testid="stButton"]) button {{
+    div.msg-ops-container-assistant {{
+        display: flex !important;
+        justify-content: flex-start !important;
+        margin-top: -8px !important;
+        margin-bottom: 12px !important;
+        padding-left: 50px !important;
         width: 100% !important;
-        height: 100% !important;
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        color: transparent !important;
-        cursor: pointer !important;
-        padding: 0 !important;
-        margin: 0 !important;
     }}
-
-    /* Assistant Container Select Button Overlay */
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .assistant-bubble-container-marker) {{
-        position: relative !important;
-        transition: opacity 0.2s ease !important;
-    }}
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .assistant-bubble-container-marker):hover {{
-        opacity: 0.94 !important;
-        cursor: pointer !important;
-    }}
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .assistant-bubble-container-marker) > div.element-container:has(div[data-testid="stButton"]) {{
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        z-index: 10 !important;
-    }}
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .assistant-bubble-container-marker) > div.element-container:has(div[data-testid="stButton"]) button {{
-        width: 100% !important;
-        height: 100% !important;
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        color: transparent !important;
-        cursor: pointer !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }}
-
-    div.msg-ops-container {{
-        width: 100%;
-        margin-top: 5px;
-        margin-bottom: 12px;
-        display: block !important;
-    }}
-    div.msg-ops-container div[data-testid="stButton"] {{
+    div.msg-ops-container-user div[data-testid="stButton"],
+    div.msg-ops-container-assistant div[data-testid="stButton"] {{
         display: inline-block !important;
         margin: 0 4px !important;
     }}
-    div.msg-ops-container div[data-testid="stButton"] button {{
+    div.msg-ops-container-user div[data-testid="stButton"] button,
+    div.msg-ops-container-assistant div[data-testid="stButton"] button {{
         border-radius: 8px !important;
         width: 32px !important;
         height: 32px !important;
@@ -1459,7 +1409,8 @@ else:
         color: #fff !important;
         transition: transform 0.2s ease, background-color 0.2s ease !important;
     }}
-    div.msg-ops-container div[data-testid="stButton"] button p {{
+    div.msg-ops-container-user div[data-testid="stButton"] button p,
+    div.msg-ops-container-assistant div[data-testid="stButton"] button p {{
         font-size: 16px !important;
         margin: 0 !important;
         padding: 0 !important;
@@ -1467,7 +1418,8 @@ else:
         line-height: 1 !important;
         display: inline-block !important;
     }}
-    div.msg-ops-container div[data-testid="stButton"] button:hover {{
+    div.msg-ops-container-user div[data-testid="stButton"] button:hover,
+    div.msg-ops-container-assistant div[data-testid="stButton"] button:hover {{
         transform: scale(1.1) !important;
         background-color: rgba(243, 156, 18, 0.25) !important;
         border-color: #f39c12 !important;
@@ -2938,35 +2890,25 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                 if m["role"] == "assistant":
                     content_rendered = detect_and_render_media(m["content"])
                     with st.container():
-                        st.markdown('<div class="assistant-bubble-container-marker"></div>', unsafe_allow_html=True)
                         st.markdown(
                             f'''<div class="assistant-box"><img src="{AVATAR_URL}" class="avatar"><div class="assistant-bubble"><div class="header-box">Aslan Parçası</div><div style="color:white !important;">{content_rendered}</div></div></div>''',
                             unsafe_allow_html=True
                         )
-                        if st.button("", key=f"assistant_select_trigger_{idx}", help="Aslan parçasının cevabını seç"):
-                            if st.session_state.get("active_assistant_select_idx") == idx:
-                                st.session_state.active_assistant_select_idx = None
-                            else:
-                                st.session_state.active_assistant_select_idx = idx
-                                st.session_state.active_chat_select_idx = None
-                            st.rerun()
 
-                    if st.session_state.get("active_assistant_select_idx") == idx:
-                        st.markdown('<div class="msg-ops-container">', unsafe_allow_html=True)
-                        col_btn, col_empty = st.columns([1.5, 8.5])
-                        with col_btn:
-                            if st.button("🔄", key=f"assistant_regen_{idx}", help="Cevabı Yeniden Oluştur"):
-                                with st.spinner("Aslan Parçası analiz ediyor ve yeni bir yanıt oluşturuyor..."):
-                                    messages_context = st.session_state.messages[:idx]
-                                    yeni_cevap = ai_cevap(messages_context[-6:])
-                                    new_chat = list(st.session_state.messages)
-                                    new_chat[idx]["content"] = yeni_cevap
-                                    st.session_state.messages = new_chat
-                                    user_ref.update({"sohbet_gecmisi": new_chat})
-                                    st.session_state.active_assistant_select_idx = None
-                                    st.success("Yeni yanıt oluşturuldu!")
-                                    st.rerun()
-                        st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="msg-ops-container-assistant">', unsafe_allow_html=True)
+                    col_btn, _ = st.columns([1.5, 10.5])
+                    with col_btn:
+                        if st.button("🔄", key=f"assistant_regen_{idx}", help="Cevabı Yeniden Oluştur"):
+                            with st.spinner("Aslan Parçası analiz ediyor ve yeni bir yanıt oluşturuyor..."):
+                                messages_context = st.session_state.messages[:idx]
+                                yeni_cevap = ai_cevap(messages_context[-6:])
+                                new_chat = list(st.session_state.messages)
+                                new_chat[idx]["content"] = yeni_cevap
+                                st.session_state.messages = new_chat
+                                user_ref.update({"sohbet_gecmisi": new_chat})
+                                st.success("Yeni yanıt oluşturuldu!")
+                                st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
                 else:
                     msg_name = m.get("isim", kullanici_ismi_fresh)
                     msg_color = m.get("color", u_color_fresh)
@@ -2977,37 +2919,27 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                     content_rendered = detect_and_render_media(m["content"])
                     
                     with st.container():
-                        st.markdown('<div class="user-bubble-container-marker"></div>', unsafe_allow_html=True)
                         st.markdown(
                             f'''<div class="user-box"><div class="user-bubble"><div class="header-box" style="text-align: right; margin-bottom: 5px;">{msg_display_name}</div><div style="color:white !important; text-align: right;">{content_rendered}</div></div><img src="{_user_avatar_url}" class="avatar"></div>''',
                             unsafe_allow_html=True
                         )
-                        if st.button("", key=f"user_select_trigger_{idx}", help="Mesajınızı seçin"):
-                            if st.session_state.get("active_chat_select_idx") == idx:
-                                st.session_state.active_chat_select_idx = None
-                            else:
-                                st.session_state.active_chat_select_idx = idx
-                                st.session_state.active_assistant_select_idx = None
-                            st.rerun()
 
-                    if st.session_state.get("active_chat_select_idx") == idx:
-                        st.markdown('<div class="msg-ops-container">', unsafe_allow_html=True)
-                        col_space, col_btn1, col_btn2 = st.columns([7.0, 1.5, 1.5])
-                        with col_btn1:
-                            if st.button("✏️", key=f"chat_edit_{idx}", help="Mesajı Düzenle"):
-                                st.session_state.active_chat_edit_idx = idx
-                                st.session_state.active_chat_edit_text = m["content"]
-                                st.rerun()
-                        with col_btn2:
-                            if st.button("🗑️", key=f"chat_delete_{idx}", help="Mesajı Sil"):
-                                new_chat = list(st.session_state.messages)
-                                new_chat.pop(idx)
-                                st.session_state.messages = new_chat
-                                user_ref.update({"sohbet_gecmisi": new_chat})
-                                st.success("Mesaj silindi!")
-                                st.session_state.active_chat_select_idx = None
-                                st.rerun()
-                        st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="msg-ops-container-user">', unsafe_allow_html=True)
+                    col_space, col_btn1, col_btn2 = st.columns([9.0, 1.5, 1.5])
+                    with col_btn1:
+                        if st.button("✏️", key=f"chat_edit_{idx}", help="Mesajı Düzenle"):
+                            st.session_state.active_chat_edit_idx = idx
+                            st.session_state.active_chat_edit_text = m["content"]
+                            st.rerun()
+                    with col_btn2:
+                        if st.button("🗑️", key=f"chat_delete_{idx}", help="Mesajı Sil"):
+                            new_chat = list(st.session_state.messages)
+                            new_chat.pop(idx)
+                            st.session_state.messages = new_chat
+                            user_ref.update({"sohbet_gecmisi": new_chat})
+                            st.success("Mesaj silindi!")
+                            st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
 
                     if st.session_state.get("active_chat_edit_idx") == idx:
                         edit_val = st.text_input("Mesajı düzenle:", value=st.session_state.active_chat_edit_text, key=f"chat_edit_inp_{idx}")
@@ -3021,7 +2953,6 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                                     user_ref.update({"sohbet_gecmisi": new_chat})
                                     st.session_state.pop("active_chat_edit_idx", None)
                                     st.session_state.pop("active_chat_edit_text", None)
-                                    st.session_state.pop("active_chat_select_idx", None)
                                     st.success("Mesaj güncellendi!")
                                     st.rerun()
                         with col_cancel:
