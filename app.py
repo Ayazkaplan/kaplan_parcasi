@@ -1368,62 +1368,80 @@ else:
         box-sizing: border-box !important;
         width: fit-content;
     }}
-    div.msg-ops-container-user {{
+    /* User Message Ops Styles (Edit & Delete) */
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-ops-marker) {{
         display: flex !important;
-        justify-content: flex-end !important;
-        margin-top: -8px !important;
-        margin-bottom: 12px !important;
+        flex-direction: column !important;
+        align-items: flex-end !important;
+        width: 100% !important;
+        margin-top: -12px !important;
+        margin-bottom: 8px !important;
         padding-right: 50px !important;
-        width: 100% !important;
     }}
-    div.msg-ops-container-assistant {{
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-ops-marker) > div.element-container:has(div[data-testid="stHorizontalBlock"]) > div[data-testid="stHorizontalBlock"] {{
         display: flex !important;
-        justify-content: flex-start !important;
-        margin-top: -8px !important;
-        margin-bottom: 12px !important;
-        padding-left: 50px !important;
+        flex-direction: row !important;
+        justify-content: flex-end !important;
+        width: auto !important;
+        gap: 8px !important;
+        flex-wrap: nowrap !important;
+    }}
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-ops-marker) div[data-testid="column"] {{
+        width: auto !important;
+        min-width: unset !important;
+        flex: none !important;
+    }}
+
+    /* Assistant Message Ops Styles (Regenerate) */
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .assistant-ops-marker) {{
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
         width: 100% !important;
+        margin-top: -12px !important;
+        margin-bottom: 8px !important;
+        padding-left: 50px !important;
     }}
-    div.msg-ops-container-user div[data-testid="stButton"],
-    div.msg-ops-container-assistant div[data-testid="stButton"] {{
-        display: inline-block !important;
-        margin: 0 4px !important;
-    }}
-    div.msg-ops-container-user div[data-testid="stButton"] button,
-    div.msg-ops-container-assistant div[data-testid="stButton"] button {{
+
+    /* Shared Action Button Custom Formatting */
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-ops-marker) div[data-testid="stButton"] button,
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .assistant-ops-marker) div[data-testid="stButton"] button {{
         border-radius: 8px !important;
-        width: 32px !important;
-        height: 32px !important;
-        min-width: 32px !important;
-        max-width: 32px !important;
-        min-height: 32px !important;
-        max-height: 32px !important;
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        max-width: 36px !important;
+        min-height: 36px !important;
+        max-height: 36px !important;
         padding: 0 !important;
         font-size: 16px !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        background-color: rgba(30,30,30,0.85) !important;
+        background-color: rgba(30, 30, 30, 0.85) !important;
         border: 1px solid #f39c12 !important;
         box-shadow: 0 2px 6px rgba(243, 156, 18, 0.3) !important;
         color: #fff !important;
         transition: transform 0.2s ease, background-color 0.2s ease !important;
     }}
-    div.msg-ops-container-user div[data-testid="stButton"] button p,
-    div.msg-ops-container-assistant div[data-testid="stButton"] button p {{
-        font-size: 16px !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        color: #fff !important;
-        line-height: 1 !important;
-        display: inline-block !important;
-    }}
-    div.msg-ops-container-user div[data-testid="stButton"] button:hover,
-    div.msg-ops-container-assistant div[data-testid="stButton"] button:hover {{
+    
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-ops-marker) div[data-testid="stButton"] button:hover,
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .assistant-ops-marker) div[data-testid="stButton"] button:hover {{
         transform: scale(1.1) !important;
         background-color: rgba(243, 156, 18, 0.25) !important;
         border-color: #f39c12 !important;
         box-shadow: 0 4px 10px rgba(243, 156, 18, 0.5) !important;
+    }}
+
+    /* Target inner span and text and emojis nicely */
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-ops-marker) div[data-testid="stButton"] button *,
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .assistant-ops-marker) div[data-testid="stButton"] button * {{
+        color: #fff !important;
+        font-size: 16px !important;
+        display: inline-block !important;
+        line-height: 1 !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }}
     .assistant-box *, .user-box *, .assistant-bubble *, .user-bubble * {{
         word-wrap: break-word !important; overflow-wrap: break-word !important;
@@ -2895,9 +2913,8 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                             unsafe_allow_html=True
                         )
 
-                    st.markdown('<div class="msg-ops-container-assistant">', unsafe_allow_html=True)
-                    col_btn, _ = st.columns([1.5, 10.5])
-                    with col_btn:
+                    with st.container():
+                        st.markdown('<div class="assistant-ops-marker"></div>', unsafe_allow_html=True)
                         if st.button("🔄", key=f"assistant_regen_{idx}", help="Cevabı Yeniden Oluştur"):
                             with st.spinner("Aslan Parçası analiz ediyor ve yeni bir yanıt oluşturuyor..."):
                                 messages_context = st.session_state.messages[:idx]
@@ -2908,7 +2925,6 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                                 user_ref.update({"sohbet_gecmisi": new_chat})
                                 st.success("Yeni yanıt oluşturuldu!")
                                 st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
                 else:
                     msg_name = m.get("isim", kullanici_ismi_fresh)
                     msg_color = m.get("color", u_color_fresh)
@@ -2924,22 +2940,22 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                             unsafe_allow_html=True
                         )
 
-                    st.markdown('<div class="msg-ops-container-user">', unsafe_allow_html=True)
-                    col_space, col_btn1, col_btn2 = st.columns([9.0, 1.5, 1.5])
-                    with col_btn1:
-                        if st.button("✏️", key=f"chat_edit_{idx}", help="Mesajı Düzenle"):
-                            st.session_state.active_chat_edit_idx = idx
-                            st.session_state.active_chat_edit_text = m["content"]
-                            st.rerun()
-                    with col_btn2:
-                        if st.button("🗑️", key=f"chat_delete_{idx}", help="Mesajı Sil"):
-                            new_chat = list(st.session_state.messages)
-                            new_chat.pop(idx)
-                            st.session_state.messages = new_chat
-                            user_ref.update({"sohbet_gecmisi": new_chat})
-                            st.success("Mesaj silindi!")
-                            st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
+                    with st.container():
+                        st.markdown('<div class="user-ops-marker"></div>', unsafe_allow_html=True)
+                        col_btn1, col_btn2 = st.columns([1, 1], gap="small")
+                        with col_btn1:
+                            if st.button("✏️", key=f"chat_edit_{idx}", help="Mesajı Düzenle"):
+                                st.session_state.active_chat_edit_idx = idx
+                                st.session_state.active_chat_edit_text = m["content"]
+                                st.rerun()
+                        with col_btn2:
+                            if st.button("🗑️", key=f"chat_delete_{idx}", help="Mesajı Sil"):
+                                new_chat = list(st.session_state.messages)
+                                new_chat.pop(idx)
+                                st.session_state.messages = new_chat
+                                user_ref.update({"sohbet_gecmisi": new_chat})
+                                st.success("Mesaj silindi!")
+                                st.rerun()
 
                     if st.session_state.get("active_chat_edit_idx") == idx:
                         edit_val = st.text_input("Mesajı düzenle:", value=st.session_state.active_chat_edit_text, key=f"chat_edit_inp_{idx}")
