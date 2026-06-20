@@ -1368,82 +1368,115 @@ else:
         box-sizing: border-box !important;
         width: fit-content;
     }}
-    /* User Message Ops Styles (Edit & Delete) */
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-ops-marker) {{
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-end !important;
-        width: 100% !important;
-        margin-top: -12px !important;
-        margin-bottom: 8px !important;
-        padding-right: 50px !important;
-    }}
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-ops-marker) > div.element-container:has(div[data-testid="stHorizontalBlock"]) > div[data-testid="stHorizontalBlock"] {{
+    /* User Message Ops Sibling Styles (Edit & Delete side-by-side) */
+    div.element-container:has(.user-ops-marker) ~ div.element-container {
         display: flex !important;
         flex-direction: row !important;
         justify-content: flex-end !important;
-        width: auto !important;
-        gap: 8px !important;
-        flex-wrap: nowrap !important;
-    }}
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-ops-marker) div[data-testid="column"] {{
-        width: auto !important;
-        min-width: unset !important;
-        flex: none !important;
-    }}
-
-    /* Assistant Message Ops Styles (Regenerate) */
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .assistant-ops-marker) {{
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
+        align-items: center !important;
         width: 100% !important;
         margin-top: -12px !important;
-        margin-bottom: 8px !important;
-        padding-left: 50px !important;
-    }}
-
-    /* Shared Action Button Custom Formatting */
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-ops-marker) div[data-testid="stButton"] button,
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .assistant-ops-marker) div[data-testid="stButton"] button {{
-        border-radius: 8px !important;
-        width: 36px !important;
-        height: 36px !important;
-        min-width: 36px !important;
-        max-width: 36px !important;
-        min-height: 36px !important;
-        max-height: 36px !important;
+        margin-bottom: 12px !important;
+        padding-right: 50px !important;
+        box-sizing: border-box !important;
+    }
+    
+    div.element-container:has(.user-ops-marker) ~ div.element-container div[data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: auto !important;
+        flex-wrap: nowrap !important;
+    }
+    
+    div.element-container:has(.user-ops-marker) ~ div.element-container div[data-testid="column"] {
+        width: auto !important;
+        flex: none !important;
+        min-width: unset !important;
+        margin: 0 !important;
         padding: 0 !important;
-        font-size: 16px !important;
+    }
+
+    /* Assistant Message Ops Sibling Styles (Regenerate on the left) */
+    div.element-container:has(.assistant-ops-marker) ~ div.element-container {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin-top: -12px !important;
+        margin-bottom: 12px !important;
+        padding-left: 50px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Style the actual button elements inside these siblings */
+    div.element-container:has(.user-ops-marker) ~ div.element-container button,
+    div.element-container:has(.assistant-ops-marker) ~ div.element-container button {
+        border-radius: 8px !important;
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        max-width: 38px !important;
+        min-height: 38px !important;
+        max-height: 38px !important;
+        padding: 0 !important;
+        margin: 0 !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        background-color: rgba(30, 30, 30, 0.85) !important;
+        background-color: rgba(30,30,30,0.85) !important;
         border: 1px solid #f39c12 !important;
         box-shadow: 0 2px 6px rgba(243, 156, 18, 0.3) !important;
-        color: #fff !important;
+        color: #ffffff !important;
+        cursor: pointer !important;
         transition: transform 0.2s ease, background-color 0.2s ease !important;
-    }}
+    }
     
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-ops-marker) div[data-testid="stButton"] button:hover,
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .assistant-ops-marker) div[data-testid="stButton"] button:hover {{
+    @media (max-width: 768px) {
+        div.element-container:has(.user-ops-marker) ~ div.element-container {
+            padding-right: 15px !important;
+        }
+        div.element-container:has(.assistant-ops-marker) ~ div.element-container {
+            padding-left: 15px !important;
+        }
+        div.element-container:has(.user-ops-marker) ~ div.element-container button,
+        div.element-container:has(.assistant-ops-marker) ~ div.element-container button {
+            width: 38px !important;
+            height: 38px !important;
+            min-width: 38px !important;
+            max-width: 38px !important;
+            min-height: 38px !important;
+            max-height: 38px !important;
+            padding: 0 !important;
+        }
+    }
+
+    div.element-container:has(.user-ops-marker) ~ div.element-container button:hover,
+    div.element-container:has(.assistant-ops-marker) ~ div.element-container button:hover {
         transform: scale(1.1) !important;
         background-color: rgba(243, 156, 18, 0.25) !important;
         border-color: #f39c12 !important;
         box-shadow: 0 4px 10px rgba(243, 156, 18, 0.5) !important;
-    }}
+    }
 
-    /* Target inner span and text and emojis nicely */
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .user-ops-marker) div[data-testid="stButton"] button *,
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .assistant-ops-marker) div[data-testid="stButton"] button * {{
-        color: #fff !important;
-        font-size: 16px !important;
-        display: inline-block !important;
-        line-height: 1 !important;
+    /* Target direct children of button inside our operations area so writing displays correctly */
+    div.element-container:has(.user-ops-marker) ~ div.element-container button p,
+    div.element-container:has(.assistant-ops-marker) ~ div.element-container button p,
+    div.element-container:has(.user-ops-marker) ~ div.element-container button span,
+    div.element-container:has(.assistant-ops-marker) ~ div.element-container button span {
+        color: #ffffff !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         margin: 0 !important;
         padding: 0 !important;
-    }}
-    .assistant-box *, .user-box *, .assistant-bubble *, .user-bubble * {{
+    }
+    .assistant-box *, .user-box *, .assistant-bubble *, .user-bubble * {
         word-wrap: break-word !important; overflow-wrap: break-word !important;
         word-break: break-word !important; max-width: 100% !important;
         box-sizing: border-box !important; min-width: 0;
