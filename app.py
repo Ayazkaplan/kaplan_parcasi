@@ -2955,9 +2955,12 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                     return "⚠️ Bir hata oluştu, lütfen tekrar dene Reis."
 
             last_assistant_idx = -1
+            last_user_idx = -1
             for i, msg in enumerate(st.session_state.messages):
                 if msg["role"] == "assistant":
                     last_assistant_idx = i
+                else:
+                    last_user_idx = i
 
             for idx, m in enumerate(st.session_state.messages):
                 if m["role"] == "assistant":
@@ -2996,12 +2999,13 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                             unsafe_allow_html=True
                         )
 
-                    with st.container():
-                        st.markdown('<div class="user-ops-marker"></div>', unsafe_allow_html=True)
-                        if st.button("✎", key=f"user_edit_trigger_{idx}", help="Mesajı Düzenle"):
-                            st.session_state.active_chat_edit_idx = idx
-                            st.session_state.active_chat_edit_text = m["content"]
-                            st.rerun()
+                    if idx == last_user_idx:
+                        with st.container():
+                            st.markdown('<div class="user-ops-marker"></div>', unsafe_allow_html=True)
+                            if st.button("✎", key=f"user_edit_trigger_{idx}", help="Mesajı Düzenle"):
+                                st.session_state.active_chat_edit_idx = idx
+                                st.session_state.active_chat_edit_text = m["content"]
+                                st.rerun()
 
                     if st.session_state.get("active_chat_edit_idx") == idx:
                         edit_val = st.text_input("Mesajı düzenle:", value=st.session_state.active_chat_edit_text, key=f"chat_edit_inp_{idx}")
