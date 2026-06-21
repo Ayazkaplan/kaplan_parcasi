@@ -1368,89 +1368,29 @@ else:
         box-sizing: border-box !important;
         width: fit-content;
     }}
-    /* Assistant Message Ops Sibling Styles (Regenerate exactly under the left yellow line) */
-    div.element-container:has(.assistant-ops-marker) + div.element-container {{
+    /* Assistant Message Ops Container Styles (Regenerate aligned under the left yellow line) */
+    div[data-testid="stVerticalBlock"]:has(.assistant-ops-container-marker) {
         display: flex !important;
         flex-direction: row !important;
         justify-content: flex-start !important;
         align-items: center !important;
         width: 100% !important;
-        margin-top: -19px !important; /* Move it up to sit perfectly aligned with the bottom of the gold border of assistant-bubble */
+        margin-top: -19px !important; /* Sit aligned with bottom of assistant bubble */
         margin-bottom: 12px !important;
         padding-left: 50px !important; /* Align exactly with the gold border left edge (avatar 40px + gap 10px) */
         box-sizing: border-box !important;
         height: 32px !important;
-    }}
+    }
 
-    /* Style the actual square button element */
-    div.element-container:has(.assistant-ops-marker) + div.element-container button {{
-        border-radius: 8px !important;
-        width: 32px !important;
-        height: 32px !important;
-        min-width: 32px !important;
-        max-width: 32px !important;
-        min-height: 32px !important;
-        max-height: 32px !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        background-color: rgba(30,30,30,0.85) !important;
-        border: 1.5px solid gold !important; /* Gold border to match gold border */
-        box-shadow: 0 2px 6px rgba(243, 156, 18, 0.3) !important;
-        color: #ffffff !important;
-        cursor: pointer !important;
-        transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease !important;
-    }}
-    
-    @media (max-width: 768px) {{
-        div.element-container:has(.assistant-ops-marker) + div.element-container {{
-            padding-left: 50px !important; /* Keep 50px to stay absolutely aligned with the bubble's gold border */
-        }}
-    }}
-
-    div.element-container:has(.assistant-ops-marker) + div.element-container button:hover {{
-        transform: scale(1.1) !important;
-        background-color: rgba(243, 156, 18, 0.25) !important;
-        border-color: #f39c12 !important;
-        box-shadow: 0 4px 10px rgba(243, 156, 18, 0.5) !important;
-    }}
-
-    /* Target direct children of button inside our operations area so writing displays correctly */
-    div.element-container:has(.assistant-ops-marker) + div.element-container button * {{
-        color: #ffffff !important;
-        font-size: 20px !important;
-        font-weight: bold !important;
-        line-height: 1 !important;
+    div[data-testid="stVerticalBlock"]:has(.assistant-ops-container-marker) .stButton,
+    div[data-testid="stVerticalBlock"]:has(.assistant-ops-container-marker) .stButton > div {
         display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }}
-
-    /* User Message Ops Sibling Styles (Edit button aligned to matching right-hand bubble boundary) */
-    div.element-container:has(.user-ops-marker) + div.element-container {{
-        display: flex !important;
-        flex-direction: row !important;
-        justify-content: flex-end !important;
-        align-items: center !important;
+        justify-content: flex-start !important;
         width: 100% !important;
-        margin-top: -19px !important; /* Sit aligned with the bottom of user bubble */
-        margin-bottom: 12px !important;
-        padding-right: 50px !important; /* Pre-calculated to stay to the left of the 40px user avatar + 10px gap */
-        box-sizing: border-box !important;
-        height: 32px !important;
-    }}
+    }
 
-    /* Align the Streamlit button wrapper container to the right too */
-    div.element-container:has(.user-ops-marker) + div.element-container .stButton,
-    div.element-container:has(.user-ops-marker) + div.element-container .stButton > div {{
-        display: flex !important;
-        justify-content: flex-end !important;
-        width: 100% !important;
-    }}
-
-    div.element-container:has(.user-ops-marker) + div.element-container button {{
+    /* Style the actual square regenerate button */
+    div[data-testid="stVerticalBlock"]:has(.assistant-ops-container-marker) button {
         border-radius: 8px !important;
         width: 32px !important;
         height: 32px !important;
@@ -1464,27 +1404,27 @@ else:
         align-items: center !important;
         justify-content: center !important;
         background-color: rgba(30, 30, 30, 0.85) !important;
-        border: 1.5px solid #a855f7 !important; /* Purple border to fit user theme aesthetics nicely */
-        box-shadow: 0 2px 6px rgba(168, 85, 247, 0.3) !important;
+        border: 1.5px solid gold !important; /* Gold border to match assistant bubble */
+        box-shadow: 0 2px 6px rgba(243, 156, 18, 0.3) !important;
         color: #ffffff !important;
         cursor: pointer !important;
         transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease !important;
-    }}
+    }
 
-    @media (max-width: 768px) {{
-        div.element-container:has(.user-ops-marker) + div.element-container {{
-            padding-right: 50px !important;
-        }}
-    }}
+    @media (max-width: 768px) {
+        div[data-testid="stVerticalBlock"]:has(.assistant-ops-container-marker) {
+            padding-left: 50px !important;
+        }
+    }
 
-    div.element-container:has(.user-ops-marker) + div.element-container button:hover {{
+    div[data-testid="stVerticalBlock"]:has(.assistant-ops-container-marker) button:hover {
         transform: scale(1.1) !important;
-        background-color: rgba(168, 85, 247, 0.25) !important;
-        border-color: #a855f7 !important;
-        box-shadow: 0 4px 10px rgba(168, 85, 247, 0.5) !important;
-    }}
+        background-color: rgba(243, 156, 18, 0.25) !important;
+        border-color: #f39c12 !important;
+        box-shadow: 0 4px 10px rgba(243, 156, 18, 0.5) !important;
+    }
 
-    div.element-container:has(.user-ops-marker) + div.element-container button * {{
+    div[data-testid="stVerticalBlock"]:has(.assistant-ops-container-marker) button * {
         color: #ffffff !important;
         font-size: 20px !important;
         font-weight: bold !important;
@@ -1492,7 +1432,73 @@ else:
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-    }}
+    }
+
+    /* User Message Ops Container Styles (Edit button aligned to matching right-hand bubble boundary) */
+    div[data-testid="stVerticalBlock"]:has(.user-ops-container-marker) {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin-top: -19px !important; /* Sit aligned with the bottom of user bubble */
+        margin-bottom: 12px !important;
+        padding-right: 50px !important; /* Pre-calculated to stay to the left of the 40px user avatar + 10px gap */
+        box-sizing: border-box !important;
+        height: 32px !important;
+    }
+
+    /* Align the Streamlit button wrapper container to the right too */
+    div[data-testid="stVerticalBlock"]:has(.user-ops-container-marker) .stButton,
+    div[data-testid="stVerticalBlock"]:has(.user-ops-container-marker) .stButton > div {
+        display: flex !important;
+        justify-content: flex-end !important;
+        width: 100% !important;
+    }
+
+    div[data-testid="stVerticalBlock"]:has(.user-ops-container-marker) button {
+        border-radius: 8px !important;
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        max-width: 32px !important;
+        min-height: 32px !important;
+        max-height: 32px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background-color: rgba(30, 30, 30, 0.85) !important;
+        border: 1.5px solid #a855f7 !important; /* purple border */
+        box-shadow: 0 2px 6px rgba(168, 85, 247, 0.3) !important;
+        color: #ffffff !important;
+        cursor: pointer !important;
+        transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease !important;
+    }
+
+    @media (max-width: 768px) {
+        div[data-testid="stVerticalBlock"]:has(.user-ops-container-marker) {
+            padding-right: 50px !important;
+        }
+    }
+
+    div[data-testid="stVerticalBlock"]:has(.user-ops-container-marker) button:hover {
+        transform: scale(1.1) !important;
+        background-color: rgba(168, 85, 247, 0.25) !important;
+        border-color: #a855f7 !important;
+        box-shadow: 0 4px 10px rgba(168, 85, 247, 0.5) !important;
+    }
+
+    div[data-testid="stVerticalBlock"]:has(.user-ops-container-marker) button * {
+        color: #ffffff !important;
+        font-size: 20px !important;
+        font-weight: bold !important;
+        line-height: 1 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
     .assistant-box *, .user-box *, .assistant-bubble *, .user-bubble * {{
         word-wrap: break-word !important; overflow-wrap: break-word !important;
         word-break: break-word !important; max-width: 100% !important;
@@ -2970,7 +2976,7 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
 
                     if idx == last_assistant_idx:
                         with st.container():
-                            st.markdown('<div class="assistant-ops-marker"></div>', unsafe_allow_html=True)
+                            st.markdown('<div class="assistant-ops-container-marker"></div>', unsafe_allow_html=True)
                             if st.button("↻", key=f"assistant_regen_{idx}", help="Cevabı Yeniden Oluştur"):
                                 with st.spinner("Aslan Parçası analiz ediyor ve yeni bir yanıt oluşturuyor..."):
                                     messages_context = st.session_state.messages[:idx]
@@ -2997,8 +3003,8 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                         )
 
                     with st.container():
-                        st.markdown('<div class="user-ops-marker"></div>', unsafe_allow_html=True)
-                        if st.button("✎", key=f"user_edit_trigger_{idx}", help="Mesajı Düzenle"):
+                        st.markdown('<div class="user-ops-container-marker"></div>', unsafe_allow_html=True)
+                        if st.button("✏️", key=f"user_edit_trigger_{idx}", help="Mesajı Düzenle"):
                             st.session_state.active_chat_edit_idx = idx
                             st.session_state.active_chat_edit_text = m["content"]
                             st.rerun()
@@ -4002,4 +4008,4 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                                     st.rerun()
             else:
                 st.markdown("<hr style='border:none;border-top:1px solid rgba(255,255,255,0.08);margin:16px 0 12px;'>", unsafe_allow_html=True)
-                st.info("Henüz kayıtlı video yok.")  
+                st.info("Henüz kayıtlı video yok.") 
