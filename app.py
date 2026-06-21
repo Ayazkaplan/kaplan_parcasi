@@ -1442,6 +1442,14 @@ else:
         height: 32px !important;
     }}
 
+    /* Align the Streamlit button wrapper container to the right too */
+    div.element-container:has(.user-ops-marker) + div.element-container .stButton,
+    div.element-container:has(.user-ops-marker) + div.element-container .stButton > div {{
+        display: flex !important;
+        justify-content: flex-end !important;
+        width: 100% !important;
+    }}
+
     div.element-container:has(.user-ops-marker) + div.element-container button {{
         border-radius: 8px !important;
         width: 32px !important;
@@ -3994,4 +4002,4 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                                     st.rerun()
             else:
                 st.markdown("<hr style='border:none;border-top:1px solid rgba(255,255,255,0.08);margin:16px 0 12px;'>", unsafe_allow_html=True)
-                st.info("Henüz kayıtlı video yok.") 
+                st.info("Henüz kayıtlı video yok.")  
