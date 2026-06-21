@@ -1369,7 +1369,7 @@ else:
         width: fit-content;
     }}
     /* Assistant Message Ops Sibling Styles (Regenerate exactly under the left yellow line) */
-    div.element-container:has(.assistant-ops-marker) + div.element-container {
+    div.element-container:has(.assistant-ops-marker) + div.element-container {{
         display: flex !important;
         flex-direction: row !important;
         justify-content: flex-start !important;
@@ -1380,10 +1380,10 @@ else:
         padding-left: 50px !important; /* Align exactly with the gold border left edge (avatar 40px + gap 10px) */
         box-sizing: border-box !important;
         height: 32px !important;
-    }
+    }}
 
     /* Style the actual square button element */
-    div.element-container:has(.assistant-ops-marker) + div.element-container button {
+    div.element-container:has(.assistant-ops-marker) + div.element-container button {{
         border-radius: 8px !important;
         width: 32px !important;
         height: 32px !important;
@@ -1397,32 +1397,32 @@ else:
         align-items: center !important;
         justify-content: center !important;
         background-color: rgba(30, 30, 30, 0.85) !important;
-        border: 1.5px solid gold !important; /* Gold border to match bubble left border */
+        border: 1.5px solid gold !important; /* Gold border to match gold border */
         box-shadow: 0 2px 6px rgba(243, 156, 18, 0.3) !important;
         color: #ffffff !important;
         cursor: pointer !important;
         transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease !important;
-    }
+    }}
     
-    @media (max-width: 768px) {
-        div.element-container:has(.assistant-ops-marker) + div.element-container {
+    @media (max-width: 768px) {{
+        div.element-container:has(.assistant-ops-marker) + div.element-container {{
             padding-left: 50px !important; /* Keep 50px to stay absolutely aligned with the bubble's gold border */
-        }
-    }
+        }}
+    }}
 
-    div.element-container:has(.assistant-ops-marker) + div.element-container button:hover {
+    div.element-container:has(.assistant-ops-marker) + div.element-container button:hover {{
         transform: scale(1.1) !important;
         background-color: rgba(243, 156, 18, 0.25) !important;
         border-color: #f39c12 !important;
         box-shadow: 0 4px 10px rgba(243, 156, 18, 0.5) !important;
-    }
+    }}
 
     /* Target direct children of button inside our operations area so writing displays correctly */
-    div.element-container:has(.assistant-ops-marker) + div.element-container button * {
+    div.element-container:has(.assistant-ops-marker) + div.element-container button * {{
         color: #ffffff !important;
         font-size: 16px !important;
         font-weight: bold !important;
-    }
+    }}
     .assistant-box *, .user-box *, .assistant-bubble *, .user-bubble * {{
         word-wrap: break-word !important; overflow-wrap: break-word !important;
         word-break: break-word !important; max-width: 100% !important;
