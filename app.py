@@ -534,6 +534,29 @@ def emoji_var_mi(text):
 def get_video_iframe(video_id):
     return f'<iframe width="100%" height="200" src="https://www.youtube.com/embed/{video_id}" frameborder="0" allowfullscreen></iframe>'
 
+def get_global_announcement():
+    try:
+        doc = db.collection("settings").document("global_announcement").get()
+        if doc.exists:
+            return doc.to_dict()
+    except Exception:
+        pass
+    return {
+        "text": "",
+        "size": 20,
+        "font": "sans-serif",
+        "bg_type": "none",
+        "bg_color": "#111122",
+        "bg_gradient_end": "#1a1a3a",
+        "glow_enabled": False,
+        "glow_intensity": 50,
+        "shadow_enabled": False,
+        "shadow_intensity": 50,
+        "char_colors": [],
+        "align": "center",
+        "text_color": "#FFFFFF"
+    }
+
 def get_styled_user_name(u_name, u_color, u_glow, u_tag, u_rozet):
     color_val = u_color if u_color else "#FFFFFF"
     glow_css = f"text-shadow: 0 0 10px {color_val}, 0 0 20px {color_val}, 0 0 30px {color_val};" if u_glow else ""
@@ -2386,6 +2409,137 @@ else:
 
         st.divider()
 
+        with st.expander("📢 Tepe Duyurusu (Herkesin Göreceği Yazı) Düzenle", expanded=False):
+            st.markdown("### 📢 Tepe Duyuru Bandı Editörü")
+            st.write("Bu alandan ekranın en üstünde, 'Aslan Parçası' başlığı üstünde yer alan ortak duyuru yazısını her harfi harfine biçimlendirerek düzenleyebilirsiniz.")
+            
+            # Read current values
+            ann_raw = get_global_announcement()
+            
+            # Fields
+            ann_new_text = st.text_input("Duyuru Metni:", value=ann_raw.get("text", ""))
+            
+            st.markdown("#### 🎨 Genel Biçimlendirme")
+            col_ann1, col_ann2, col_ann3 = st.columns(3)
+            with col_ann1:
+                ann_new_size = st.number_input("Yazı Boyutu (px):", min_value=12, max_value=80, value=ann_raw.get("size", 20))
+                ann_new_align = st.selectbox("Hizalama:", options=["center", "left", "right"], index=["center", "left", "right"].index(ann_raw.get("align", "center")))
+            with col_ann2:
+                font_options = ["sans-serif", "Space Grotesk", "monospace", "cursive", "serif", "Georgia"]
+                current_font = ann_raw.get("font", "sans-serif")
+                if current_font not in font_options: current_font = "sans-serif"
+                ann_new_font = st.selectbox("Yazı Tipi:", options=font_options, index=font_options.index(current_font))
+                ann_new_text_color = st.color_picker("Varsayılan Yazı Rengi:", value=ann_raw.get("text_color", "#FFFFFF"))
+            with col_ann3:
+                bg_options = ["none", "flat", "gradient"]
+                current_bg = ann_raw.get("bg_type", "none")
+                if current_bg not in bg_options: current_bg = "none"
+                ann_new_bg_type = st.selectbox("Arka Plan Tipi:", options=bg_options, index=bg_options.index(current_bg))
+            
+            # Background colors config
+            ann_new_bg_color = ann_raw.get("bg_color", "#111122")
+            ann_new_bg_gradient_end = ann_raw.get("bg_gradient_end", "#1a1a3a")
+            if ann_new_bg_type in ["flat", "gradient"]:
+                col_bg_colors = st.columns(2)
+                with col_bg_colors[0]:
+                    ann_new_bg_color = st.color_picker("Arka Plan Rengi 1 / Düz Renk:", value=ann_raw.get("bg_color", "#111122"))
+                with col_bg_colors[1]:
+                    if ann_new_bg_type == "gradient":
+                        ann_new_bg_gradient_end = st.color_picker("Arka Plan Rengi 2 (Gradient Bitiş):", value=ann_raw.get("bg_gradient_end", "#1a1a3a"))
+            
+            st.markdown("#### ✨ Parlaklık & Gölge Efektleri")
+            # Glow Config
+            st.write("**Parlaklık (Neon/Glow) Ayarları**")
+            col_glow1, col_glow2 = st.columns([1, 4])
+            with col_glow1:
+                ann_glow_enabled = st.checkbox("Aç / Kapa", value=ann_raw.get("glow_enabled", False), key="ann_glow_en")
+            with col_glow2:
+                ann_glow_intensity = st.slider("Parlaklık Gücü (Görünüm Yoğunluğu):", min_value=0, max_value=100, value=ann_raw.get("glow_intensity", 50), help="Varsayılan değer 50'dir.")
+                
+            # Shadow Config
+            st.write("**Gölge Ayarları (Derinlik)**")
+            col_sh1, col_sh2 = st.columns([1, 4])
+            with col_sh1:
+                ann_sh_enabled = st.checkbox("Aç / Kapa", value=ann_raw.get("shadow_enabled", False), key="ann_sh_en")
+            with col_sh2:
+                ann_sh_intensity = st.slider("Gölge Gücü:", min_value=0, max_value=100, value=ann_raw.get("shadow_intensity", 50), help="Varsayılan değer 50'dir.")
+
+            # Letter-by-letter custom colors picker
+            st.markdown("#### 🔠 Harf Harf Özel Renk Belirleme")
+            st.info("Her harfin altına tıklayarak o harfe ait özel rengi tanımlayabilirsiniz. Eğer değiştirmek istemezseniz kutucuk rengini varsayılan renkle aynı bırakabilirsiniz.")
+            
+            current_char_colors = list(ann_raw.get("char_colors", []))
+            # Pad or truncate list of character colors to match new text duration
+            if len(current_char_colors) < len(ann_new_text):
+                current_char_colors += [ann_new_text_color] * (len(ann_new_text) - len(current_char_colors))
+            else:
+                current_char_colors = current_char_colors[:len(ann_new_text)]
+            
+            new_char_colors = []
+            if ann_new_text:
+                char_cols_count = len(ann_new_text)
+                for chunk_start in range(0, char_cols_count, 8):
+                    chunk_end = min(chunk_start + 8, char_cols_count)
+                    cols_chunk = st.columns(max(1, chunk_end - chunk_start))
+                    for col_idx, char_pos in enumerate(range(chunk_start, chunk_end)):
+                        with cols_chunk[col_idx]:
+                            char_label = ann_new_text[char_pos] or " "
+                            if char_label.strip() == "":
+                                char_label = f"Boşluk ({char_pos+1})"
+                            else:
+                                char_label = f"'{char_label}' ({char_pos+1})"
+                            char_color_val = current_char_colors[char_pos] if char_pos < len(current_char_colors) else ann_new_text_color
+                            assigned_col = st.color_picker(char_label, value=char_color_val, key=f"char_col_pick_{char_pos}")
+                            new_char_colors.append(assigned_col)
+            
+            # Action Buttons
+            st.markdown("---")
+            col_act1, col_act2 = st.columns(2)
+            with col_act1:
+                if st.button("💾 Değişiklikleri ve Tepe Duyurusunu Kaydet", type="primary", use_container_width=True):
+                    ann_payload = {
+                        "text": ann_new_text,
+                        "size": ann_new_size,
+                        "font": ann_new_font,
+                        "align": ann_new_align,
+                        "bg_type": ann_new_bg_type,
+                        "bg_color": ann_new_bg_color,
+                        "bg_gradient_end": ann_new_bg_gradient_end,
+                        "glow_enabled": ann_glow_enabled,
+                        "glow_intensity": ann_glow_intensity,
+                        "shadow_enabled": ann_sh_enabled,
+                        "shadow_intensity": ann_sh_intensity,
+                        "char_colors": new_char_colors,
+                        "text_color": ann_new_text_color
+                    }
+                    db.collection("settings").document("global_announcement").set(ann_payload)
+                    st.success("✅ Tepe duyurusu başarıyla kaydedildi ve tüm kullanıcılarda güncellendi!")
+                    time.sleep(1)
+                    st.rerun()
+            with col_act2:
+                st.write("**Varsayılana Sıfırla**")
+                reset_confirm = st.checkbox("Sıfırlamayı onaylıyorum", key="reset_ann_confirm")
+                if st.button("🔄 Tümünü Varsayılana Sıfırla", type="secondary", use_container_width=True, disabled=not reset_confirm):
+                    default_payload = {
+                        "text": "",
+                        "size": 20,
+                        "font": "sans-serif",
+                        "align": "center",
+                        "bg_type": "none",
+                        "bg_color": "#111122",
+                        "bg_gradient_end": "#1a1a3a",
+                        "glow_enabled": False,
+                        "glow_intensity": 50,
+                        "shadow_enabled": False,
+                        "shadow_intensity": 50,
+                        "char_colors": [],
+                        "text_color": "#FFFFFF"
+                    }
+                    db.collection("settings").document("global_announcement").set(default_payload)
+                    st.success("✅ Tepe duyurusu varsayılan ayarlara başarıyla sıfırlandı!")
+                    time.sleep(1.2)
+                    st.rerun()
+
         with st.expander("👑 Kendi Profil Stilimi Düzenle", expanded=False):
             st.markdown("### 👑 Kendi Profil Stilimi Düzenle")
             f_color = st.color_picker("Kendi İsim Renginiz (Hex):", value=user_doc.get("isim_rengi", "#FF0000"))
@@ -2409,8 +2563,11 @@ else:
             search_email = st.text_input("Yönetici adayı e-posta adresi:", placeholder="ornek@domain.com", key="role_admin_search_email").strip().lower()
 
             if search_email:
-                user_query = db.collection("users").where("email", "==", search_email).limit(1).get()
-                if user_query:
+                if search_email == KURUCU_EMAIL.strip().lower():
+                    st.error("❌ Bu e-posta adresi kurucuya aittir! Kurucu stili buradan değiştirilemez. Lütfen 'Kendi Profil Stilimi Düzenle' expander'ını kullanın.")
+                else:
+                    user_query = db.collection("users").where("email", "==", search_email).limit(1).get()
+                    if user_query:
                     target_doc = user_query[0]
                     target_id = target_doc.id
                     target_data = target_doc.to_dict()
@@ -2798,6 +2955,67 @@ else:
                 box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
             }
             </style>""", unsafe_allow_html=True)
+
+            # RENDER GLOBAL ANNOUNCEMENT ABOVE MAIN TITLE
+            ann_data = get_global_announcement()
+            ann_text = ann_data.get("text", "")
+            if ann_text:
+                font_family = ann_data.get("font", "sans-serif")
+                align = ann_data.get("align", "center")
+                size = ann_data.get("size", 20)
+                
+                # Glow
+                glow_enabled = ann_data.get("glow_enabled", False)
+                glow_int = ann_data.get("glow_intensity", 50)
+                glow_css = ""
+                if glow_enabled:
+                    blur_1 = glow_int * 0.2
+                    blur_2 = glow_int * 0.4
+                    glow_css = f"0 0 {blur_1:.1f}px var(--glow-color), 0 0 {blur_2:.1f}px var(--glow-color)"
+                
+                # Drop shadow
+                shadow_enabled = ann_data.get("shadow_enabled", False)
+                shadow_int = ann_data.get("shadow_intensity", 50)
+                shadow_css = ""
+                if shadow_enabled:
+                    off = shadow_int * 0.06
+                    blur_s = shadow_int * 0.12
+                    shadow_css = f"{off:.1f}px {off:.1f}px {blur_s:.1f}px rgba(0,0,0,0.8)"
+                
+                effects_css = ""
+                if glow_css or shadow_css:
+                    combined_shadows = ", ".join(filter(None, [glow_css, shadow_css]))
+                    effects_css = f"text-shadow: {combined_shadows};"
+
+                # Background
+                bg_type = ann_data.get("bg_type", "none")
+                bg_color = ann_data.get("bg_color", "#111122")
+                bg_end = ann_data.get("bg_gradient_end", "#1a1a3a")
+                bg_css = "background: transparent; border: none; padding: 0;"
+                if bg_type == "flat":
+                    bg_css = f"background: {bg_color}; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 18px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.25);"
+                elif bg_type == "gradient":
+                    bg_css = f"background: linear-gradient(135deg, {bg_color}, {bg_end}); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 12px 18px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.25);"
+                
+                char_colors = ann_data.get("char_colors", [])
+                text_color_global = ann_data.get("text_color", "#FFFFFF")
+                
+                rendered_chars = []
+                for char_idx, char in enumerate(ann_text):
+                    char_color = text_color_global
+                    if char_idx < len(char_colors) and char_colors[char_idx]:
+                        char_color = char_colors[char_idx]
+                    
+                    glow_col_style = f"--glow-color: {char_color}; color: {char_color};" if glow_enabled else f"color: {char_color};"
+                    html_item = f'<span style="display: inline-block; white-space: pre-wrap; {glow_col_style} {effects_css}">{char}</span>'
+                    rendered_chars.append(html_item)
+                
+                ann_content_html = "".join(rendered_chars)
+                st.markdown(f'''
+                <div style="{bg_css} text-align: {align}; font-family: \'{font_family}\', sans-serif; font-size: {size}px; line-height: 1.4; width: 100%; box-sizing: border-box;">
+                    {ann_content_html}
+                </div>
+                ''', unsafe_allow_html=True)
 
             col_title, col_bildirim = st.columns([6, 1])
             with col_title:
@@ -3566,15 +3784,23 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
 
             partner_styled_name = get_styled_user_name(partner_isim, partner_color, partner_glow, partner_tag, partner_rozet)
 
-            partner_online = partner_data.get("online", False)
-            partner_last_seen = partner_data.get("last_seen", "")
-            if hasattr(partner_last_seen, "to_datetime"):
-                partner_last_seen = partner_last_seen.to_datetime()
+            partner_online = False
+            partner_son_gorulme = partner_data.get("son_gorulme_zamani")
+            if hasattr(partner_son_gorulme, "to_datetime"):
+                partner_son_gorulme = partner_son_gorulme.to_datetime()
 
-            if partner_last_seen:
-                if partner_last_seen.tzinfo is None: partner_last_seen = partner_last_seen.replace(tzinfo=timezone.utc)
+            if partner_son_gorulme:
+                if partner_son_gorulme.tzinfo is None:
+                    partner_son_gorulme = partner_son_gorulme.replace(tzinfo=timezone.utc)
+                now_utc = datetime.now(timezone.utc)
+                diff = now_utc - partner_son_gorulme
+                total_seconds = int(diff.total_seconds())
+                if total_seconds < 0:
+                    total_seconds = 0
+                if total_seconds <= 300:
+                    partner_online = True
                 tr_offset = timezone(timedelta(hours=3))
-                partner_last_seen_tr = partner_last_seen.astimezone(tr_offset)
+                partner_last_seen_tr = partner_son_gorulme.astimezone(tr_offset)
                 partner_last_seen_str = partner_last_seen_tr.strftime("%H:%M - %d.%m.%Y")
             else:
                 partner_last_seen_str = "Bilinmiyor"
@@ -3656,73 +3882,27 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                         if dm_type == "gif":
                             dm_html = f'<img src="{dm_content}" style="max-width:200px;border-radius:8px;" referrerPolicy="no-referrer"/>'
                         elif dm_type == "voice":
-                            dm_html = f'<audio controls src="data:audio/webm;base64,{dm_content}" style="max-width:250px;"></audio>'
+                            dm_html = f'<audio controls src="data:audio/webm;base64,{dm_content}" style="width:100%; max-width:240px; display:block; margin-top:5px; height:40px; outline:none;"></audio>'
                         else:
                             dm_html = detect_and_render_media(dm_content)
 
-                        col_msg_bubble, col_msg_ops = st.columns([5, 1.2]) if dm_sender == uid else (st.container(), None)
-                        
-                        if dm_sender == uid:
-                            with col_msg_bubble:
-                                st.markdown(f'''
-                                <div style="display:flex; flex-direction:{flex_dir}; align-items:flex-start; gap:10px; margin:12px 0; width:100%;">
-                                    <img src="{s_foto_src}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid #f39c12;margin-top:2px;"/>
-                                    <div style="display:inline-block; max-width:75%;">
-                                        <div style="font-size:0.8rem; margin-bottom:4px; text-align:right;">{s_styled}</div>
-                                        <div style="background:{bg_color}; padding:8px 12px; border-radius:12px; font-size:0.95rem; white-space:pre-wrap; word-break:break-word;">
-                                            {dm_html}
-                                            <div style="font-size:0.65em; color:#aaa; margin-top:4px; text-align:right;">{dm_zaman}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                ''', unsafe_allow_html=True)
-                            with col_msg_ops:
-                                st.write("")
-                                op_edit, op_del = st.columns(2)
-                                with op_edit:
-                                    if st.button("✏️", key=f"dm_edit_btn_{idx}"):
-                                        st.session_state.active_dm_edit_idx = idx
-                                        st.session_state.active_dm_edit_text = dm_content
-                                        st.rerun()
-                                with op_del:
-                                    if st.button("🗑️", key=f"dm_delete_btn_{idx}"):
-                                        new_dms = list(dm_mesajlar)
-                                        new_dms.pop(idx)
-                                        dm_doc_ref.update({"mesajlar": new_dms})
-                                        st.success("Mesaj silindi!")
-                                        st.rerun()
-                        else:
-                            st.markdown(f'''
-                            <div style="display:flex; flex-direction:{flex_dir}; align-items:flex-start; gap:10px; margin:12px 0; width:100%;">
-                                <img src="{s_foto_src}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid #f39c12;margin-top:2px;"/>
-                                <div style="display:inline-block; max-width:75%;">
-                                    <div style="font-size:0.8rem; margin-bottom:4px; text-align:left;">{s_styled}</div>
-                                    <div style="background:{bg_color}; padding:8px 12px; border-radius:12px; font-size:0.95rem; white-space:pre-wrap; word-break:break-word;">
-                                        {dm_html}
-                                        <div style="font-size:0.65em; color:#aaa; margin-top:4px; text-align:left;">{dm_zaman}</div>
-                                    </div>
+                        is_voice = (dm_type == "voice")
+                        bubble_width_css = "width: 260px;" if is_voice else "width: fit-content;"
+                        voice_padding_css = "padding: 6px 10px;" if is_voice else "padding: 8px 12px;"
+                        align_items_inner = "flex-end" if dm_sender == uid else "flex-start"
+
+                        st.markdown(f'''
+                        <div style="display:flex; flex-direction:{flex_dir}; align-items:flex-start; gap:10px; margin:12px 0; width:100%;">
+                            <img src="{s_foto_src}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid #f39c12;margin-top:2px;flex-shrink:0;"/>
+                            <div style="display:flex; flex-direction:column; align-items:{align_items_inner}; max-width:75%; width:100%;">
+                                <div style="font-size:0.8rem; margin-bottom:4px; text-align:{align};">{s_styled}</div>
+                                <div style="background:{bg_color}; {voice_padding_css} border-radius:12px; font-size:0.95rem; white-space:pre-wrap; word-break:break-word; {bubble_width_css} max-width:100%; box-sizing:border-box;">
+                                    {dm_html}
+                                    <div style="font-size:0.65em; color:#aaa; margin-top:4px; text-align:{align};">{dm_zaman}</div>
                                 </div>
                             </div>
-                            ''', unsafe_allow_html=True)
-
-                        if st.session_state.get("active_dm_edit_idx") == idx:
-                            new_val_dm = st.text_input("Mesajı düzenle:", value=st.session_state.active_dm_edit_text, key=f"dm_edit_inp_{idx}")
-                            btn_col1, btn_col2 = st.columns(2)
-                            with btn_col1:
-                                if st.button("Kaydet", key=f"dm_save_edit_btn_{idx}"):
-                                    if new_val_dm.strip():
-                                        new_dms = list(dm_mesajlar)
-                                        new_dms[idx]["icerik"] = new_val_dm.strip()
-                                        dm_doc_ref.update({"mesajlar": new_dms})
-                                        st.session_state.pop("active_dm_edit_idx", None)
-                                        st.session_state.pop("active_dm_edit_text", None)
-                                        st.success("Mesaj güncellendi!")
-                                        st.rerun()
-                            with btn_col2:
-                                if st.button("Vazgeç", key=f"dm_cancel_edit_btn_{idx}"):
-                                    st.session_state.pop("active_dm_edit_idx", None)
-                                    st.session_state.pop("active_dm_edit_text", None)
-                                    st.rerun()
+                        </div>
+                        ''', unsafe_allow_html=True)
 
                 # Mesaj gönderme
                 st.markdown("---")
