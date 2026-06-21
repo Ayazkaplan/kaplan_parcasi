@@ -17,7 +17,7 @@ from PIL import Image
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(
-    page_title="Aslan Parçası V17.8",
+    page_title="Aslan Parçası V17.9",
     page_icon="🦁",
     layout="centered"
 )
@@ -1034,7 +1034,7 @@ if not st.session_state.user_logged_in:
             st.rerun()
         st.stop()
 
-    st.title("🦁 Aslan Parçası V17.8")
+    st.title("🦁 Aslan Parçası V17.9")
 
     if "ban_error_on_logout" in st.session_state:
         st.error(st.session_state.ban_error_on_logout)
@@ -2452,34 +2452,48 @@ else:
             search_email_normal = st.text_input("Normal kullanıcı e-posta adresi:", placeholder="normal@domain.com", key="role_normal_search_email").strip().lower()
 
             if search_email_normal:
-                user_query_n = db.collection("users").where("email", "==", search_email_normal).limit(1).get()
-                if user_query_n:
-                    target_doc_n = user_query_n[0]
-                    target_id_n = target_doc_n.id
-                    target_data_n = target_doc_n.to_dict()
-
-                    st.text_input("Kullanıcı İsmi (Salt Okunur):", value=target_data_n.get("isim", "Bilinmeyen"), disabled=True, key=f"nm_name_{target_id_n}")
-                    st.text_input("Kullanıcı E-postası (Salt Okunur):", value=target_data_n.get("email", ""), disabled=True, key=f"nm_email_{target_id_n}")
-                    isim_rengi_n = st.color_picker("İsim Rengi (Hex):", value=target_data_n.get("isim_rengi", "#FFFFFF"), key=f"nm_color_{target_id_n}")
-                    ismin_parlakligi_n = st.checkbox("Yazı Parlaklığı (CSS Gölge Efekti):", value=target_data_n.get("ismin_parlakligi", False), key=f"nm_glow_{target_id_n}")
-                    tag_val_n = st.text_input("Kullanıcı Tagı (Örn: Eğlenceli, Vip):", value=target_data_n.get("tag", ""), max_chars=20, key=f"nm_tag_{target_id_n}")
-                    rozet_val_n = st.text_input("Kullanıcı Rozeti (Örn: 🎮, ✨):", value=target_data_n.get("rozet", ""), max_chars=10, key=f"nm_rozet_{target_id_n}")
-
-                    if st.button("💾 Normal Kullanıcıyı Kaydet", type="primary", use_container_width=True, key=f"nm_save_{target_id_n}"):
-                        update_payload_n = {
-                            "isim_rengi": isim_rengi_n,
-                            "ismin_parlakligi": ismin_parlakligi_n,
-                            "tag": tag_val_n.strip(),
-                            "rozet": rozet_val_n.strip()
-                        }
-
-                        db.collection("users").document(target_id_n).update(update_payload_n)
-                        st.success("✅ Normal kullanıcının süslemeleri başarıyla güncellendi!")
-                        st.session_state.valid_users_cache = None
-                        time.sleep(1)
-                        st.rerun()
+                if search_email_normal == KURUCU_EMAIL.strip().lower():
+                    st.error("❌ Bu e-posta adresi kurucuya aittir! Normal kullanıcı stili olarak değiştirilemez.")
                 else:
-                    st.error("❌ Eşleşen bir kullanıcı bulunamadı.")
+                    user_query_n = db.collection("users").where("email", "==", search_email_normal).limit(1).get()
+                    if user_query_n:
+                        target_doc_n = user_query_n[0]
+                        target_id_n = target_doc_n.id
+                        target_data_n = target_doc_n.to_dict()
+
+                        is_target_admin_n = target_data_n.get("is_admin", False)
+                        is_target_founder_n = target_data_n.get("email", "").strip().lower() == KURUCU_EMAIL.strip().lower()
+
+                        if is_target_admin_n or is_target_founder_n:
+                            st.error("❌ Bu kullanıcı bir yönetici veya kurucudur! Normal kullanıcı stili sekmesinden düzenlenemez. Lütfen 'Yönetici Rolü & Stil' sekmesini kullanın.")
+                        else:
+                            st.text_input("Kullanıcı İsmi (Salt Okunur):", value=target_data_n.get("isim", "Bilinmeyen"), disabled=True, key=f"nm_name_{target_id_n}")
+                            st.text_input("Kullanıcı E-postası (Salt Okunur):", value=target_data_n.get("email", ""), disabled=True, key=f"nm_email_{target_id_n}")
+                            isim_rengi_n = st.color_picker("İsim Rengi (Hex):", value=target_data_n.get("isim_rengi", "#FFFFFF"), key=f"nm_color_{target_id_n}")
+                            ismin_parlakligi_n = st.checkbox("Yazı Parlaklığı (CSS Gölge Efekti):", value=target_data_n.get("ismin_parlakligi", False), key=f"nm_glow_{target_id_n}")
+                            tag_val_n = st.text_input("Kullanıcı Tagı (Örn: Eğlenceli, Vip):", value=target_data_n.get("tag", ""), max_chars=20, key=f"nm_tag_{target_id_n}")
+                            rozet_val_n = st.text_input("Kullanıcı Rozeti (Örn: 🎮, ✨):", value=target_data_n.get("rozet", ""), max_chars=10, key=f"nm_rozet_{target_id_n}")
+
+                            if st.button("💾 Normal Kullanıcıyı Kaydet", type="primary", use_container_width=True, key=f"nm_save_{target_id_n}"):
+                                # Re-verify current database state just in case to avoid concurrency exploit
+                                fresh_doc_n = db.collection("users").document(target_id_n).get().to_dict() or {}
+                                if fresh_doc_n.get("is_admin", False) or fresh_doc_n.get("email", "").strip().lower() == KURUCU_EMAIL.strip().lower():
+                                    st.error("❌ Hata: Bu kullanıcı bir yöneticiye veya kurucuya dönüştürülmüş! İşlem iptal edildi.")
+                                else:
+                                    update_payload_n = {
+                                        "isim_rengi": isim_rengi_n,
+                                        "ismin_parlakligi": ismin_parlakligi_n,
+                                        "tag": tag_val_n.strip(),
+                                        "rozet": rozet_val_n.strip()
+                                    }
+
+                                    db.collection("users").document(target_id_n).update(update_payload_n)
+                                    st.success("✅ Normal kullanıcının süslemeleri başarıyla güncellendi!")
+                                    st.session_state.valid_users_cache = None
+                                    time.sleep(1)
+                                    st.rerun()
+                    else:
+                        st.error("❌ Eşleşen bir kullanıcı bulunamadı.")
 
             st.divider()
             st.markdown("### 👤 Mevcut Stili Değiştirilenler")
@@ -2787,7 +2801,7 @@ else:
 
             col_title, col_bildirim = st.columns([6, 1])
             with col_title:
-                st.title("🤖 Aslan Parçası V17.8")
+                st.title("🤖 Aslan Parçası V17.9")
             with col_bildirim:
                 # Info button on top
                 with st.popover("ℹ️", help="Uygulama Bilgisi"):
@@ -2795,7 +2809,7 @@ else:
                     st.markdown("""
 **Müstakbel Şirket**, dijital iletişim ve yapay zeka alanında öncü çözümler geliştiren, geleceğin teknolojilerini bugünün ihtiyaçlarıyla buluşturan köklü bir teknoloji kuruluşudur.
 
-**Aslan Parçası V17.8**, Müstakbel Şirket bünyesinde geliştirilen amiral gemisi yapay zeka platformudur. Gerçek zamanlı sohbet, yapay zeka destekli asistan, YouTube entegrasyonu ve topluluk yönetimi tek çatı altında sunulmaktadır.
+**Aslan Parçası V17.9**, Müstakbel Şirket bünyesinde geliştirilen amiral gemisi yapay zeka platformudur. Gerçek zamanlı sohbet, yapay zeka destekli asistan, YouTube entegrasyonu ve topluluk yönetimi tek çatı altında sunulmaktadır.
                     """)
                     st.divider()
                     st.markdown("## 🎯 Misyonumuz")
@@ -3001,7 +3015,8 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                     f"5. Eğer normal bir kullanıcı ise ona samimi ve asil bir duruşla 'Reis', 'Dostum' veya doğrudan ismiyle hitap et.\n\n"
                     "⚠️ EK KURALLAR:\n"
                     "- Geçmiş sohbetlerdeki eski veya hatalı isimleri tamamen unut.\n"
-                    "- Her koşulda aslan gibi dik, asil, kararlı, zeki ve kurallara bağlı bir yapay zeka ol.\n\n"
+                    "- Her koşulda aslan gibi dik, asil, kararlı, zeki ve kurallara bağlı bir yapay zeka ol.\n"
+                    "- Kesinlikle ve hiçbir koşulda, yıldızlar (asterisk - *) veya parantezler içinde fiziksel hareketler, jestler, mimikler veya rol yapma eylemleri (*eğilerek selam verir*, *saygıyla eğilir*, *başını eğer* vb.) yazma, bunları canlandırma. Doğrudan ve asil bir konuşma yürüt, fiziksel hareket betimlemelerinden tamamen kaçın.\n\n"
                     "📝 TÜRKÇE KARAKTER DÜZELTME TALİMATI:\n"
                     "Kullanıcılar bazen Türkçe özel karakterleri kullanmadan yazar. Aşağıdaki dönüşümleri zihninde otomatik olarak yap ve mesajı düzgün Türkçe olarak anla:\n"
                     "- 'u' yerine 'ü' olabilir (ornegin: 'guzul' → 'güzül/güzel', 'dusunuyorum' → 'düşünüyorum')\n"
