@@ -1443,6 +1443,12 @@ else:
     }}
 
     /* Align the Streamlit button wrapper container to the right too */
+    div.element-container:has(.user-ops-marker) + div.element-container .stButton,
+    div.element-container:has(.user-ops-marker) + div.element-container .stButton > div {{
+        display: flex !important;
+        justify-content: flex-end !important;
+        width: 100% !important;
+    }}
 
     div.element-container:has(.user-ops-marker) + div.element-container button {{
         border-radius: 8px !important;
