@@ -3616,24 +3616,24 @@ else:
             // 1. BG css decoration
             let bg_css = "background: transparent; border: 1px dashed rgba(255,255,255,0.1); padding: 5px;";
             if (bg_type === "flat") {{
-                bg_css = `background: ${bg_color}; border: 1px solid rgba(255,255,255,0.1); border-radius: ${border_radius}px; padding: ${padding_vertical}px ${padding_horizontal}px;`;
+                bg_css = `background: ${{bg_color}}; border: 1px solid rgba(255,255,255,0.1); border-radius: ${{border_radius}}px; padding: ${{padding_vertical}}px ${{padding_horizontal}}px;`;
             }} else if (bg_type === "gradient") {{
-                bg_css = `background: linear-gradient(135deg, ${bg_color}, ${bg_gradient_end}); border: 1px solid rgba(255,255,255,0.15); border-radius: ${border_radius}px; padding: ${padding_vertical}px ${padding_horizontal}px;`;
+                bg_css = `background: linear-gradient(135deg, ${{bg_color}}, ${{bg_gradient_end}}); border: 1px solid rgba(255,255,255,0.15); border-radius: ${{border_radius}}px; padding: ${{padding_vertical}}px ${{padding_horizontal}}px;`;
             }} else if (bg_type === "image") {{
                 const overlay_op = 1.0 - bg_opacity;
-                bg_css = `background: linear-gradient(rgba(17,17,34,${overlay_op.toFixed(2)}), rgba(17,17,34,${overlay_op.toFixed(2)})), url('${bg_image_url}'); background-size: cover; background-position: center; border: 1px solid rgba(255,255,255,0.15); border-radius: ${border_radius}px; padding: ${padding_vertical}px ${padding_horizontal}px;`;
+                bg_css = `background: linear-gradient(rgba(17,17,34,${{overlay_op.toFixed(2)}}), rgba(17,17,34,${{overlay_op.toFixed(2)}})), url('${{bg_image_url}}'); background-size: cover; background-position: center; border: 1px solid rgba(255,255,255,0.15); border-radius: ${{border_radius}}px; padding: ${{padding_vertical}}px ${{padding_horizontal}}px;`;
             }}
             
             const bannerWrapper = document.getElementById('banner-wrapper');
             bannerWrapper.className = "";
-            bannerWrapper.style.cssText = bg_css + ` text-align: ${align}; font-family: '${font}', sans-serif; transition: all 0.15s ease; width: 100%;`;
+            bannerWrapper.style.cssText = bg_css + ` text-align: ${{align}}; font-family: '${{font}}', sans-serif; transition: all 0.15s ease; width: 100%;`;
 
             // 2. Shadows
             let shadow_css = "";
             if (shadow_enabled) {{
                 const off = shadow_intensity * 0.08;
                 const blur_s = shadow_intensity * 0.16;
-                shadow_css = `${off.toFixed(1)}px ${off.toFixed(1)}px ${blur_s.toFixed(1)}px ${shadow_color}`;
+                shadow_css = `${{off.toFixed(1)}}px ${{off.toFixed(1)}}px ${{blur_s.toFixed(1)}}px ${{shadow_color}}`;
             }}
 
             // 3. Characters
@@ -3651,49 +3651,49 @@ else:
                 if (glow_enabled) {{
                     const blur_1 = glow_intensity * 0.2;
                     const blur_2 = glow_intensity * 0.4;
-                    glow_css = `0 0 ${blur_1.toFixed(1)}px ${local_glow_color}, 0 0 ${blur_2.toFixed(1)}px ${local_glow_color}`;
+                    glow_css = `0 0 ${{blur_1.toFixed(1)}}px ${{local_glow_color}}, 0 0 ${{blur_2.toFixed(1)}}px ${{local_glow_color}}`;
                 }}
                 
                 let combined_shadows = [glow_css, shadow_css].filter(Boolean).join(", ");
-                let shadow_style = combined_shadows ? `text-shadow: ${combined_shadows};` : "";
-                let glow_val_style = glow_enabled ? `--glow-color: ${local_glow_color}; --gl-blur: ${(glow_intensity * 0.4).toFixed(1)}px;` : "";
-                let italic_bold_style = `font-weight: ${font_weight}; font-style: ${font_style}; text-decoration: ${text_decoration};`;
-                let anim_delay_style = (animation_type === 'wiggle') ? `animation-delay: ${(i * 0.08).toFixed(2)}s;` : "";
+                let shadow_style = combined_shadows ? `text-shadow: ${{combined_shadows}};` : "";
+                let glow_val_style = glow_enabled ? `--glow-color: ${{local_glow_color}}; --gl-blur: ${{ (glow_intensity * 0.4).toFixed(1) }}px;` : "";
+                let italic_bold_style = `font-weight: ${{font_weight}}; font-style: ${{font_style}}; text-decoration: ${{text_decoration}};`;
+                let anim_delay_style = (animation_type === 'wiggle') ? `animation-delay: ${{ (i * 0.08).toFixed(2) }}s;` : "";
                 
                 let span_class = "";
                 if (["neon_pulse", "wiggle", "neon_flicker", "rainbow", "pulse", "blur_fade"].includes(animation_type)) {{
-                    span_class = `ann-animate-${animation_type}`;
+                    span_class = `ann-animate-${{animation_type}}`;
                 }}
                 
-                rendered_chars_html += `<span class="${span_class}" style="display: inline-block; white-space: pre-wrap; color: ${char_color}; ${glow_val_style} ${shadow_style} ${italic_bold_style} ${anim_delay_style}">${char}</span>`;
+                rendered_chars_html += `<span class="${{span_class}}" style="display: inline-block; white-space: pre-wrap; color: ${{char_color}}; ${{glow_val_style}} ${{shadow_style}} ${{italic_bold_style}} ${{anim_delay_style}}">${{char}}</span>`;
             }}
 
             // 4. Media Render
             let media_html = "";
             if (media_url) {{
-                media_html = `<img src="${media_url}" style="width: ${media_size}px; height: auto; border-radius: 8px; margin: 8px; vertical-align: middle; max-width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.4);" />`;
+                media_html = `<img src="${{media_url}}" style="width: ${{media_size}}px; height: auto; border-radius: 8px; margin: 8px; vertical-align: middle; max-width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.4);" />`;
             }}
 
             // 5. Connect media & layout
             let body_html = "";
             if (media_html) {{
                 if (media_align === "above") {{
-                    body_html = `<div style="margin-bottom: 8px;">${media_html}</div><div>${rendered_chars_html}</div>`;
+                    body_html = `<div style="margin-bottom: 8px;">${{media_html}}</div><div>${{rendered_chars_html}}</div>`;
                 }} else if (media_align === "below") {{
-                    body_html = `<div>${rendered_chars_html}</div><div style="margin-top: 8px;">${media_html}</div>`;
+                    body_html = `<div>${{rendered_chars_html}}</div><div style="margin-top: 8px;">${{media_html}}</div>`;
                 }} else if (media_align === "left") {{
-                    body_html = `<div style="display: flex; align-items: center; justify-content: ${align}; flex-wrap: wrap; gap: 15px;"><div>${media_html}</div><div style="flex: 1; text-align: ${align};">${rendered_chars_html}</div></div>`;
+                    body_html = `<div style="display: flex; align-items: center; justify-content: ${{align}}; flex-wrap: wrap; gap: 15px;"><div>${{media_html}}</div><div style="flex: 1; text-align: ${{align}};">${{rendered_chars_html}}</div></div>`;
                 }} else if (media_align === "right") {{
-                    body_html = `<div style="display: flex; align-items: center; justify-content: ${align}; flex-wrap: wrap; gap: 15px;"><div style="flex: 1; text-align: ${align};">${rendered_chars_html}</div><div>${media_html}</div></div>`;
+                    body_html = `<div style="display: flex; align-items: center; justify-content: ${{align}}; flex-wrap: wrap; gap: 15px;"><div style="flex: 1; text-align: ${{align}};">${{rendered_chars_html}}</div><div>${{media_html}}</div></div>`;
                 }}
             }} else {{
-                body_html = `<div>${rendered_chars_html}</div>`;
+                body_html = `<div>${{rendered_chars_html}}</div>`;
             }}
 
             // Overwrite children HTML
             bannerWrapper.innerHTML = `
-                <div style="opacity: ${opacity}; display: inline-block; width: 100%;">
-                    ${body_html}
+                <div style="opacity: ${{opacity}}; display: inline-block; width: 100%;">
+                    ${{body_html}}
                 </div>
             `;
 
@@ -3712,7 +3712,7 @@ else:
         }}
         
         function applyTransforms() {{
-            dragItem.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
+            dragItem.style.transform = `translate(${{x}}px, ${{y}}px) rotate(${{rot}}deg)`;
             updateDisplay();
         }}
         
