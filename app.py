@@ -1095,10 +1095,6 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
     components.html(html_studio_code, height=695, scrolling=False)
 
     # === EARLY RETURN TO PREVENT UNREACHABLE SANDBOX EXECUTION CORS HACKS ===
-    return             except Exception as e:
-                    st.error(f"Sistem hatası oluştu: {e}")
-
-    # === EARLY RETURN TO PREVENT UNREACHABLE SANDBOX EXECUTION CORS HACKS ===
     return
 
     # Package and serialize initial values for the CapCut dashboard template
