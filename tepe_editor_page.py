@@ -1107,7 +1107,7 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
         }}
         
         function applyTransforms() {{
-            dragItem.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
+            dragItem.style.transform = `translate(${{x}}px, ${{y}}px) rotate(${{rot}}deg)`;
             updateDisplay();
         }}
         
@@ -1477,4 +1477,4 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
                 time.sleep(1)
                 st.rerun()
         except Exception as e:
-            st.error(f"⚠️ Teknik bir hata oluştu: {e}")
+            st.error(f"⚠️ Teknik bir hata oluştu: {e}") 
