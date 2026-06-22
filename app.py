@@ -3994,12 +3994,13 @@ with open(HTML_PATH, "w", encoding="utf-8") as f:
           // Set frame height to 0 to make it invisible
           sendMessage("streamlit:setFrameHeight", {height: 0});
           
-          // Read current state
-          var val = localStorage.getItem("kaplan_passkey") || "NOT_FOUND";
-          var page = localStorage.getItem("kaplan_current_page") || "chat";
-          
-          // Send it back to Streamlit
-          sendMessage("streamlit:setComponentValue", {value: val + "|||" + page});
+          // ONLY send component value back to Streamlit if we are READING (get).
+          // Action "set" or "remove" should NOT send anything to avoid triggering infinite reruns!
+          if (action !== "set" && action !== "remove") {
+            var val = localStorage.getItem("kaplan_passkey") || "NOT_FOUND";
+            var page = localStorage.getItem("kaplan_current_page") || "chat";
+            sendMessage("streamlit:setComponentValue", {value: val + "|||" + page});
+          }
         }
       });
       
@@ -4560,24 +4561,63 @@ if not st.session_state.user_logged_in:
 
 # --- ANA EKRAN ---
 else:
+    class InterceptedUserRef:
+        def __init__(self, original_ref):
+            self._original_ref = original_ref
+        
+        def __getattr__(self, name):
+            return getattr(self._original_ref, name)
+            
+        def update(self, *args, **kwargs):
+            st.session_state.force_sync_db = True
+            st.session_state.pop("cached_user_doc", None)
+            return self._original_ref.update(*args, **kwargs)
+            
+        def get(self, *args, **kwargs):
+            return self._original_ref.get(*args, **kwargs)
+
     uid = st.session_state.user_data['uid']
-    user_ref = db.collection("users").document(uid)
+    user_ref = InterceptedUserRef(db.collection("users").document(uid))
 
     # Sync current page with localStorage & document.cookie for immediate restoration
     current_page_val = st.session_state.get("current_page", "chat")
-    get_local_storage(action="set", key_name="kaplan_current_page", value=current_page_val, key="page_save_comp")
+    if st.session_state.get("prev_synced_page") != current_page_val:
+        get_local_storage(action="set", key_name="kaplan_current_page", value=current_page_val, key="page_save_comp")
+        st.session_state.prev_synced_page = current_page_val
 
-    try:
-        user_ref.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
-    except Exception:
-        pass
+    # Throttle son_gorulme_zamani update to once every 60 seconds to avoid blocking on every rerun
+    import time
+    last_seen_update = st.session_state.get("last_seen_update_sec", 0)
+    now_epoch = time.time()
+    if now_epoch - last_seen_update > 60:
+        try:
+            user_ref.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
+            st.session_state.last_seen_update_sec = now_epoch
+        except Exception:
+            pass
 
-    user_snap = user_ref.get()
-
-    if not user_snap.exists:
-        logout_user()
-
-    user_doc = user_snap.to_dict()
+    # Smart cached user doc to prevent database query on every micro-rerun (massive speedup!)
+    cached_doc = st.session_state.get("cached_user_doc")
+    if (cached_doc is None or 
+        st.session_state.get("force_sync_db", False) or 
+        (now_epoch - st.session_state.get("last_db_fetch_sec", 0) > 3)):
+        try:
+            # We bypass InterceptedUserRef default behavior for the main loop get
+            user_snap = user_ref._original_ref.get()
+            if not user_snap.exists:
+                logout_user()
+            user_doc = user_snap.to_dict()
+            st.session_state.cached_user_doc = user_doc
+            st.session_state.last_db_fetch_sec = now_epoch
+            st.session_state.force_sync_db = False
+        except Exception:
+            if cached_doc is not None:
+                user_doc = cached_doc
+            else:
+                st.error("Veritabanı bağlantısı kurulamadı. Lütfen sayfayı yenileyin.")
+                st.stop()
+    else:
+        user_doc = cached_doc
     email = user_doc.get("email", "")
 
     # Anlık Ban Kontrolü
