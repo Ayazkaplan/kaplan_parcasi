@@ -175,27 +175,30 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
         
         .tabs-header {{
             display: flex;
-            gap: 4px;
+            flex-direction: column;
+            gap: 6px;
             margin-bottom: 12px;
-            border-bottom: 2px solid #202035;
-            padding-bottom: 6px;
-            overflow-x: auto;
+            border-bottom: none;
+            padding-bottom: 0px;
         }}
         .tab-btn {{
-            background: transparent;
+            background: #202035;
             color: #8892b0;
-            border: none;
-            padding: 6px 10px;
-            font-size: 11px;
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 10px 14px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
-            border-radius: 4px;
-            white-space: nowrap;
+            border-radius: 8px;
+            text-align: left;
+            width: 100%;
             transition: all 0.2s ease;
+            box-sizing: border-box;
         }}
         .tab-btn.active {{
             background: #e67e22;
             color: white;
+            border-color: #f39c12;
         }}
         .tab-content {{
             display: none;
@@ -308,48 +311,54 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
 
         .indicators-row {{
             display: flex;
-            justify-content: space-between;
-            gap: 6px;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
         }}
         .indicator {{
-            flex: 1;
+            width: 100%;
             background: rgba(0,0,0,0.5);
             border: 1px solid rgba(255,255,255,0.06);
             border-radius: 8px;
-            padding: 5px 3px;
-            text-align: center;
-            font-size: 10px;
+            padding: 10px 14px;
+            text-align: left;
+            font-size: 13px;
             color: #bdc3c7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
         }}
         .indicator span {{
-            display: block;
+            display: inline-block;
             color: #f39c12;
             font-weight: bold;
-            font-size: 12px;
-            margin-top: 1px;
+            font-size: 14px;
+            margin-top: 0px;
         }}
 
         .toolbar {{
             display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
         }}
         .action-btn {{
-            flex: 1;
-            min-width: 75px;
+            width: 100%;
             background: #252538;
             color: white;
             border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 6px;
-            padding: 6px;
-            font-size: 10px;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.15s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 2px;
+            gap: 6px;
+            box-sizing: border-box;
         }}
         .action-btn:hover {{
             background: #31314a;
@@ -367,14 +376,17 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
 
         .bottom-action-bar {{
             display: flex;
-            gap: 8px;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            margin-top: 10px;
         }}
         .bottom-btn {{
-            flex: 1;
-            padding: 11px;
+            width: 100%;
+            padding: 14px;
             border: none;
             border-radius: 8px;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
             color: white;
@@ -383,8 +395,9 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
+            gap: 6px;
             transition: all 0.2s ease;
+            box-sizing: border-box;
         }}
         .bottom-btn.preview-btn {{
             background: linear-gradient(135deg, #2ecc71, #27ae60);
@@ -2035,7 +2048,7 @@ components.html("""
     setTimeout(function() { injectIcons(); setupInputHandlers(); }, 500);
     var btnObs = new MutationObserver(function() {
       setTimeout(function() { injectIcons(); setupInputHandlers(); }, 100);
-      var avatar = pd.querySelector('.profil-avatar-wrap img');
+      var avatar = pd.querySelector('.profil-avatar-wrap');
       if (avatar && !avatar.dataset.clickBound) {
         avatar.dataset.clickBound = '1';
         avatar.addEventListener('click', function() {
@@ -2046,7 +2059,7 @@ components.html("""
     });
     btnObs.observe(pd.body || pd.documentElement, { childList: true, subtree: true });
     setTimeout(function() {
-      var avatar = pd.querySelector('.profil-avatar-wrap img');
+      var avatar = pd.querySelector('.profil-avatar-wrap');
       if (avatar && !avatar.dataset.clickBound) {
         avatar.dataset.clickBound = '1';
         avatar.addEventListener('click', function() {
@@ -3564,16 +3577,34 @@ else:
             # Gizli file uploader (CSS ile görünmez)
             if "foto_upload_key" not in st.session_state:
                 st.session_state.foto_upload_key = 0
+            if "foto_upload_error" not in st.session_state:
+                st.session_state.foto_upload_error = None
+
+            if st.session_state.foto_upload_error:
+                st.error(st.session_state.foto_upload_error)
+                if st.button("Hata Mesajını Kapat", key="clear_foto_error_btn"):
+                    st.session_state.foto_upload_error = None
+                    st.rerun()
+
             foto_dosya = st.file_uploader("Profil fotoğrafı", type=["jpg", "jpeg", "png", "webp"], key=f"profil_foto_upload_{st.session_state.foto_upload_key}", label_visibility="collapsed")
             if foto_dosya is not None:
-                if foto_dosya.size > 5 * 1024 * 1024:
-                    st.error("❌ Dosya boyutu 5MB'dan küçük olmalıdır.")
-                else:
-                    foto_bytes = foto_dosya.read()
-                    foto_b64 = resize_profile_photo(foto_bytes)
-                    user_ref.update({"profil_foto": foto_b64})
+                if foto_dosya.size > 15 * 1024 * 1024:
+                    st.session_state.foto_upload_error = "❌ Dosya boyutu 15MB'dan küçük olmalıdır. Mobil cihazla çekilen büyük fotoğrafları yüklemek için lütfen önce kırpın veya küçültün."
                     st.session_state.foto_upload_key += 1
                     st.rerun()
+                else:
+                    try:
+                        foto_bytes = foto_dosya.read()
+                        foto_b64 = resize_profile_photo(foto_bytes)
+                        user_ref.update({"profil_foto": foto_b64})
+                        st.session_state.foto_upload_error = None
+                        st.session_state.foto_upload_key += 1
+                        st.session_state.valid_users_cache = None
+                        st.rerun()
+                    except Exception as e:
+                        st.session_state.foto_upload_error = f"❌ Fotoğraf işlenirken teknik bir hata oluştu: {str(e)}"
+                        st.session_state.foto_upload_key += 1
+                        st.rerun()
 
             # Uploader'ı CSS ile gizle
             st.markdown("""<style>
@@ -3583,6 +3614,7 @@ else:
             if mevcut_foto:
                 if st.button("Fotoğrafı Kaldır", key="remove_profile_photo", use_container_width=True):
                     user_ref.update({"profil_foto": ""})
+                    st.session_state.valid_users_cache = None
                     st.rerun()
 
             st.markdown(f"<div style='text-align:center;'>{isim_stili}</div>", unsafe_allow_html=True)
