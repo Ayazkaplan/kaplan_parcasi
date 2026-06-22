@@ -35,6 +35,254 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
     
     ts = st.session_state.temp_ann_settings
 
+    # Two columns: Left is the live mockup display, Right is standard premium controls
+    col_mock, col_widgets = st.columns([5, 5])
+    
+    with col_mock:
+        st.markdown("""
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                <span style="font-size:1.3rem;">📱</span>
+                <span style="font-weight:bold;color:#f39c12;font-size:1.1rem;letter-spacing:0.5px;font-family:'Space Grotesk', sans-serif;">ANLIK ANA SAYFA ÖNİZLEMESİ</span>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Compile dynamic banner HTML
+        ann_rendered_html = render_custom_banner_html(ts)
+        
+        # Build whole chat page dashboard mockup with live overlay
+        mockup_html = f"""
+        <div style="
+            width: 100%;
+            max-width: 100%;
+            min-height: 520px;
+            border-radius: 15px;
+            border: 2px solid #e67e22;
+            background: radial-gradient(circle at top, #2e0000 0%, #110000 65%, #050000 100%);
+            padding: 22px;
+            box-sizing: border-box;
+            position: relative;
+            overflow: visible;
+            color: white;
+            box-shadow: inset 0 3px 25px rgba(0,0,0,0.95), 0 8px 30px rgba(0,0,0,0.65);
+            font-family: 'Space Grotesk', sans-serif;
+            margin-bottom: 20px;
+        ">
+            <!-- Status Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: rgba(255, 255, 255, 0.3); font-weight: bold; margin-bottom: 22px; width:100%;">
+                <span>Turkcell LTE</span>
+                <span>17:57 %18.1 🔋</span>
+            </div>
+            
+            <!-- Live Banner Render Spot (Supports Rotation, Translates, Gradients, Shadows) -->
+            <div style="width: 100%; min-height: 50px; margin-bottom: 25px; z-index: 1000; position: relative; overflow: visible;">
+                {ann_rendered_html}
+            </div>
+            
+            <!-- Home Title & Subtitle Mock -->
+            <div style="position: relative; z-index: 1; pointer-events: none; user-select: none;">
+                <h1 style="font-size: 1.6rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; margin: 0 0 10px 0; display: flex; align-items: center; gap: 8px; font-family: 'Space Grotesk', sans-serif;">
+                    🤖 Kaplan Parçası V18.1
+                </h1>
+                <p style="font-size: 0.8rem; color: rgba(255,255,255,0.4); margin: 0 0 25px 0;">Müstakbel Şirket bünyesinde geliştirilen yapay zeka platformu.</p>
+                
+                <div style="width: 44px; height: 44px; border-radius: 50%; border: 2.2px solid #f39c12; background: #1a1a3a; display: flex; align-items: center; justify-content: center; font-size: 18px; color: white; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(243, 156, 18, 0.455);">
+                    🔔
+                </div>
+                
+                <div style="width: 100%; display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px;">
+                    <label style="color: rgba(255,255,255,0.55); font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Mesajını yaz:</label>
+                    <div style="width: 100%; height: 75px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(30,30,50,0.3); box-shadow: inset 0 2px 8px rgba(0,0,0,0.45);"></div>
+                </div>
+                
+                <div style="padding: 10px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(45, 45, 65, 0.5); font-size: 12px; color: #ffffff; font-weight: bold; width: fit-content; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
+                    <span>✉ Gönder</span>
+                </div>
+            </div>
+        </div>
+        """
+        st.markdown(mockup_html, unsafe_allow_html=True)
+        
+        # Quick paint utilities
+        st.write("")
+        st.markdown("**🎨 Harf & Kelime Renklendirme Paneli**")
+        col_paint_w, col_paint_c = st.columns([2, 1])
+        with col_paint_w:
+            paint_word = st.text_input("Renklendirilecek Kelime", placeholder="Örn: KAPLAN", key="paint_word_key")
+        with col_paint_c:
+            paint_color = st.color_picker("Renk seçin", value="#FFD700", key="paint_color_key")
+            
+        col_paint_btn, col_paint_rst = st.columns([1, 1])
+        with col_paint_btn:
+            if st.button("Kelimeleri Boya", use_container_width=True):
+                if paint_word:
+                    text_val = ts.get("text", "")
+                    char_colors = list(ts.get("char_colors", []))
+                    if len(char_colors) < len(text_val):
+                        char_colors = [ts.get("text_color", "#FFFFFF")] * len(text_val)
+                    
+                    idx = text_val.lower().find(paint_word.lower())
+                    while idx != -1:
+                        for i in range(idx, idx + len(paint_word)):
+                            if i < len(char_colors):
+                                char_colors[i] = paint_color
+                        idx = text_val.lower().find(paint_word.lower(), idx + 1)
+                    
+                    st.session_state.temp_ann_settings["char_colors"] = char_colors
+                    st.success(f"'{paint_word}' kelimesi başarıyla renklendirildi!")
+                    st.rerun()
+        with col_paint_rst:
+            if st.button("Renkleri Temizle 🔄", use_container_width=True):
+                st.session_state.temp_ann_settings["char_colors"] = []
+                st.success("Tüm özel harf boyamaları temizlendi.")
+                st.rerun()
+
+    with col_widgets:
+        st.markdown("""
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                <span style="font-size:1.3rem;">⚙️</span>
+                <span style="font-weight:bold;color:#f39c12;font-size:1.1rem;letter-spacing:0.5px;font-family:'Space Grotesk', sans-serif;">AYARLAR VE BİÇİMLENDİRME KAPISI</span>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        tab_yazi, tab_konum, tab_arka, tab_efekt, tab_medya = st.tabs([
+            "📝 Yazı & Biçim", 
+            "📐 Konum & Boyut", 
+            "🖼 Arka Plan", 
+            "✨ Neon & Gölge", 
+            "📷 Görsel & Medya"
+        ])
+        
+        with tab_yazi:
+            es_text = st.text_area("Tepe Duyurusu Metni", value=ts.get("text", "YENİ TEPE DUYURUSU"), placeholder="Duyuru metnini yazın...", height=80)
+            es_text_color = st.color_picker("Varsayılan Yazı Rengi", value=ts.get("text_color", "#FFFFFF"))
+            
+            font_list = ["sans-serif", "Space Grotesk", "Cinzel", "monospace", "cursive", "Arial", "Impact"]
+            font_idx = font_list.index(ts.get("font", "sans-serif")) if ts.get("font", "sans-serif") in font_list else 0
+            es_font = st.selectbox("Yazı Tipi (Font)", font_list, index=font_idx)
+            
+            weight_list = ["bold", "normal", "bolder", "900"]
+            weight_idx = weight_list.index(ts.get("font_weight", "bold")) if ts.get("font_weight", "bold") in weight_list else 0
+            es_weight = st.selectbox("Yazı Kalınlığı", weight_list, index=weight_idx)
+            
+            style_list = ["normal", "italic"]
+            style_idx = style_list.index(ts.get("font_style", "normal")) if ts.get("font_style", "normal") in style_list else 0
+            es_style = st.selectbox("Yazı Eğikliği (Style)", style_list, index=style_idx)
+            
+            decor_list = ["none", "underline", "line-through"]
+            decor_idx = decor_list.index(ts.get("text_decoration", "none")) if ts.get("text_decoration", "none") in decor_list else 0
+            es_decor = st.selectbox("Yazı Süsleme (Decoration)", decor_list, index=decor_idx)
+            
+            es_opacity = st.slider("Yazı Saydamlığı (%)", 10, 100, int(ts.get("opacity", 100)), step=5)
+            
+        with tab_konum:
+            es_displacement_x = st.slider("X Ekseni Kaydırma (Displacement X)", -300, 300, int(ts.get("displacement_x", 0)), step=1)
+            es_displacement_y = st.slider("Y Ekseni Kaydırma (Displacement Y)", -300, 300, int(ts.get("displacement_y", 0)), step=1)
+            es_size = st.slider("Yazı Boyut Değeri (px)", 8, 120, int(ts.get("size", 20)), step=1)
+            es_rot = st.slider("Döndürme Açısı (Derece)", -180, 180, int(ts.get("rotation", 0)), step=1)
+            
+            align_list = ["center", "left", "right"]
+            align_idx = align_list.index(ts.get("align", "center")) if ts.get("align", "center") in align_list else 0
+            es_align = st.selectbox("Harf Hizalama (Align)", align_list, index=align_idx)
+            
+        with tab_arka:
+            bg_type_list = ["none", "flat", "gradient", "image"]
+            bg_type_idx = bg_type_list.index(ts.get("bg_type", "none")) if ts.get("bg_type", "none") in bg_type_list else 0
+            es_bg_type = st.selectbox("Arka Plan Türü", bg_type_list, index=bg_type_idx)
+            
+            es_bg_color = st.color_picker("Arka Plan Ana Rengi / Gradyan Başlangıç", value=ts.get("bg_color", "#111122"))
+            es_bg_gradient = st.color_picker("Gradyan Bitiş Rengi", value=ts.get("bg_gradient_end", "#1a1a3a"))
+            es_bg_url = st.text_input("Arka Plan Resim URL'si (Varsa)", value=ts.get("bg_image_url", ""))
+            es_bg_opacity = st.slider("Resim Arka Plan Saydamlığı (%)", 10, 100, int(ts.get("bg_opacity", 100)), step=5)
+            
+            es_pad_v = st.slider("Dikey Dolgu (Vertical Padding)", 0, 100, int(ts.get("padding_vertical", 10)), step=1)
+            es_pad_h = st.slider("Yatay Dolgu (Horizontal Padding)", 0, 100, int(ts.get("padding_horizontal", 15)), step=1)
+            es_radius = st.slider("Kenar Yuvarlaklığı (Border Radius)", 0, 50, int(ts.get("border_radius", 12)), step=1)
+            
+        with tab_efekt:
+            es_glow = st.checkbox("Neon Parıldama Aktif", value=ts.get("glow_enabled", False))
+            es_glow_intensity = st.slider("Neon Parıldama Şiddeti", 5, 150, int(ts.get("glow_intensity", 50)), step=5)
+            
+            glow_modes = ["auto", "fixed"]
+            glow_modes_idx = glow_modes.index(ts.get("glow_color_mode", "auto")) if ts.get("glow_color_mode", "auto") in glow_modes else 0
+            es_glow_mode = st.radio("Neon Parlama Rengi Modu", glow_modes, index=glow_modes_idx)
+            es_glow_fixed = st.color_picker("Sabit Neon Rengi (Fixed Mode)", value=ts.get("glow_color_fixed", "#FFC000"))
+            
+            es_shadow_en = st.checkbox("Gölge Efekti Aktif", value=ts.get("shadow_enabled", False))
+            es_shadow_int = st.slider("Gölge Şiddeti / Uzaklığı", 5, 100, int(ts.get("shadow_intensity", 50)), step=5)
+            es_shadow_color = st.color_picker("Gölge Rengi", value=ts.get("shadow_color", "#000000"))
+            
+            anim_list = ["none", "neon_pulse", "wiggle", "neon_flicker", "rainbow", "pulse", "blur_fade"]
+            anim_idx = anim_list.index(ts.get("animation_type", "none")) if ts.get("animation_type", "none") in anim_list else 0
+            es_anim = st.selectbox("Yazı Animasyonu", anim_list, index=anim_idx)
+            
+        with tab_medya:
+            es_media_url = st.text_input("Ek Medya / GIF Görsel URL'si", value=ts.get("media_url", ""))
+            
+            media_align_list = ["below", "above", "left", "right"]
+            media_align_idx = media_align_list.index(ts.get("media_align", "below")) if ts.get("media_align", "below") in media_align_list else 0
+            es_media_align = st.selectbox("Medya Konumlandırma", media_align_list, index=media_align_idx)
+            es_media_size = st.slider("Medya Genişliği (px)", 20, 500, int(ts.get("media_size", 150)), step=5)
+            
+        # Composing temporary input metrics to sync on runtime
+        temp_payload = {
+            "text": es_text,
+            "text_color": es_text_color,
+            "font": es_font,
+            "font_weight": es_weight,
+            "font_style": es_style,
+            "text_decoration": es_decor,
+            "opacity": es_opacity,
+            "displacement_x": es_displacement_x,
+            "displacement_y": es_displacement_y,
+            "size": es_size,
+            "rotation": es_rot,
+            "align": es_align,
+            "bg_type": es_bg_type,
+            "bg_color": es_bg_color,
+            "bg_gradient_end": es_bg_gradient,
+            "bg_image_url": es_bg_url,
+            "bg_opacity": es_bg_opacity,
+            "padding_vertical": es_pad_v,
+            "padding_horizontal": es_pad_h,
+            "border_radius": es_radius,
+            "glow_enabled": es_glow,
+            "glow_intensity": es_glow_intensity,
+            "glow_color_mode": es_glow_mode,
+            "glow_color_fixed": es_glow_fixed,
+            "shadow_enabled": es_shadow_en,
+            "shadow_intensity": es_shadow_int,
+            "shadow_color": es_shadow_color,
+            "animation_type": es_anim,
+            "media_url": es_media_url,
+            "media_align": es_media_align,
+            "media_size": es_media_size,
+            "char_colors": ts.get("char_colors", []) # keep letter levels colors
+        }
+        
+        # Check if values changed in controls to update preview in session state
+        if temp_payload != ts:
+            st.session_state.temp_ann_settings = temp_payload
+            st.rerun()
+            
+        # Action panels
+        st.write("")
+        col_btn_dummy, col_btn_save = st.columns([1, 1])
+        with col_btn_dummy:
+            if st.button("✨ ANLIK ÖNİZLEMEYİ GÜNCELLE", use_container_width=True, type="secondary"):
+                st.rerun()
+        with col_btn_save:
+            if st.button("💾 CANLIYA KAYDET VE YAYINLA 🚀", use_container_width=True, type="primary"):
+                try:
+                    db.collection("settings").document("global_announcement").set(temp_payload)
+                    st.success("✅ Tepe duyurusu başarıyla kaydedildi ve tüm kullanıcılar için canlıya alındı!")
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Sistem hatası oluştu: {e}")
+
+    # === EARLY RETURN TO PREVENT UNREACHABLE SANDBOX EXECUTION CORS HACKS ===
+    return
+
     # Package and serialize initial values for the CapCut dashboard template
     disp_x_sb = ts.get("displacement_x", 0)
     disp_y_sb = ts.get("displacement_y", 0)
@@ -164,16 +412,17 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
         .canvas-area {{
             position: relative;
             width: 100%;
-            height: 280px;
-            border-radius: 10px;
-            border: 1px dashed rgba(255,165,0,0.25);
-            background-color: #07070f;
+            height: 480px;
+            border-radius: 15px;
+            border: 2px solid #e67e22;
+            background: radial-gradient(circle at top, #3b0000 0%, #170000 65%, #050000 100%);
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             overflow: hidden;
             cursor: grab;
-            box-shadow: inset 0 3px 15px rgba(0,0,0,0.8);
+            box-shadow: inset 0 3px 25px rgba(0,0,0,0.9), 0 8px 30px rgba(0,0,0,0.5);
         }}
         .canvas-area:active {{
             cursor: grabbing;
@@ -185,7 +434,10 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
             will-change: transform;
             display: inline-block;
             text-align: center;
-            white-space: nowrap;
+            white-space: wrap !important;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }}
         
         .tabs-header {{
@@ -475,8 +727,43 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
             <!-- LEFTPANEL: Preview & Coordinates -->
             <div class="editor-panel-left">
                 <div class="canvas-area" id="canvas-area">
-                    <div id="drag-item" style="transform: translate({disp_x_sb}px, {disp_y_sb}px) rotate({disp_rot_sb}deg);">
-                        <div id="banner-wrapper"></div>
+                    <!-- Pure decorative background and mockup UI that acts as our "Kaplan Parçası" landing/chat dashboard -->
+                    <div class="mock-device-container" style="position: absolute; inset: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; padding: 25px 23px; box-sizing: border-box; font-family: sans-serif; pointer-events: none; user-select: none; text-align: left; z-index: 1;">
+                        
+                        <!-- Top status bar mock -->
+                        <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: rgba(255, 255, 255, 0.35); margin-bottom: 25px; font-weight: bold;">
+                            <span>Turkcell LTE</span>
+                            <span>17:57 %18.1 🔋</span>
+                        </div>
+                        
+                        <!-- The target dropzone for the announcement band. We put an empty spacing region where the banner natively rendered above the title -->
+                        <div style="width: 100%; height: auto; min-height: 50px; margin-bottom: 20px; border: 1.5px dashed rgba(255,255,255,0.06); border-radius: 8px; background: rgba(0,0,0,0.15);">
+                            <!-- This empty spacer represents the default spot of the banner, allowing users to see it in its original place or offset it -->
+                        </div>
+
+                        <!-- 🐯 Kaplan Parçası V18.1 Header -->
+                        <h2 style="font-size: 1.6rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; margin: 0 0 15px 0; font-family: sans-serif; display: flex; align-items: center; gap: 8px; width: 100%;">🐯 Kaplan Parçası V18.1</h2>
+
+                        <!-- Bell Popover Circle Button Mock -->
+                        <div style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid #f39c12; background: #1a1a3a; display: flex; align-items: center; justify-content: center; font-size: 18px; color: white; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);">
+                            🔔
+                        </div>
+
+                        <!-- Textbox Mock -->
+                        <div style="width: 100%; display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px;">
+                            <label style="color: #bdc3c7; font-size: 13px; font-weight: bold; font-family: sans-serif;">Mesajını yaz:</label>
+                            <div style="width: 100%; height: 85px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(30, 30, 50, 0.25); box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);"></div>
+                        </div>
+
+                        <!-- Send Button Mock -->
+                        <div style="padding: 12px 24px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(45, 45, 65, 0.5); font-size: 13px; color: #ffffff; font-weight: bold; width: fit-content; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                            <span>✉ Gönder</span>
+                        </div>
+                    </div>
+
+                    <!-- The active interactive draggable item - overlays on top of mock elements. Starts at default spot (offset relative to the upper spacing region) -->
+                    <div id="drag-item" style="transform: translate({disp_x_sb}px, {disp_y_sb}px) rotate({disp_rot_sb}deg); z-index: 100; position: absolute; left: 15px; right: 15px; top: 55px; margin: 0 auto; width: calc(100% - 30px); pointer-events: auto;">
+                        <div id="banner-wrapper" style="overflow: visible;"></div>
                     </div>
                 </div>
                 
@@ -791,19 +1078,18 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
             padding: 5px 12px;
             border-radius: 6px;
             font-size: 11px;
-            color: #e67e22;
+            color: #bdc3c7;
             font-weight: bold;
             z-index: 999999;
             pointer-events: none;
             transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             box-shadow: 0 4px 15px rgba(0,0,0,0.6);
         `;
-        lockBadge.innerHTML = '🔒 HAREKET KİLİTLİ (Açmak için Çift Tıkla)';
         canvasArea.appendChild(lockBadge);
 
         function updateLockUI() {{
             if (dragUnlocked) {{
-                lockBadge.innerHTML = '🔓 HAREKET SERBEST (Sürükleyebilirsin)';
+                lockBadge.innerHTML = '🔓 HAREKET SERBEST (Sürükleyip konumlandır)';
                 lockBadge.style.borderColor = 'rgba(46, 204, 113, 0.7)';
                 lockBadge.style.color = '#2ecc71';
                 lockBadge.style.boxShadow = '0 0 12px rgba(46, 204, 113, 0.4)';
@@ -816,6 +1102,7 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
                 canvasArea.style.touchAction = 'auto';
             }}
         }}
+        updateLockUI();
 
         // Dblclick to unlock / lock
         canvasArea.addEventListener('dblclick', (e) => {{
@@ -2594,8 +2881,8 @@ def render_custom_banner_html(ann_data):
         
     final_html = f"""{font_import}
 {css_definitions}
-<div style="{bg_css} text-align: {align}; font-family: '{font_family}', sans-serif; font-size: {size}px; line-height: 1.4; width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
-<div style="{displacement_style} max-width: 100%; box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
+<div style="{displacement_style} width: 100%; max-width: 100%; overflow: visible; position: relative; z-index: 1000; box-sizing: border-box;">
+<div style="{bg_css} text-align: {align}; font-family: '{font_family}', sans-serif; font-size: {size}px; line-height: 1.4; width: 100%; max-width: 100%; box-sizing: border-box; overflow: visible; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
 {body_html}
 </div>
 </div>"""
@@ -6572,7 +6859,7 @@ else:
             if ann_data.get("text", "") or ann_data.get("media_url", ""):
                 ann_rendered_html = render_custom_banner_html(ann_data)
                 # Outer wrapper designed with high safety standards
-                st.markdown(f'<div style="width: 100%; max-width: 100%; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; margin-bottom: 25px;">{ann_rendered_html}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="width: 100%; max-width: 100%; overflow: visible; position: relative; z-index: 1000; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; margin-bottom: 25px;">{ann_rendered_html}</div>', unsafe_allow_html=True)
 
             col_title, col_bildirim = st.columns([6, 1])
             with col_title:
