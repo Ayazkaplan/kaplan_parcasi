@@ -5,36 +5,26 @@ import time
 def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
     st.markdown("""
     <style>
-    /* Styling to make the parent container wide and stylish */
+    /* Reset Streamlit default layout margins and overflow for an immersive editor page */
     div[data-testid="stAppViewBlockContainer"] {
         max-width: 100% !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
+        padding: 0px !important;
+        margin: 0px !important;
     }
+    header {visibility: hidden !important;}
+    footer {visibility: hidden !important;}
+    div[data-testid="stHeader"] {display: none !important;}
+    button[title="View source code"] {display: none !important;}
     iframe {
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        width: 100vw !important;
+        border: none !important;
+        border-radius: 0px !important;
+        box-shadow: none !important;
+        padding: 0px !important;
+        margin: 0px !important;
     }
     </style>
     """, unsafe_allow_html=True)
-
-    st.title("🎨 Tepe Duyuru Bandı Editörü (CapCut Esintili)")
-    st.info("Duyuru bandının yerini, boyutunu, eğimini ve rengini canlı olarak sürükle-bırak yöntemiyle ve aşağıdaki kontroller ile ayarlayabilirsiniz.")
-    
-    col_back_ann, col_back_main, col_back_chat = st.columns([4, 4, 4])
-    with col_back_ann:
-        if st.button("⬅️ Duyuru Sayfasına Dön", key="back_to_ann_from_tepe", use_container_width=True):
-            st.session_state.current_page = "admin_announcement"
-            st.rerun()
-    with col_back_main:
-        if st.button("🏰 Yönetici Paneline Dön", key="back_to_main_from_tepe", use_container_width=True):
-            st.session_state.current_page = "admin_main"
-            st.rerun()
-    with col_back_chat:
-        if st.button("💬 Sohbet Ekranına Dön", key="back_to_chat_from_tepe", use_container_width=True):
-            st.session_state.current_page = "chat"
-            st.rerun()
-    st.write("")
 
     # Setup session memory for smooth preview without saving
     if "temp_ann_settings" not in st.session_state:
@@ -95,13 +85,13 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
             padding: 0;
         }}
         body {{
-            background: transparent;
+            background: #0b0b14;
             color: #ffffff;
             overflow-x: hidden;
             overflow-y: auto;
             user-select: none;
             -webkit-user-select: none;
-            padding: 5px;
+            padding: 10px;
             max-width: 100vw;
             box-sizing: border-box;
         }}
@@ -396,12 +386,16 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
 
         /* STATS INDICATORS ROW */
         .indicators-row {{
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 6px;
         }}
+        @media (min-width: 480px) {{
+            .indicators-row {{
+                grid-template-columns: repeat(4, 1fr);
+            }}
+        }}
         .indicator {{
-            flex: 1;
             background: rgba(0,0,0,0.5);
             border: 1px solid rgba(255,255,255,0.06);
             border-radius: 8px;
@@ -421,9 +415,14 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
         /* GRID-BASED TOOLBAR TO PREVENT OVERFLOWS ON MOBILE */
         .toolbar {{
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 6px;
             margin-bottom: 10px;
+        }}
+        @media (min-width: 480px) {{
+            .toolbar {{
+                grid-template-columns: repeat(3, 1fr);
+            }}
         }}
         .action-btn {{
             background: #252538;
@@ -492,9 +491,52 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
         .bottom-btn:active {{
             transform: scale(0.97);
         }}
+
+        /* IMMERSIVE HEADER DESTRUCT NAVIGATION BAR */
+        .top-nav-bar {{
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 8px;
+            border-radius: 10px;
+            border: 1px dashed rgba(230, 126, 34, 0.25);
+        }}
+        .nav-btn {{
+            background: #1c1c34;
+            color: #bdc3c7;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px 6px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }}
+        .nav-btn:hover {{
+            color: #ffffff;
+            background: #e67e22;
+            border-color: #e67e22;
+            box-shadow: 0 0 10px rgba(230, 126, 34, 0.4);
+        }}
+        .nav-btn:active {{
+            transform: scale(0.96);
+        }}
     </style>
 </head>
 <body>
+    <div class="top-nav-bar">
+        <button class="nav-btn" onclick="pushAction('back_to_announcement')">🔔 Duyuru Sayfası</button>
+        <button class="nav-btn" onclick="pushAction('back_to_main')">🏰 Yönetici Paneli</button>
+        <button class="nav-btn" onclick="pushAction('back_to_chat')">💬 Sohbet Ekranı</button>
+    </div>
+
     <div class="stage-container">
         <!-- Hidden size storage input to prevent reference errors -->
         <input type="hidden" id="inp-size" value="{disp_size_sb}" />
@@ -1412,6 +1454,25 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
             }}, 150);
         }}
 
+        function pushAction(actionName) {{
+            const jsonText = buildFullPayloadJSON();
+            const payload = JSON.parse(jsonText);
+            payload.action = actionName;
+            
+            const textareas = window.parent.document.querySelectorAll('textarea[aria-label="advanced_json_payload"]');
+            textareas.forEach(t => {{
+                t.value = JSON.stringify(payload);
+                t.dispatchEvent(new Event('input', {{ bubbles: true }}));
+            }});
+            
+            setTimeout(() => {{
+                const btn = Array.from(window.parent.document.querySelectorAll('button')).find(b => b.innerText.includes('Tepe Duyurusunu Kaydet'));
+                if (btn) {{
+                    btn.click();
+                }}
+            }}, 150);
+        }}
+
         document.getElementById('btn-preview').addEventListener('click', () => pushAndSubmit('preview'));
         document.getElementById('btn-save').addEventListener('click', () => pushAndSubmit('save'));
 
@@ -1425,8 +1486,8 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
     </script>
 </body>
 </html>"""
-
-    st.components.v1.html(sandbox_code, height=1250, scrolling=True)
+ 
+    st.components.v1.html(sandbox_code, height=1400, scrolling=True)
     st.markdown("---")
     
     # Dynamic stream sync form structure - completely processed via the CapCut JS pipeline
@@ -1462,6 +1523,20 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
     if btn_preview or btn_save:
         try:
             updated_payload = json.loads(json_input_val)
+            action = updated_payload.get("action", "")
+            
+            if action == "back_to_announcement":
+                st.session_state.current_page = "admin_announcement"
+                st.rerun()
+            elif action == "back_to_main":
+                st.session_state.current_page = "admin_main"
+                st.rerun()
+            elif action == "back_to_chat":
+                st.session_state.current_page = "chat"
+                st.rerun()
+                
+            if "action" in updated_payload:
+                del updated_payload["action"]
             
             # Store as temp settings in memory
             st.session_state.temp_ann_settings = updated_payload
