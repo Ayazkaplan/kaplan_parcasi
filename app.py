@@ -8155,7 +8155,7 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                           </div>
                         </details>
                         '''
-                    
+
                     with st.container():
                         st.markdown(
                             f'''<div class="assistant-box"><img src="{AVATAR_URL}" class="avatar"><div class="assistant-bubble"><div class="header-box">Kaplan Parçası</div>{thinking_html}<div style="color:white !important;">{content_rendered}</div></div></div>''',
@@ -8172,55 +8172,7 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                                 new_chat[idx]["content"] = cevap_dict["content"]
                                 new_chat[idx]["search_query"] = cevap_dict["search_query"]
                                 new_chat[idx]["search_results"] = cevap_dict["search_results"]
-                                new_chat[idx]["thinking_process"] = cevap_dict["thinking_process"]ıldızlar (asterisk - *) veya parantezler içinde fiziksel hareketler, jestler, mimikler veya rol yapma eylemleri (*eğilerek selam verir*, *saygıyla eğilir*, *başını eğer* vb.) yazma, bunları canlandırma. Doğrudan ve asil bir konuşma yürüt, fiziksel hareket betimlemelerinden tamamen kaçın.\n\n"
-                    "📝 TÜRKÇE KARAKTER DÜZELTME TALİMATI:\n"
-                    "Kullanıcılar bazen Türkçe özel karakterleri kullanmadan yazar. Aşağıdaki dönüşümleri zihninde otomatik olarak yap ve mesajı düzgün Türkçe olarak anla:\n"
-                    "- 'u' yerine 'ü' olabilir (ornegin: 'guzul' → 'güzül/güzel', 'dusunuyorum' → 'düşünüyorum')\n"
-                    "- 'o' yerine 'ö' olabilir (ornegin: 'gormek' → 'görmek', 'donmek' → 'dönmek')\n"
-                    "- 'i' yerine 'ı' olabilir (ornegin: 'iyi' → 'ıyı' değil ama 'acik' → 'açık')\n"
-                    "- 's' yerine 'ş' olabilir (ornegin: 'seker' → 'şeker', 'dusunce' → 'düşünce')\n"
-                    "- 'c' yerine 'ç' olabilir (ornegin: 'cok' → 'çok', 'icmek' → 'içmek')\n"
-                    "- 'g' yerine 'ğ' olabilir (ornegin: 'dogru' → 'doğru', 'yagmur' → 'yağmur')\n"
-                    "Bu tür yazımlarda kullanıcıyı düzeltme, sadece mesajı doğru anla ve doğru Türkçe ile yanıt ver."
-                    f"{search_context}"
-                )
-                payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
-                headers = {"Authorization": f"Bearer {OPENROUTER_API_KEY}"}
-                try:
-                    res = requests.post(
-                        "https://openrouter.ai/api/v1/chat/completions",
-                        headers=headers, json=payload, timeout=30
-                    )
-                    res.raise_for_status()
-                    return res.json()['choices'][0]['message']['content']
-                except Exception as e:
-                    return "⚠️ Bir hata oluştu, lütfen tekrar dene Reis."
-
-            last_assistant_idx = -1
-            last_user_idx = -1
-            for i, msg in enumerate(st.session_state.messages):
-                if msg["role"] == "assistant":
-                    last_assistant_idx = i
-                else:
-                    last_user_idx = i
-
-            for idx, m in enumerate(st.session_state.messages):
-                if m["role"] == "assistant":
-                    content_rendered = detect_and_render_media(m["content"])
-                    with st.container():
-                        st.markdown(
-                            f'''<div class="assistant-box"><img src="{AVATAR_URL}" class="avatar"><div class="assistant-bubble"><div class="header-box">Kaplan Parçası</div><div style="color:white !important;">{content_rendered}</div></div></div>''',
-                            unsafe_allow_html=True
-                        )
-
-                    if idx == last_assistant_idx:
-                        st.markdown('<div class="assistant-ops-marker"></div>', unsafe_allow_html=True)
-                        if st.button("↻", key=f"assistant_regen_{idx}"):
-                            with st.spinner("Kaplan Parçası analiz ediyor ve yeni bir yanıt oluşturuyor..."):
-                                messages_context = st.session_state.messages[:idx]
-                                yeni_cevap = ai_cevap(messages_context[-6:])
-                                new_chat = list(st.session_state.messages)
-                                new_chat[idx]["content"] = yeni_cevap
+                                new_chat[idx]["thinking_process"] = cevap_dict["thinking_process"]
                                 st.session_state.messages = new_chat
                                 user_ref.update({"sohbet_gecmisi": new_chat})
                                 st.success("Yeni yanıt oluşturuldu!")
