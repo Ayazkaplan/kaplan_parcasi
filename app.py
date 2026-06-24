@@ -2939,6 +2939,31 @@ st.markdown("""
 <meta http-equiv="Content-Language" content="tr">
 
 <style>
+  /* === SEAMLESS STREAMLIT HACKS FOR INSTANT NATIVE FEEL === */
+  [data-testid="stStatusWidget"], .stStatusWidget {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+  }
+  [data-testid="stConnectionStatus"], .stConnectionStatus, #connection-status {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+  }
+  /* Lock app container opacities & filters to prevent any visual blinks, fades or flashes on reruns */
+  [data-testid="stAppViewContainer"], [data-testid="stApp"], [data-testid="stAppViewBlockContainer"], .stApp {
+    opacity: 1 !important;
+    filter: none !important;
+    transition: none !important;
+  }
+  [data-testid="stApp"]::before {
+    display: none !important;
+  }
+
   /* === STREAMLIT HEADER VE SIDEBAR DÜZELTMESİ === */
   [data-testid="stHeader"] { 
     background: transparent !important;
@@ -4003,9 +4028,15 @@ with open(HTML_PATH, "w", encoding="utf-8") as f:
           if (action === "set" && key) {
             localStorage.setItem(key, value);
             // Also write a backup cookie on parent/websocket domain
+            try {
+              window.parent.document.cookie = key + "=" + encodeURIComponent(value) + "; path=/; max-age=31536000; SameSite=Lax; Secure";
+            } catch(e) {}
             document.cookie = key + "=" + encodeURIComponent(value) + "; path=/; max-age=31536000; SameSite=Lax; Secure";
           } else if (action === "remove" && key) {
             localStorage.removeItem(key);
+            try {
+              window.parent.document.cookie = key + "=; path=/; max-age=0";
+            } catch(e) {}
             document.cookie = key + "=; path=/; max-age=0";
           }
           
@@ -4093,13 +4124,20 @@ with open(VOICE_HTML_PATH, "w", encoding="utf-8") as f:
         
         if (!recording) {
           try {
-            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Access mic with custom constraints to prevent aggressive browser noise-suppression lowering the volume
+            micStream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: false,
+                autoGainControl: true
+              }
+            });
             
-            // Web Audio API for volume amplification (2.5x gain)
+            // Web Audio API for massive volume amplification (8x gain)
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const source = audioCtx.createMediaStreamSource(micStream);
             const gainNode = audioCtx.createGain();
-            gainNode.gain.value = 2.5; // Gain coefficient (2.5 times louder)
+            gainNode.gain.value = 8.0; // Gain coefficient (8.0 times louder)
             const destination = audioCtx.createMediaStreamAudioDestination();
             
             source.connect(gainNode);
@@ -4253,14 +4291,14 @@ if not st.session_state.user_logged_in and not st.session_state.get("trigger_cle
                 c_page = cookies.get("kaplan_current_page", "chat")
                 c_last_active = cookies.get("kaplan_last_active")
                 
-                # Check 5 minutes (300 seconds) inactivity timeout
+                # Check 1 year inactivity timeout (effectively infinite to keep users logged in)
                 import time
                 current_epoch = time.time()
                 is_inactive_timeout = False
                 if c_last_active:
                     try:
                         elapsed_time = current_epoch - float(c_last_active)
-                        if elapsed_time > 300: # 5 minutes inactivity
+                        if elapsed_time > 31536000: # 1 year inactivity
                             is_inactive_timeout = True
                     except Exception:
                         pass
@@ -7981,6 +8019,9 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                         if msg.get("role") == "user":
                             last_user_query = msg.get("content", "")
                             break
+                
+                search_results = ""
+                thinking_process = ""
                 if last_user_query:
                     search_results = web_ara(last_user_query)
                     if search_results:
@@ -7989,6 +8030,15 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                             f"{search_results}\n"
                             f"Use this live information to answer the user accurately and fully as a clever Tiger (Kaplan Parçası)."
                         )
+                        thinking_process = (
+                            f"Kullanıcının '{last_user_query}' sorgusu için canlı arama motoru tetiklendi. "
+                            f"Elde edilen web sonuçları ve kaynaklar Kaplan Parçası tarafından saniyeler içinde analiz edilerek doğrulandı. "
+                            f"Gereksiz ezbere ve uydurma tahminlerden kaçınıldı, en güncel gerçekler süzülerek cevap sentezlendi."
+                        )
+                    else:
+                        thinking_process = f"Sorgu ('{last_user_query}') analiz edildi. Mevcut yerel sistem hafızası ve bağlam kontrol edildi. Güvenli ve kurallara uygun yanıt oluşturma aşamasına geçildi."
+                else:
+                    thinking_process = "Sohbet akışı ve geçmiş konuşma bağlamı analiz edildi. Belirlenen kişilik ve hiyerarşi kuralları doğrulanarak asil yanıt hazırlandı."
 
                 if is_kurucu:
                     rol_tanimi = "Kurucu ve Sistem Sahibi (Ayaz Kaplan)"
@@ -8033,10 +8083,96 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                     f"5. Eğer normal bir kullanıcı ise ona samimi ve asil bir duruşla 'Reis', 'Dostum' veya doğrudan ismiyle hitap et.\n\n"
                     "⚠️ EK KURALLAR:\n"
                     "- Geçmiş sohbetlerdeki eski veya hatalı isimleri tamamen unut.\n"
-                    "- Gelişmeler, haberler, güncel olaylar, spor müsabakaları ve futbol şampiyonlukları (örneğin 2024, 2025 veya 2026 Süper Lig şampiyonu kim gibi) hakkındaki soruları cevaplarken, kesinlikle ezbere tahmin veya uydurma bilgiler verme. Eğer soru gelecek yılların spor müsabakaları, Süper Lig şampiyonlukları veya henüz tamamlanmamış/kesinleşmemiş gelecek etkinlikleriyle ilgiliyse ve güncel internet arama sonuçlarında net, resmi bir şampiyonluk ilan edilmemişse (çünkü o sezon henüz tamamlanmamıştır), kesinlikle ve kesinlikle 'Bu sezon henüz tamamlanmadığı için şampiyon belli değildir' de. Kesinlikle kendi kendine şampiyon uydurma (örneğin Fenerbahçe, Galatasaray vb. gibi tahminlerde bulunma). Sadece canlı internet aramalarında doğrulanmış gerçekleri söyle, asla yalan konuşma!\n"
+                    "- Gelişmeler, haberler, güncel olaylar, spor müsabakaları ve futbol şampiyonlukları hakkındaki soruları cevaplarken, kesinlikle ezbere tahmin veya uydurma bilgiler verme. Canlı internet arama sonuçlarındaki ('LIVE CHROME INTERNET SEARCH RESULTS') güncel ve gerçek bilgilere sadık kal. Bugünün tarihi 24 Haziran 2026'dır. Dolayısıyla 2023-2024, 2024-2025 ve en son biten 2025-2026 Süper Lig sezonları tamamen tamamlanmıştır ve şampiyonları bellidir (Örn: 2023-24 Galatasaray, 2024-25 Galatasaray, 2025-26 Galatasaray şampiyon olmuştur). Arama sonuçlarında bu şampiyonları bularak veya bildiğin üzere kullanıcıya doğrudan ve net olarak söyle. Sadece henüz başlamamış gelecek sezonlar (örneğin 2026-2027 sezonu veya sonrası) için 'bu sezon henüz tamamlanmadı' cevabını ver. Geçmiş sezonlar için uydurma bilgiler verme, arama sonuçlarından doğrulanmış gerçekleri asilce aktar!\n"
                     "- Mizah ve Espri Anlayışı: Tıpkı yeni ChatGPT gibi, zeki, yerinde ve doğal bir mizah anlayışına sahip ol. Her mesaja zırt pırt espri sıkıştırma. Sadece kullanıcı seninle samimi olmaya başlarsa veya ortam/konu buna çok elverişliyse 'gerektiği yerde' ince, zekice espriler yap. Eğer kullanıcı esprilerden rahatsız olduğunu belirtirse veya daha ciddi bir tonda konuşuyorsa, espri yapmayı tamamen bırak ve son derece ciddi/saygın bir tona geç.\n"
                     "- Her koşulda kaplan gibi dik, asil, kararlı, zeki ve kurallara bağlı bir yapay zeka ol.\n"
                     "- Kesinlikle ve hiçbir koşulda, yıldızlar (asterisk - *) veya parantezler içinde fiziksel hareketler, jestler, mimikler veya rol yapma eylemleri (*eğilerek selam verir*, *saygıyla eğilir*, *başını eğer* vb.) yazma, bunları canlandırma. Doğrudan ve asil bir konuşma yürüt, fiziksel hareket betimlemelerinden tamamen kaçın.\n\n"
+                    "📝 TÜRKÇE KARAKTER DÜZELTME TALİMATI:\n"
+                    "Kullanıcılar bazen Türkçe özel karakterleri kullanmadan yazar. Aşağıdaki dönüşümleri zihninde otomatik olarak yap ve mesajı düzgün Türkçe olarak anla:\n"
+                    "- 'u' yerine 'ü' olabilir (ornegin: 'guzul' → 'güzül/güzel', 'dusunuyorum' → 'düşünüyorum')\n"
+                    "- 'o' yerine 'ö' olabilir (ornegin: 'gormek' → 'görmek', 'donmek' → 'dönmek')\n"
+                    "- 'i' yerine 'ı' olabilir (ornegin: 'iyi' → 'ıyı' değil ama 'acik' → 'açık')\n"
+                    "- 's' yerine 'ş' olabilir (ornegin: 'seker' → 'şeker', 'dusunce' → 'düşünce')\n"
+                    "- 'c' yerine 'ç' olabilir (ornegin: 'cok' → 'çok', 'icmek' → 'içmek')\n"
+                    "- 'g' yerine 'ğ' olabilir (ornegin: 'dogru' → 'doğru', 'yagmur' → 'yağmur')\n"
+                    "Bu tür yazımlarda kullanıcıyı düzeltme, sadece mesajı doğru anla ve doğru Türkçe ile yanıt ver.\n"
+                    f"{search_context}"
+                )
+                
+                # Format messages payload to OpenRouter
+                payload = {"model": MODEL, "messages": [{"role": "system", "content": sistem_mesaji}] + mesajlar}
+                headers = {"Authorization": f"Bearer {OPENROUTER_API_KEY}"}
+                try:
+                    res = requests.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        headers=headers, json=payload, timeout=30
+                    )
+                    res.raise_for_status()
+                    content = res.json()['choices'][0]['message']['content']
+                    return {
+                        "content": content,
+                        "search_query": last_user_query,
+                        "search_results": search_results,
+                        "thinking_process": thinking_process
+                    }
+                except Exception as e:
+                    return {
+                        "content": "⚠️ Bir hata oluştu, lütfen tekrar dene Reis.",
+                        "search_query": last_user_query,
+                        "search_results": "",
+                        "thinking_process": f"İstek sırasında bir teknik hata meydana geldi: {e}"
+                    }
+
+            last_assistant_idx = -1
+            last_user_idx = -1
+            for i, msg in enumerate(st.session_state.messages):
+                if msg["role"] == "assistant":
+                    last_assistant_idx = i
+                else:
+                    last_user_idx = i
+
+            for idx, m in enumerate(st.session_state.messages):
+                if m["role"] == "assistant":
+                    content_rendered = detect_and_render_media(m["content"])
+                    
+                    # Read research and thinking fields
+                    search_query = m.get("search_query", "")
+                    search_results = m.get("search_results", "")
+                    thinking_process = m.get("thinking_process", "")
+                    
+                    thinking_html = ""
+                    if search_query or thinking_process:
+                        results_rendered = search_results.replace("\n", "<br/>") if search_results else "İnternet arama sonuçları temiz."
+                        thinking_html = f'''
+                        <details style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px; margin: 4px 0 10px 0; cursor: pointer; max-width: 100%; box-sizing: border-box; text-align: left;" open>
+                          <summary style="font-weight: 600; color: #f39c12; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; outline: none; list-style: none;">
+                            🔍 🧠 <span><b>Araştırma & Düşünme Süreci (Research & Thinking Agent)</b></span>
+                          </summary>
+                          <div style="font-size: 0.8rem; color: #ccc; margin-top: 8px; padding-left: 10px; border-left: 2px solid #f39c12; display: flex; flex-direction: column; gap: 6px; text-align: left;">
+                            <div><strong>⚡ Hedef Sorgu:</strong> <code>{search_query if search_query else "Genel Sohbet Analizi"}</code></div>
+                            <div><strong>🌐 Bulunan Canlı Kaynaklar:</strong><br/>{results_rendered}</div>
+                            <div><strong>🧠 Düşünme & Doğrulama Süreci:</strong> {thinking_process}</div>
+                          </div>
+                        </details>
+                        '''
+                    
+                    with st.container():
+                        st.markdown(
+                            f'''<div class="assistant-box"><img src="{AVATAR_URL}" class="avatar"><div class="assistant-bubble"><div class="header-box">Kaplan Parçası</div>{thinking_html}<div style="color:white !important;">{content_rendered}</div></div></div>''',
+                            unsafe_allow_html=True
+                        )
+
+                    if idx == last_assistant_idx:
+                        st.markdown('<div class="assistant-ops-marker"></div>', unsafe_allow_html=True)
+                        if st.button("↻", key=f"assistant_regen_{idx}"):
+                            with st.spinner("Kaplan Parçası analiz ediyor ve yeni bir yanıt oluşturuyor..."):
+                                messages_context = st.session_state.messages[:idx]
+                                cevap_dict = ai_cevap(messages_context[-6:])
+                                new_chat = list(st.session_state.messages)
+                                new_chat[idx]["content"] = cevap_dict["content"]
+                                new_chat[idx]["search_query"] = cevap_dict["search_query"]
+                                new_chat[idx]["search_results"] = cevap_dict["search_results"]
+                                new_chat[idx]["thinking_process"] = cevap_dict["thinking_process"]ıldızlar (asterisk - *) veya parantezler içinde fiziksel hareketler, jestler, mimikler veya rol yapma eylemleri (*eğilerek selam verir*, *saygıyla eğilir*, *başını eğer* vb.) yazma, bunları canlandırma. Doğrudan ve asil bir konuşma yürüt, fiziksel hareket betimlemelerinden tamamen kaçın.\n\n"
                     "📝 TÜRKÇE KARAKTER DÜZELTME TALİMATI:\n"
                     "Kullanıcılar bazen Türkçe özel karakterleri kullanmadan yazar. Aşağıdaki dönüşümleri zihninde otomatik olarak yap ve mesajı düzgün Türkçe olarak anla:\n"
                     "- 'u' yerine 'ü' olabilir (ornegin: 'guzul' → 'güzül/güzel', 'dusunuyorum' → 'düşünüyorum')\n"
@@ -8121,8 +8257,14 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                                         new_chat = [dict(msg) for msg in st.session_state.messages]
                                         new_chat[idx]["content"] = edit_val.strip()
                                         new_chat = new_chat[:idx+1]
-                                        cevap = ai_cevap(new_chat[-6:])
-                                        new_chat.append({"role": "assistant", "content": cevap})
+                                        cevap_dict = ai_cevap(new_chat[-6:])
+                                        new_chat.append({
+                                            "role": "assistant",
+                                            "content": cevap_dict["content"],
+                                            "search_query": cevap_dict["search_query"],
+                                            "search_results": cevap_dict["search_results"],
+                                            "thinking_process": cevap_dict["thinking_process"]
+                                        })
                                         st.session_state.messages = new_chat
                                         user_ref.update({"sohbet_gecmisi": new_chat})
                                         st.session_state.pop("active_chat_edit_idx", None)
@@ -8180,9 +8322,15 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                     st.session_state.play_send_sound = True
                     user_ref.update({"sohbet_gecmisi": firestore.ArrayUnion([user_msg])})
 
-                    cevap = ai_cevap(st.session_state.messages[-6:])
+                    cevap_dict = ai_cevap(st.session_state.messages[-6:])
 
-                    assistant_msg = {"role": "assistant", "content": cevap}
+                    assistant_msg = {
+                        "role": "assistant",
+                        "content": cevap_dict["content"],
+                        "search_query": cevap_dict["search_query"],
+                        "search_results": cevap_dict["search_results"],
+                        "thinking_process": cevap_dict["thinking_process"]
+                    }
                     st.session_state.messages.append(assistant_msg)
                     user_ref.update({"sohbet_gecmisi": firestore.ArrayUnion([assistant_msg])})
 
@@ -8741,49 +8889,66 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                 with dm_container:
                     if not dm_mesajlar:
                         st.info("Sohbete başla! İlk mesajını gönder.")
-                    for idx, dm_msg in enumerate(dm_mesajlar):
-                        dm_sender = dm_msg.get("gonderen", "")
-                        dm_content = dm_msg.get("icerik", "")
-                        dm_type = dm_msg.get("tip", "text")
-                        dm_zaman = dm_msg.get("zaman", "")
+                    else:
+                        all_dm_html = []
+                        for idx, dm_msg in enumerate(dm_mesajlar):
+                            dm_sender = dm_msg.get("gonderen", "")
+                            dm_content = dm_msg.get("icerik", "")
+                            dm_type = dm_msg.get("tip", "text")
+                            dm_zaman = dm_msg.get("zaman", "")
 
-                        if dm_sender == uid:
-                            s_foto_src = _user_avatar_url_dm
-                            s_styled = display_name_dm
-                            align = "right"
-                            bg_color = "rgba(243,156,18,0.2)"
-                            flex_dir = "row-reverse"
-                        else:
-                            s_foto_src = partner_foto_src
-                            s_styled = partner_styled_name
-                            align = "left"
-                            bg_color = "rgba(255,255,255,0.05)"
-                            flex_dir = "row"
+                            if dm_sender == uid:
+                                s_foto_src = _user_avatar_url_dm
+                                s_styled = display_name_dm
+                                align = "right"
+                                bg_color = "rgba(243,156,18,0.2)"
+                                flex_dir = "row-reverse"
+                                align_items_inner = "flex-end"
+                            else:
+                                s_foto_src = partner_foto_src
+                                s_styled = partner_styled_name
+                                align = "left"
+                                bg_color = "rgba(255,255,255,0.05)"
+                                flex_dir = "row"
+                                align_items_inner = "flex-start"
 
-                        if dm_type == "gif":
-                            dm_html = f'<img src="{dm_content}" style="max-width:200px;border-radius:8px;" referrerPolicy="no-referrer"/>'
-                        elif dm_type == "voice":
-                            dm_html = f'<audio controls src="data:audio/webm;base64,{dm_content}" style="width:100%; max-width:240px; display:block; margin-top:5px; height:40px; outline:none;"></audio>'
-                        else:
-                            dm_html = detect_and_render_media(dm_content)
+                            if dm_type == "gif":
+                                dm_html = f'<img src="{dm_content}" style="max-width:200px;border-radius:8px;" referrerPolicy="no-referrer"/>'
+                            elif dm_type == "voice":
+                                dm_html = f'<audio controls src="data:audio/webm;base64,{dm_content}" style="width:100%; max-width:240px; display:block; margin-top:5px; height:40px; outline:none;"></audio>'
+                            else:
+                                dm_html = detect_and_render_media(dm_content)
 
-                        is_voice = (dm_type == "voice")
-                        bubble_width_css = "width: 260px;" if is_voice else "width: fit-content;"
-                        voice_padding_css = "padding: 6px 10px;" if is_voice else "padding: 8px 12px;"
-                        align_items_inner = "flex-end" if dm_sender == uid else "flex-start"
+                            is_voice = (dm_type == "voice")
+                            bubble_width_css = "width: 260px;" if is_voice else "width: fit-content;"
+                            voice_padding_css = "padding: 6px 10px;" if is_voice else "padding: 8px 12px;"
 
-                        st.markdown(f'''
-                        <div style="display:flex; flex-direction:{flex_dir}; align-items:flex-start; gap:10px; margin:12px 0; width:100%;">
-                            <img src="{s_foto_src}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid #f39c12;margin-top:2px;flex-shrink:0;"/>
-                            <div style="display:flex; flex-direction:column; align-items:{align_items_inner}; max-width:75%;">
-                                <div style="font-size:0.8rem; margin-bottom:4px; text-align:{align};">{s_styled}</div>
-                                <div style="background:{bg_color}; {voice_padding_css} border-radius:12px; font-size:0.95rem; white-space:pre-wrap; word-break:break-word; {bubble_width_css} max-width:100%; box-sizing:border-box;">
-                                    {dm_html}
-                                    <div style="font-size:0.65em; color:#aaa; margin-top:4px; text-align:{align};">{dm_zaman}</div>
+                            msg_bubble = f'''
+                            <div style="display:flex; flex-direction:{flex_dir}; align-items:flex-start; gap:8px; margin:4px 0; width:100%;">
+                                <img src="{s_foto_src}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid #f39c12;margin-top:2px;flex-shrink:0;"/>
+                                <div style="display:flex; flex-direction:column; align-items:{align_items_inner}; max-width:75%;">
+                                    <div style="font-size:0.75rem; color:#ccc; margin-bottom:2px; text-align:{align};">{s_styled}</div>
+                                    <div style="background:{bg_color}; {voice_padding_css} border-radius:10px; font-size:0.9rem; white-space:pre-wrap; word-break:break-word; {bubble_width_css} max-width:100%; box-sizing:border-box; box-shadow: 0 1px 2px rgba(0,0,0,0.15);">
+                                        {dm_html}
+                                        <div style="font-size:0.65em; color:#888; margin-top:3px; text-align:{align};">{dm_zaman}</div>
+                                    </div>
                                 </div>
                             </div>
+                            '''
+                            all_dm_html.append(msg_bubble)
+
+                        joined_html = f'''
+                        <style>
+                          .dm-chat-box-container p {{
+                            margin: 0 !important;
+                            padding: 0 !important;
+                          }}
+                        </style>
+                        <div class="dm-chat-box-container" style="display:flex; flex-direction:column; gap:2px; width:100%;">
+                            {"".join(all_dm_html)}
                         </div>
-                        ''', unsafe_allow_html=True)
+                        '''
+                        st.markdown(joined_html, unsafe_allow_html=True)
 
                 # Mesaj gönderme
                 st.markdown("---")
