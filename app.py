@@ -5400,10 +5400,12 @@ else:
     # ═══════════════════════════════════════════════════
     if st.session_state.get("yt_playing_id"):
         _gvid = re.sub(r'[^a-zA-Z0-9_\-]', '', st.session_state.yt_playing_id)
-        _gts = int(st.session_state.yt_ts_dict.get(_gvid, 0))
-
-        components.html(
-                    f"""
+        
+        if st.session_state.get("global_player_rendered_vid") == _gvid and st.session_state.get("global_player_html_cached"):
+            player_html = st.session_state.global_player_html_cached
+        else:
+            _gts = int(st.session_state.yt_ts_dict.get(_gvid, 0))
+            player_html = f"""
                     <style>
                         html, body {{ margin:0; padding:0; height:100%; background:transparent; overflow:hidden; }}
                         #ap-gp-wrap {{ position:absolute; inset:0; background:#000; border-radius:10px; overflow:hidden; }}
@@ -5530,8 +5532,14 @@ else:
                         }}
                     }})();
                     </script>
-                    """,
-                    height=0,
+            """
+            st.session_state.global_player_rendered_vid = _gvid
+            st.session_state.global_player_html_cached = player_html
+
+        components.html(
+            player_html,
+            height=0,
+            key="global_youtube_player_stable",
         )
 
     # --- SAYFA YÖNLENDİRME ---
@@ -8199,13 +8207,13 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                                 )
                                 time.sleep(delay * step)
                         placeholder.markdown(
-                            f'''<div class="assistant-box"><img src="{AVATAR_URL}" class="avatar"><div class="assistant-bubble"><div class="header-box">Kaplan Parçası</div>{thinking_html}<div style="color:white !important;">{content_rendered}</div></div></div>''',
+                            f'''<div class="assistant-box"><img src="{AVATAR_URL}" class="avatar"><div class="assistant-bubble"><div class="header-box">Kaplan Parçası</div><div style="color:white !important;">{content_rendered}</div></div></div>''',
                             unsafe_allow_html=True
                         )
                     else:
                         with st.container():
                             st.markdown(
-                                f'''<div class="assistant-box"><img src="{AVATAR_URL}" class="avatar"><div class="assistant-bubble"><div class="header-box">Kaplan Parçası</div>{thinking_html}<div style="color:white !important;">{content_rendered}</div></div></div>''',
+                                f'''<div class="assistant-box"><img src="{AVATAR_URL}" class="avatar"><div class="assistant-bubble"><div class="header-box">Kaplan Parçası</div><div style="color:white !important;">{content_rendered}</div></div></div>''',
                                 unsafe_allow_html=True
                             )
 
@@ -8323,7 +8331,8 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                     st.session_state.play_send_sound = True
                     user_ref.update({"sohbet_gecmisi": firestore.ArrayUnion([user_msg])})
 
-                    cevap_dict = ai_cevap(st.session_state.messages[-6:])
+                    with st.spinner("Kaplan Parçası düşünüyor..."):
+                        cevap_dict = ai_cevap(st.session_state.messages[-6:])
 
                     assistant_msg = {
                         "role": "assistant",
@@ -8896,12 +8905,13 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                     if not dm_mesajlar:
                         st.info("Sohbete başla! İlk mesajını gönder.")
                     else:
-                        all_dm_html = []
+                        st.markdown('<style>.dm-chat-box-container p {margin: 0 !important; padding: 0 !important;}</style>', unsafe_allow_html=True)
                         for idx, dm_msg in enumerate(dm_mesajlar):
                             dm_sender = dm_msg.get("gonderen", "")
                             dm_content = dm_msg.get("icerik", "")
                             dm_type = dm_msg.get("tip", "text")
                             dm_zaman = dm_msg.get("zaman", "")
+                            is_deleted = dm_msg.get("silindi", False) or dm_content == "Mesaj Silindi"
 
                             if dm_sender == uid:
                                 s_foto_src = _user_avatar_url_dm
@@ -8918,19 +8928,21 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                                 flex_dir = "row"
                                 align_items_inner = "flex-start"
 
-                            if dm_type == "gif":
+                            if is_deleted:
+                                dm_html = '<span style="color:#888; font-style:italic;">Mesaj Silindi</span>'
+                            elif dm_type == "gif":
                                 dm_html = f'<img src="{dm_content}" style="max-width:200px;border-radius:8px;" referrerPolicy="no-referrer"/>'
                             elif dm_type == "voice":
                                 dm_html = f'<audio controls src="data:audio/webm;base64,{dm_content}" style="width:100%; max-width:240px; display:block; margin-top:5px; height:40px; outline:none;"></audio>'
                             else:
                                 dm_html = detect_and_render_media(dm_content)
 
-                            is_voice = (dm_type == "voice")
+                            is_voice = (dm_type == "voice") and not is_deleted
                             bubble_width_css = "width: 260px;" if is_voice else "width: fit-content;"
                             voice_padding_css = "padding: 6px 10px;" if is_voice else "padding: 8px 12px;"
 
                             msg_bubble = (
-                                f'<div style="display:flex; flex-direction:{flex_dir}; align-items:flex-start; gap:8px; margin:4px 0; width:100%;">'
+                                f'<div class="dm-chat-box-container" style="display:flex; flex-direction:{flex_dir}; align-items:flex-start; gap:8px; margin:4px 0; width:100%;">'
                                 f'<img src="{s_foto_src}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid #f39c12;margin-top:2px;flex-shrink:0;"/>'
                                 f'<div style="display:flex; flex-direction:column; align-items:{align_items_inner}; max-width:75%;">'
                                 f'<div style="font-size:0.75rem; color:#ccc; margin-bottom:2px; text-align:{align};">{s_styled}</div>'
@@ -8939,15 +8951,48 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                                 f'<div style="font-size:0.65em; color:#888; margin-top:3px; text-align:{align};">{dm_zaman}</div>'
                                 f'</div></div></div>'
                             )
-                            all_dm_html.append(msg_bubble)
 
-                        joined_html = (
-                            f'<style>.dm-chat-box-container p {{margin: 0 !important; padding: 0 !important;}}</style>'
-                            f'<div class="dm-chat-box-container" style="display:flex; flex-direction:column; gap:2px; width:100%;">'
-                            f'{"".join(all_dm_html)}'
-                            f'</div>'
-                        )
-                        st.markdown(joined_html, unsafe_allow_html=True)
+                            # Place message and a trash bin button next to each message
+                            if flex_dir == "row-reverse":
+                                col_del, col_msg = st.columns([1, 12])
+                                with col_msg:
+                                    st.markdown(msg_bubble, unsafe_allow_html=True)
+                                with col_del:
+                                    if not is_deleted:
+                                        if st.button("🗑️", key=f"del_dm_{dm_conv_id}_{idx}", help="Mesajı sil"):
+                                            try:
+                                                doc_snap = dm_doc_ref.get()
+                                                if doc_snap.exists:
+                                                    current_messages = doc_snap.to_dict().get("mesajlar", [])
+                                                    if idx < len(current_messages):
+                                                        current_messages[idx]["icerik"] = "Mesaj Silindi"
+                                                        current_messages[idx]["silindi"] = True
+                                                        dm_doc_ref.update({"mesajlar": current_messages})
+                                                        st.rerun()
+                                            except Exception as e:
+                                                st.error(f"Hata: {e}")
+                                    else:
+                                        st.write("<div style='opacity:0.3; padding-top:15px; text-align:center;'>🗑️</div>", unsafe_allow_html=True)
+                            else:
+                                col_msg, col_del = st.columns([12, 1])
+                                with col_msg:
+                                    st.markdown(msg_bubble, unsafe_allow_html=True)
+                                with col_del:
+                                    if not is_deleted:
+                                        if st.button("🗑️", key=f"del_dm_{dm_conv_id}_{idx}", help="Mesajı sil"):
+                                            try:
+                                                doc_snap = dm_doc_ref.get()
+                                                if doc_snap.exists:
+                                                    current_messages = doc_snap.to_dict().get("mesajlar", [])
+                                                    if idx < len(current_messages):
+                                                        current_messages[idx]["icerik"] = "Mesaj Silindi"
+                                                        current_messages[idx]["silindi"] = True
+                                                        dm_doc_ref.update({"mesajlar": current_messages})
+                                                        st.rerun()
+                                            except Exception as e:
+                                                st.error(f"Hata: {e}")
+                                    else:
+                                        st.write("<div style='opacity:0.3; padding-top:15px; text-align:center;'>🗑️</div>", unsafe_allow_html=True)
 
                 # Mesaj gönderme
                 st.markdown("---")
@@ -8974,24 +9019,6 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                             dm_doc_ref.set({"mesajlar": firestore.ArrayUnion([yeni_dm])}, merge=True)
                             st.session_state.dm_input_key = st.session_state.get("dm_input_key", 0) + 1
                             st.rerun()
-
-                # Tarayıcı-Uyumlu Ses Kaydı Başlatıcı
-                st.write("🎤 **Mikrofon ile Ses Kaydet ve Gönder:**")
-                voice_data = voice_recorder_component(key=f"dm_voice_recorder_{st.session_state.get('dm_input_key', 0)}")
-                if voice_data and voice_data != "NOT_FOUND":
-                    if st.button("🎙️ Kaydedilen Sesi Gönder", key=f"dm_send_voice_direct_{st.session_state.get('dm_input_key', 0)}", use_container_width=True):
-                        st.session_state.play_send_sound = True
-                        zaman_str = get_tr_time().strftime("%H:%M")
-                        voice_dm = {
-                            "gonderen": uid,
-                            "icerik": voice_data,
-                            "tip": "voice",
-                            "zaman": zaman_str
-                        }
-                        dm_doc_ref.set({"mesajlar": firestore.ArrayUnion([voice_dm])}, merge=True)
-                        st.session_state.dm_input_key = st.session_state.get("dm_input_key", 0) + 1
-                        st.success("Sesli mesaj gönderildi!")
-                        st.rerun()
 
         # ═══════════════════════════════════════════════════
         # ✉️ ADMIN MESAJ GÖNDERİMİ SAYFASI
