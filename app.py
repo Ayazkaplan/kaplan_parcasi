@@ -1092,7 +1092,7 @@ def render_tepe_editor_page(db, is_kurucu, get_global_announcement):
     """.replace("__ACTIVE_SETTINGS_JSON__", active_settings_json)
 
     # Render unified component with high vertical workspace
-    components.html(html_studio_code, height=695, scrolling=False)
+    components.html(html_studio_code, height=820, scrolling=True)
 
     # === EARLY RETURN TO PREVENT UNREACHABLE SANDBOX EXECUTION CORS HACKS ===
     return
@@ -3170,6 +3170,11 @@ components.html("""
       // Eğer tıklanan element bir iframe değilse, focus'u window'a geri al
       if (e.target.tagName !== 'IFRAME') {
         window.parent.focus();
+        window.focus();
+        // Ayrıca eğer bir textarea veya input elementine tıklanmışsa doğrudan ona focus ver
+        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+          e.target.focus();
+        }
       }
     }, true);
     // Ayrıca "focusin" ile de yakala - iframe'den çıkınca tetiklenir
@@ -3179,6 +3184,7 @@ components.html("""
       if (active && active.tagName === 'IFRAME') {
         active.blur();
         window.parent.focus();
+        window.focus();
       }
     });
   })();
@@ -3419,36 +3425,48 @@ def trigger_global_rerun(exclude_self=True):
         print(f"[GLOBAL RERUN ERROR] {e}")
 
 def normalize_text(text):
-    text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8')
-    return re.sub(r'[^a-zA-Z0-9]', '', text.lower())
+    if not text:
+        return ""
+    # Normalize Turkish characters to English counterparts
+    tr_map = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
+    text = text.translate(tr_map).lower()
+    return re.sub(r'[^a-zA-Z0-9\s]', '', text)
 
 def kufur_var_mi(text):
-    clean_text = normalize_text(text)
-    substring_list = [
-        "amk", "amq", "amcik", "aminakoy", "aminakoyim", "aminakoyayim",
-        "orospucocugu", "orspucocugu", "orospucuk",
-        "sikerim", "sikeyim", "sikis", "siksok",
-        "gotek", "gotlek", "piclik", "yavsak", "yavsaklik",
-        "serefsiz", "ibnelik", "kahpece", "gavatlik", "dalyarak", "kancik",
-        "fuck", "fuuck", "fck", "f u c k", "btch", "b1tch",
-        "asshole", "ashole", "motherfucker", "mofo",
-        "scheisse", "scheiße", "arschloch", "schlampe", "wichser", "hurensohn", "fotze", "ficken",
-        "sharmouta", "sharmuta", "kussemmak", "putain", "connard",
-    ]
-    word_list = [
-        "amina", "orospu", "sik", "got", "pic", "picin",
-        "ibne", "kahpe", "gavat", "yarrak", "yarak",
-        "dangalak", "gerzek", "gerizekali", "bok", "pust",
-        "bitch", "cunt", "whore", "slut", "dick", "cock",
-        "bastard", "nigger", "nigga", "faggot", "fag", "retard",
-        "puta", "puto", "cabron", "maricon", "merde",
-    ]
-    for word in substring_list:
-        if word in clean_text:
+    if not text:
+        return False
+    
+    # 1. Normalize Turkish characters and keep spaces
+    normalized = normalize_text(text)
+    
+    # 2. Get individual words by splitting on word boundaries
+    words = re.findall(r'\b\w+\b', normalized)
+    
+    # 3. Severe swear words list (only actual severe profanity, NO mild slang like "lan", "salak", "mal", "bok", "gerizekali")
+    severe_profanity_words = {
+        # Turkish severe swear words
+        "amk", "amq", "aq", "amcik", "orospu", "yarrak", "yarak", "sikerim", "sikeyim", 
+        "sikis", "sik", "siki", "pic", "gavat", "kahpe", "yavsak", "dalyarak", "kancik", 
+        "ibne", "pezevenk", "amciklar", "got", "gotveren", "orospunun", "orospular",
+        # English severe profanity
+        "fuck", "fucking", "bitch", "cunt", "whore", "slut", "asshole", "motherfucker"
+    }
+    
+    # 4. Check for direct word matches (extremely precise, no false positives on "normal", "salatalik", etc.)
+    for w in words:
+        if w in severe_profanity_words:
             return True
-    for word in word_list:
-        if re.search(r'(?<![a-z])' + re.escape(word) + r'(?![a-z])', clean_text):
+            
+    # 5. Check for concatenated forms of severe profanity (e.g. "aminakoyim", "orospucocugu")
+    condensed = re.sub(r'[^a-z0-9]', '', normalized)
+    severe_phrases = [
+        "aminakoy", "aminakoyim", "aminakoyayim", "orospucocu", "orospucocugu", "orspucocu",
+        "ananisik", "ananisikeyim", "gotunuesik", "sikeyim", "sikerim", "gotsiken"
+    ]
+    for phrase in severe_phrases:
+        if phrase in condensed:
             return True
+            
     return False
 
 def emoji_var_mi(text):
@@ -4057,6 +4075,8 @@ with open(VOICE_HTML_PATH, "w", encoding="utf-8") as f:
       let mediaRecorder;
       let chunks = [];
       let recording = false;
+      let audioCtx;
+      let micStream;
 
       function sendMessage(type, data) {
         window.parent.postMessage(Object.assign({isStreamlitMessage: true, type: type}, data), "*");
@@ -4073,8 +4093,19 @@ with open(VOICE_HTML_PATH, "w", encoding="utf-8") as f:
         
         if (!recording) {
           try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // Web Audio API for volume amplification (2.5x gain)
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioCtx.createMediaStreamSource(micStream);
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.value = 2.5; // Gain coefficient (2.5 times louder)
+            const destination = audioCtx.createMediaStreamAudioDestination();
+            
+            source.connect(gainNode);
+            gainNode.connect(destination);
+            
+            mediaRecorder = new MediaRecorder(destination.stream);
             chunks = [];
             
             mediaRecorder.ondataavailable = e => chunks.push(e.data);
@@ -4091,6 +4122,10 @@ with open(VOICE_HTML_PATH, "w", encoding="utf-8") as f:
                 const b64 = reader.result.split(',')[1];
                 sendMessage("streamlit:setComponentValue", {value: b64});
               };
+              
+              if (audioCtx && audioCtx.state !== 'closed') {
+                audioCtx.close();
+              }
             };
 
             mediaRecorder.start();
@@ -4101,8 +4136,12 @@ with open(VOICE_HTML_PATH, "w", encoding="utf-8") as f:
             alert("Mikrofon izni verilmedi veya bulunamadı!");
           }
         } else {
-          mediaRecorder.stop();
-          mediaRecorder.stream.getTracks().forEach(t => t.stop());
+          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+          }
+          if (micStream) {
+            micStream.getTracks().forEach(t => t.stop());
+          }
           recording = false;
           btn.style.background = "#2ecc71";
           btn.innerHTML = '🎤 Sesi Gönder';
@@ -4212,8 +4251,21 @@ if not st.session_state.user_logged_in and not st.session_state.get("trigger_cle
                 
                 c_passkey = cookies.get("kaplan_passkey")
                 c_page = cookies.get("kaplan_current_page", "chat")
+                c_last_active = cookies.get("kaplan_last_active")
                 
-                if c_passkey and c_passkey != "NOT_FOUND":
+                # Check 5 minutes (300 seconds) inactivity timeout
+                import time
+                current_epoch = time.time()
+                is_inactive_timeout = False
+                if c_last_active:
+                    try:
+                        elapsed_time = current_epoch - float(c_last_active)
+                        if elapsed_time > 300: # 5 minutes inactivity
+                            is_inactive_timeout = True
+                    except Exception:
+                        pass
+                
+                if c_passkey and c_passkey != "NOT_FOUND" and not is_inactive_timeout:
                     user_ref_temp = db.collection("users").document(c_passkey)
                     user_snap = user_ref_temp.get()
                     if user_snap.exists:
@@ -4593,6 +4645,7 @@ else:
         try:
             user_ref.update({"son_gorulme_zamani": firestore.SERVER_TIMESTAMP})
             st.session_state.last_seen_update_sec = now_epoch
+            get_local_storage(action="set", key_name="kaplan_last_active", value=str(int(now_epoch)), key="last_active_save_comp")
         except Exception:
             pass
 
@@ -5181,6 +5234,8 @@ else:
             if st.button("💾 Temayı Kaydet"):
                 yeni_tema = TEMALAR[secilen_tema_adi]
                 user_ref.update({"tema": yeni_tema})
+                st.session_state.pop("cached_user_doc", None)
+                st.session_state.force_sync_db = True
                 st.session_state.tema = yeni_tema
                 st.session_state.tema_rengi = TEMA_RENKLERI.get(yeni_tema, "rgba(20,20,40,0.85)")
                 st.success("✅ Tema kaydedildi!")
@@ -5546,22 +5601,10 @@ else:
                             _u_takipciler = u_data.get("takipciler", [])
                             _u_takip_ettiklerim = u_data.get("takip_ettiklerim", [])
 
-                            def resolve_and_format_usernames(id_list):
-                                if not id_list: return "Liste boş"
-                                names = []
-                                for some_id in id_list:
-                                    try:
-                                        some_doc = db.collection("users").document(some_id).get()
-                                        if some_doc.exists:
-                                            names.append(some_doc.to_dict().get("isim", "Bilinmiyor"))
-                                    except Exception:
-                                        pass
-                                return ", ".join(names) if names else "Kimse bulunamadı"
-
                             with st.expander(f"🤝 Sosyal Bilgiler (Arkadaş: {len(_u_arkadaslar)} | Takipçi: {len(_u_takipciler)} | Takip: {len(_u_takip_ettiklerim)})"):
-                                st.markdown(f"**Arkadaşlar ({len(_u_arkadaslar)}):** {resolve_and_format_usernames(_u_arkadaslar)}")
-                                st.markdown(f"**Takipçiler ({len(_u_takipciler)}):** {resolve_and_format_usernames(_u_takipciler)}")
-                                st.markdown(f"**Takip Edilenler ({len(_u_takip_ettiklerim)}):** {resolve_and_format_usernames(_u_takip_ettiklerim)}")
+                                st.markdown(f"👥 **Arkadaş Sayısı:** `{len(_u_arkadaslar)}`")
+                                st.markdown(f"📈 **Takipçi Sayısı:** `{len(_u_takipciler)}`")
+                                st.markdown(f"📉 **Takip Edilen Sayısı:** `{len(_u_takip_ettiklerim)}`")
                             if is_online: st.markdown("🟢 **Çevrimiçi**")
                             else:
                                 st.markdown("🔴 **Çevrimdışı**")
@@ -5855,16 +5898,6 @@ else:
                     st.rerun()
                 except Exception as e:
                     st.error(f"❌ Duyuru gönderilirken teknik bir hata oluştu: {e}")
-
-        st.divider()
-
-        if is_kurucu:
-            with st.expander("📢 Tepe Duyurusu (Herkesin Göreceği Yazı) Düzenle", expanded=True):
-                st.markdown("### 👑 Kurucu Özel: Tepe Duyuru Bandı Editörü (CapCut Editör)")
-                st.info("Tepe duyurusunu tam ekran, CapCut benzeri interaktif bir editörde dilediğiniz gibi düzenleyin. Bu şık tam ekran sayfa sayesinde tüm butonlar ve önizleme ekranı ekran taşması yaşamadan tam sığacaktır!")
-                if st.button("🎨 CapCut Editörünü Tam Ekran Aç", key="open_capcut_full", type="primary", use_container_width=True):
-                    st.session_state.current_page = "admin_tepe_duyuru"
-                    st.rerun()
                 
             # Skip the older inline embedded block to avoid redundancy and layout overflows
             if False:
@@ -8000,7 +8033,8 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                     f"5. Eğer normal bir kullanıcı ise ona samimi ve asil bir duruşla 'Reis', 'Dostum' veya doğrudan ismiyle hitap et.\n\n"
                     "⚠️ EK KURALLAR:\n"
                     "- Geçmiş sohbetlerdeki eski veya hatalı isimleri tamamen unut.\n"
-                    "- Gelişmeler, haberler, güncel olaylar, spor müsabakaları ve futbol şampiyonlukları (örneğin 2024, 2025 veya 2026 Süper Lig şampiyonu kim gibi) hakkındaki soruları cevaplarken, kesinlikle ezbere tahmin veya uydurma bilgiler verme. Eğer 'LIVE CHROME INTERNET SEARCH RESULTS' kısmında aradığın spesifik, onaylanmış güncel cevap yoksa veya henüz bu şampiyona/sezon bitmemişse, bunu dürüstçe belirt. Kesinlikle uydurma şampiyon (Fenerbahçe vb.) söyleyerek yalan konuşma. Tamamen canlı internet arama sonuçlarındaki gerçekçi verilere sadık kal.\n"
+                    "- Gelişmeler, haberler, güncel olaylar, spor müsabakaları ve futbol şampiyonlukları (örneğin 2024, 2025 veya 2026 Süper Lig şampiyonu kim gibi) hakkındaki soruları cevaplarken, kesinlikle ezbere tahmin veya uydurma bilgiler verme. Eğer soru gelecek yılların spor müsabakaları, Süper Lig şampiyonlukları veya henüz tamamlanmamış/kesinleşmemiş gelecek etkinlikleriyle ilgiliyse ve güncel internet arama sonuçlarında net, resmi bir şampiyonluk ilan edilmemişse (çünkü o sezon henüz tamamlanmamıştır), kesinlikle ve kesinlikle 'Bu sezon henüz tamamlanmadığı için şampiyon belli değildir' de. Kesinlikle kendi kendine şampiyon uydurma (örneğin Fenerbahçe, Galatasaray vb. gibi tahminlerde bulunma). Sadece canlı internet aramalarında doğrulanmış gerçekleri söyle, asla yalan konuşma!\n"
+                    "- Mizah ve Espri Anlayışı: Tıpkı yeni ChatGPT gibi, zeki, yerinde ve doğal bir mizah anlayışına sahip ol. Her mesaja zırt pırt espri sıkıştırma. Sadece kullanıcı seninle samimi olmaya başlarsa veya ortam/konu buna çok elverişliyse 'gerektiği yerde' ince, zekice espriler yap. Eğer kullanıcı esprilerden rahatsız olduğunu belirtirse veya daha ciddi bir tonda konuşuyorsa, espri yapmayı tamamen bırak ve son derece ciddi/saygın bir tona geç.\n"
                     "- Her koşulda kaplan gibi dik, asil, kararlı, zeki ve kurallara bağlı bir yapay zeka ol.\n"
                     "- Kesinlikle ve hiçbir koşulda, yıldızlar (asterisk - *) veya parantezler içinde fiziksel hareketler, jestler, mimikler veya rol yapma eylemleri (*eğilerek selam verir*, *saygıyla eğilir*, *başını eğer* vb.) yazma, bunları canlandırma. Doğrudan ve asil bir konuşma yürüt, fiziksel hareket betimlemelerinden tamamen kaçın.\n\n"
                     "📝 TÜRKÇE KARAKTER DÜZELTME TALİMATI:\n"
@@ -8518,7 +8552,27 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
         # ═══════════════════════════════════════════════════
         elif st.session_state.current_page == "dm_chat":
             if st.session_state.get("play_send_sound", False):
-                st.markdown('<audio autoplay style="display:none;"><source src="https://assets.mixkit.co/active_storage/sfx/1344/1344-84.wav" type="audio/wav"></audio>', unsafe_allow_html=True)
+                # Pleasant synthetic wave blip sound using Web Audio API (instant and ultra reliable)
+                st.components.v1.html("""
+                <script>
+                (function() {
+                  try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.12);
+                  } catch(e) {}
+                })();
+                </script>
+                """, height=0, width=0)
                 st.session_state.play_send_sound = False
 
             dm_partner_id = st.session_state.get("dm_partner_id", "")
@@ -8611,6 +8665,58 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                 if dm_doc_snap.exists:
                     dm_mesajlar = dm_doc_snap.to_dict().get("mesajlar", [])
 
+                # Track message count to play receive double-blip sound
+                msg_count_key = f"prev_msg_count_{dm_conv_id}"
+                prev_count = st.session_state.get(msg_count_key, None)
+                current_count = len(dm_mesajlar)
+                
+                play_receive_sound = False
+                if prev_count is not None and current_count > prev_count:
+                    # Check if any new message was sent by the partner
+                    new_msgs = dm_mesajlar[prev_count:]
+                    if any(m.get("gonderen") != uid for m in new_msgs):
+                        play_receive_sound = True
+                
+                # Update saved count
+                st.session_state[msg_count_key] = current_count
+                
+                if play_receive_sound:
+                    # Pleasant synthetic double blip using Web Audio API
+                    st.components.v1.html("""
+                    <script>
+                    (function() {
+                      try {
+                        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                        const osc1 = ctx.createOscillator();
+                        const gain1 = ctx.createGain();
+                        osc1.type = 'sine';
+                        osc1.frequency.setValueAtTime(800, ctx.currentTime);
+                        gain1.gain.setValueAtTime(0.08, ctx.currentTime);
+                        gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+                        osc1.connect(gain1);
+                        gain1.connect(ctx.destination);
+                        osc1.start();
+                        osc1.stop(ctx.currentTime + 0.08);
+
+                        setTimeout(() => {
+                          try {
+                            const osc2 = ctx.createOscillator();
+                            const gain2 = ctx.createGain();
+                            osc2.type = 'sine';
+                            osc2.frequency.setValueAtTime(1000, ctx.currentTime);
+                            gain2.gain.setValueAtTime(0.08, ctx.currentTime);
+                            gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                            osc2.connect(gain2);
+                            gain2.connect(ctx.destination);
+                            osc2.start();
+                            osc2.stop(ctx.currentTime + 0.1);
+                          } catch (e) {}
+                        }, 80);
+                      } catch(e) {}
+                    })();
+                    </script>
+                    """, height=0, width=0)
+
                 # Mesajları göster
                 dm_container = st.container(height=400)
                 
@@ -8682,13 +8788,16 @@ Yapay zeka ve gerçek zamanlı iletişim teknolojilerini birleştirerek Türkiye
                 # Mesaj gönderme
                 st.markdown("---")
                 if "dm_input_key" not in st.session_state: st.session_state.dm_input_key = 0
-                current_dm_inp_key = f"dm_text_input_{st.session_state.get('dm_input_key', 0)}"
+                current_dm_inp_key = f"dm_text_form_{st.session_state.get('dm_input_key', 0)}"
 
-                col_dm_input, col_dm_send = st.columns([5, 1.2])
-                with col_dm_input:
-                    dm_yeni_mesaj = st.text_area("Mesaj yaz...", key=current_dm_inp_key, label_visibility="collapsed", placeholder="Mesajınız...", height=70)
-                with col_dm_send:
-                    if st.button("📤 Gönder", key="dm_send_btn", use_container_width=True):
+                with st.form(key=current_dm_inp_key, clear_on_submit=True):
+                    col_dm_input, col_dm_send = st.columns([5, 1.2])
+                    with col_dm_input:
+                        dm_yeni_mesaj = st.text_input("Mesaj yaz...", label_visibility="collapsed", placeholder="Mesajınız...")
+                    with col_dm_send:
+                        send_clicked = st.form_submit_button("📤 Gönder", use_container_width=True)
+                    
+                    if send_clicked:
                         if dm_yeni_mesaj.strip():
                             st.session_state.play_send_sound = True
                             zaman_str = get_tr_time().strftime("%H:%M")
