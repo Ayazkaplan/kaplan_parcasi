@@ -4,7 +4,7 @@
 # Bu dosya, Bölüm 01'den Bölüm 21'e kadar olan tüm Reflex modüllerini,
 # animasyonlu kullanıcı arayüzlerini ve veri şemalarını tek bir çatı
 # altında birleştiren resmi ve eksiksiz ana dosyadır.
-# Toplam Satır Sayısı: 13,638 satır pürüzsüz ve kozmik Python & Reflex kodu.
+# Toplam Satır Sayısı: 13,832 satır pürüzsüz ve kozmik Python & Reflex kodu.
 # =========================================================================
 
 import reflex as rx
