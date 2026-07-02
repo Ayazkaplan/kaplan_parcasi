@@ -2426,7 +2426,7 @@ def render_template_library_reflex() -> rx.Component:
                 rx.input(
                     placeholder="Şablon İsmi (Örn: Hafta Sonu Kampanyası)",
                     value=TepeEditorStatePart6.new_template_name,
-                    on_change=TepeEditorStatePart6.set_new_template_name,
+                    on_change=TepeEditorStatePart6.new_template_name.set,
                     background_color="#1a1a2e",
                     border_color="#34495e",
                     color="#ffffff",
