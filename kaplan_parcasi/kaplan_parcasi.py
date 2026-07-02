@@ -2283,6 +2283,10 @@ class TepeEditorStatePart6(rx.State):
     # Yeni Taslak İsmi Girdisi
     new_template_name: str = ""
 
+    def set_new_template_name(self, value: str):
+        """Şablon adı giriş alanı için setter"""
+        self.new_template_name = value
+
     def handle_wheel_zoom(self, delta_y: int):
         """Fare tekerleğiyle (scroll wheel) yazı boyutunu büyütme/küçültme"""
         if delta_y < 0:
@@ -2426,7 +2430,7 @@ def render_template_library_reflex() -> rx.Component:
                 rx.input(
                     placeholder="Şablon İsmi (Örn: Hafta Sonu Kampanyası)",
                     value=TepeEditorStatePart6.new_template_name,
-                    on_change=TepeEditorStatePart6.new_template_name.set,
+                    on_change=TepeEditorStatePart6.set_new_template_name,
                     background_color="#1a1a2e",
                     border_color="#34495e",
                     color="#ffffff",
