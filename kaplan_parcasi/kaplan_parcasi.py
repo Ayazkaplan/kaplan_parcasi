@@ -84,7 +84,7 @@ class TepeEditorState(rx.State):
             # Firestore veritabanına kaydetme simülasyonu / tetikleyicisi
             # db.collection("settings").document("global_announcement").set(parsed_payload)
             
-            return rx.toast("🚀 Değişiklikler başarıyla kaydedildi ve canlıya alındı!", type="success")
+            return rx.toast("🚀 Değişiklikler başarıyla kaydedildi ve canlıya alındı!")
         except Exception as e:
             return rx.window_alert(f"Kayıt Hatası: {str(e)}")
 
@@ -1442,7 +1442,7 @@ class TepeEditorStatePart3(rx.State):
         """
         word = self.paint_word.strip()
         if not word:
-            return rx.toast("⚠️ Lütfen boyamak istediğiniz kelimeyi girin.", type="warning")
+            return rx.toast("⚠️ Lütfen boyamak istediğiniz kelimeyi girin.")
         
         text_lower = self.text.lower()
         word_lower = word.lower()
@@ -1463,19 +1463,19 @@ class TepeEditorStatePart3(rx.State):
             
         if found:
             self.paint_word = ""  # Girdiyi temizle
-            return rx.toast(f"🎉 '{word}' kelimesi başarıyla boyandı!", type="success")
+            return rx.toast(f"🎉 '{word}' kelimesi başarıyla boyandı!")
         else:
-            return rx.toast(f"❌ '{word}' kelimesi ana metin içerisinde bulunamadı.", type="error")
+            return rx.toast(f"❌ '{word}' kelimesi ana metin içerisinde bulunamadı.")
 
     def reset_char_colors(self):
         """Boyanmış harf renklerini temizler ve varsayılana döndürür"""
         self.char_colors = []
-        return rx.toast("🔄 Tüm özel harf renkleri temizlendi.", type="info")
+        return rx.toast("🔄 Tüm özel harf renkleri temizlendi.")
 
     def simulate_publish(self):
         """Değişiklikleri kaydeder ve canlı sunucuya gönderir (Publish To Live Simülasyonu)"""
         # Burada Firestore veri güncellemesi ve backend entegrasyonu simüle edilir
-        return rx.toast("🚀 Değişiklikler başarıyla canlıya alındı!", type="success")
+        return rx.toast("🚀 Değişiklikler başarıyla canlıya alındı!")
 
 
 def render_canvas_area_reflex() -> rx.Component:
@@ -1757,20 +1757,20 @@ class TepeEditorStatePart4(rx.State):
         self.displacement_y = 0
         self.font_size = 20
         self.rotation = 0
-        return rx.toast("🔄 Tüm stüdyo ayarları fabrika varsayılanlarına sıfırlandı!", type="info")
+        return rx.toast("🔄 Tüm stüdyo ayarları fabrika varsayılanlarına sıfırlandı!")
 
     def apply_bulk_color(self):
         """Tüm karakterleri seçilen renge boyar"""
         full_text = " ".join(self.multi_texts)
         self.char_colors = [self.bulk_color] * len(full_text)
-        return rx.toast("🎨 Tüm harfler toplu olarak boyandı!", type="success")
+        return rx.toast("🎨 Tüm harfler toplu olarak boyandı!")
 
     def apply_word_highlight(self):
         """Belirli bir kelimeyi boyar"""
         full_text = " ".join(self.multi_texts)
         word = self.paint_word_target.strip()
         if not word:
-            return rx.toast("⚠️ Boyanacak kelime boş olamaz!", type="warning")
+            return rx.toast("⚠️ Boyanacak kelime boş olamaz!")
         
         text_lower = full_text.lower()
         word_lower = word.lower()
@@ -1789,9 +1789,9 @@ class TepeEditorStatePart4(rx.State):
 
         if found:
             self.paint_word_target = ""
-            return rx.toast(f"🎉 '{word}' kelimesi boyandı!", type="success")
+            return rx.toast(f"🎉 '{word}' kelimesi boyandı!")
             
-        return rx.toast(f"❌ '{word}' kelimesi metinde bulunamadı.", type="error")
+        return rx.toast(f"❌ '{word}' kelimesi metinde bulunamadı.")
 
 
 def render_indicators_and_toolbar_reflex() -> rx.Component:
@@ -2059,7 +2059,7 @@ class TepeEditorStatePart5(rx.State):
     def trigger_lock_warning(self):
         """Kilitliyken sürüklenmeye çalışıldığında uyarı verir"""
         if not self.drag_unlocked:
-            return rx.toast("⚠️ Lütfen çift tıklayarak ekran kilidini açın!", type="warning")
+            return rx.toast("⚠️ Lütfen çift tıklayarak ekran kilidini açın!")
 
     def sync_char_colors(self):
         """Metin uzunluğu değiştiğinde harf renk matrisini senkronize eder"""
@@ -2309,7 +2309,7 @@ class TepeEditorStatePart6(rx.State):
         self.y = 0
         self.size = 20
         self.rot = 0
-        return rx.toast("🎯 Pozisyon ve boyut başarıyla sıfırlandı!", type="info")
+        return rx.toast("🎯 Pozisyon ve boyut başarıyla sıfırlandı!")
 
     def initialize_blank_design(self):
         """
@@ -2321,12 +2321,12 @@ class TepeEditorStatePart6(rx.State):
         self.size = 20
         self.rot = 0
         self.drag_unlocked = True
-        return rx.toast("➕ Yepyeni ve sıfır bir tasarım taslağı başlatıldı!", type="success")
+        return rx.toast("➕ Yepyeni ve sıfır bir tasarım taslağı başlatıldı!")
 
     def save_current_as_template(self):
         """Mevcut tasarımı taslak kütüphanesine kaydeder"""
         if not self.new_template_name.strip():
-            return rx.toast("⚠️ Lütfen şablon için bir isim girin!", type="warning")
+            return rx.toast("⚠️ Lütfen şablon için bir isim girin!")
             
         new_draft = {
             "id": f"draft_{len(self.saved_templates) + 1}",
@@ -2340,19 +2340,19 @@ class TepeEditorStatePart6(rx.State):
         }
         self.saved_templates.append(new_draft)
         self.new_template_name = ""
-        return rx.toast("💾 Tasarımınız başarıyla şablon kütüphanesine eklendi!", type="success")
+        return rx.toast("💾 Tasarımınız başarıyla şablon kütüphanesine eklendi!")
 
     def delete_template(self, template_id: str):
         """Seçilen şablonu siler"""
         self.saved_templates = [t for t in self.saved_templates if t["id"] != template_id]
-        return rx.toast("🗑️ Şablon başarıyla silindi.", type="info")
+        return rx.toast("🗑️ Şablon başarıyla silindi.")
 
     def load_template(self, template_id: str):
         """Seçilen şablonu editöre yükler"""
         template = next((t for t in self.saved_templates if t["id"] == template_id), None)
         if template:
             self.size = template.get("size", 20)
-            return rx.toast(f"📂 '{template['name']}' şablonu başarıyla editöre yüklendi!", type="success")
+            return rx.toast(f"📂 '{template['name']}' şablonu başarıyla editöre yüklendi!")
 
 
 def render_touch_gestures_control_reflex() -> rx.Component:
@@ -2549,7 +2549,7 @@ class TepeEditorStatePart7(rx.State):
         """Mevcut aktif duyuru ayarlarını yeni bir taslak olarak Firestore/Yerel listeye kaydeder"""
         title = self.new_taslak_title.strip()
         if not title:
-            return rx.toast("⚠️ Lütfen taslağınıza açıklayıcı bir isim belirleyin!", type="warning")
+            return rx.toast("⚠️ Lütfen taslağınıza açıklayıcı bir isim belirleyin!")
             
         current_time_str = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         
@@ -2569,13 +2569,13 @@ class TepeEditorStatePart7(rx.State):
         
         self.saved_drafts.insert(0, new_draft) # Başa ekle (Yeni olan en üstte)
         self.new_taslak_title = ""
-        return rx.toast(f"✅ '{title}' ismiyle yeni taslak kütüphaneye başarıyla kaydedildi!", type="success")
+        return rx.toast(f"✅ '{title}' ismiyle yeni taslak kütüphaneye başarıyla kaydedildi!")
 
     def load_draft_to_editor(self, draft_id: str) -> dict:
         """Kayıtlı taslağı seçip editöre yükler"""
         draft = next((d for d in self.saved_drafts if d["id"] == draft_id), None)
         if draft:
-            rx.toast(f"✅ '{draft['taslak_adi']}' taslağı başarıyla editöre yüklendi!", type="success")
+            rx.toast(f"✅ '{draft['taslak_adi']}' taslağı başarıyla editöre yüklendi!")
             return draft
         return {}
 
@@ -2584,12 +2584,12 @@ class TepeEditorStatePart7(rx.State):
         draft = next((d for d in self.saved_drafts if d["id"] == draft_id), None)
         if draft:
             # Burada canlı duyuru bandı ayarlarını güncelleme tetiklenir
-            return rx.toast(f"🎉 '{draft['taslak_adi']}' başarıyla sitenin en üstüne canlı yayına alındı!", type="success")
+            return rx.toast(f"🎉 '{draft['taslak_adi']}' başarıyla sitenin en üstüne canlı yayına alındı!")
 
     def delete_draft_permanently(self, draft_id: str):
         """Seçilen taslağı kalıcı olarak veritabanından siler"""
         self.saved_drafts = [d for d in self.saved_drafts if d["id"] != draft_id]
-        return rx.toast("🗑️ Taslak kütüphaneden başarıyla kalıcı olarak silindi.", type="success")
+        return rx.toast("🗑️ Taslak kütüphaneden başarıyla kalıcı olarak silindi.")
 
 
 # =========================================================================
@@ -2896,9 +2896,9 @@ class TepeEditorStatePart8(rx.State):
         self.moderation_checked = True
         self.moderation_result_clean = not self.kufur_var_mi_local(self.moderation_text)
         if self.moderation_result_clean:
-            return rx.toast("✅ Metin temiz! Herhangi bir küfür veya argo algılanmadı.", type="success")
+            return rx.toast("✅ Metin temiz! Herhangi bir küfür veya argo algılanmadı.")
         else:
-            return rx.toast("🚨 Dikkat! Metinde uygunsuz içerik tespit edildi.", type="error")
+            return rx.toast("🚨 Dikkat! Metinde uygunsuz içerik tespit edildi.")
 
     def kufur_var_mi_local(self, text: str) -> bool:
         """Gelişmiş Türkçe ve İngilizce ağır küfür algılama algoritması (Satır 3643-3679)"""
@@ -3502,19 +3502,19 @@ class TepeEditorStatePart9(rx.State):
         q = self.search_query.strip()
         if not q:
             self.is_searching = False
-            return rx.toast("⚠️ Lütfen arama sorgusu girin!", type="warning")
+            return rx.toast("⚠️ Lütfen arama sorgusu girin!")
         
         # Matematik kontrolü yap
         math_res = check_math_in_query_local(q)
         if math_res:
             self.math_solved_output = math_res
-            rx.toast("🧮 Arama sorgusunda matematiksel işlem çözüldü!", type="info")
+            rx.toast("🧮 Arama sorgusunda matematiksel işlem çözüldü!")
         else:
             self.math_solved_output = ""
             
         # Web arama yap
         self.web_results = web_ara_local(q)
-        rx.toast("🔍 Web arama sonuçları başarıyla yüklendi!", type="success")
+        rx.toast("🔍 Web arama sonuçları başarıyla yüklendi!")
         self.is_searching = False
 
     def run_youtube_search(self):
@@ -3523,13 +3523,13 @@ class TepeEditorStatePart9(rx.State):
         q = self.search_query.strip()
         if not q:
             self.is_searching = False
-            return rx.toast("⚠️ Lütfen arama sorgusu girin!", type="warning")
+            return rx.toast("⚠️ Lütfen arama sorgusu girin!")
             
         self.youtube_results = youtube_ara_local(q)
         if self.youtube_results:
-            rx.toast(f"🎥 {len(self.youtube_results)} adet YouTube videosu bulundu!", type="success")
+            rx.toast(f"🎥 {len(self.youtube_results)} adet YouTube videosu bulundu!")
         else:
-            rx.toast("❌ Video bulunamadı.", type="error")
+            rx.toast("❌ Video bulunamadı.")
         self.is_searching = False
 
     def solve_direct_math(self):
@@ -3537,19 +3537,19 @@ class TepeEditorStatePart9(rx.State):
         res = check_math_in_query_local(self.math_query)
         if res:
             self.math_solved_output = res
-            rx.toast("🧮 İşlem başarıyla sonuçlandırıldı!", type="success")
+            rx.toast("🧮 İşlem başarıyla sonuçlandırıldı!")
         else:
             self.math_solved_output = "Herhangi bir matematiksel denklem algılanamadı."
 
     def translate_firebase_error(self):
         """Seçilen Firebase hata kodunun Türkçe karşılığını gösterir"""
         self.translated_error = firebase_hata_cevir_local(self.raw_error_code)
-        rx.toast("🔄 Hata kodu başarıyla Türkçe'ye çevrildi!", type="success")
+        rx.toast("🔄 Hata kodu başarıyla Türkçe'ye çevrildi!")
 
     def upload_voice_data(self, b64_data: str):
         """Ses kaydı yapıldığında iframe'den gelen base64 verisini sunucuya yükler"""
         self.recorded_voice_b64 = b64_data
-        return rx.toast("🎤 Ses verisi başarıyla sunucuya kaydedildi!", type="success")
+        return rx.toast("🎤 Ses verisi başarıyla sunucuya kaydedildi!")
 
 
 # =========================================================================
@@ -3928,7 +3928,7 @@ class TepeEditorStatePart10(rx.State):
         self.is_banned = False
         self.ban_seconds_left = 0
         self.ban_timer_active = False
-        return rx.toast("👋 Başarıyla çıkış yapıldı!", type="info")
+        return rx.toast("👋 Başarıyla çıkış yapıldı!")
 
     def run_ban_countdown(self):
         """Kullanıcının geçici ban cezası için saniyelik geri sayımı çalıştırır"""
@@ -3937,7 +3937,7 @@ class TepeEditorStatePart10(rx.State):
             if self.ban_seconds_left <= 0:
                 self.is_banned = False
                 self.ban_timer_active = False
-                return rx.toast("🔓 Engelleme süreniz doldu! Giriş yapmayı tekrar deneyebilirsiniz.", type="success")
+                return rx.toast("🔓 Engelleme süreniz doldu! Giriş yapmayı tekrar deneyebilirsiniz.")
             return rx.call_later(1.0, self.run_ban_countdown)
 
     def login_user(self):
@@ -3946,7 +3946,7 @@ class TepeEditorStatePart10(rx.State):
         email_clean = self.email.strip().lower()
         
         if not email_clean or not self.password:
-            return rx.toast("⚠️ Lütfen e-posta ve şifrenizi eksiksiz girin!", type="warning")
+            return rx.toast("⚠️ Lütfen e-posta ve şifrenizi eksiksiz girin!")
             
         # Firebase login simülasyonu / API çağrısı
         try:
@@ -3975,13 +3975,13 @@ class TepeEditorStatePart10(rx.State):
                         self.ban_seconds_left = 45
                         self.ban_timer_active = True
                         rx.call_later(1.0, self.run_ban_countdown)
-                        return rx.toast("❌ Hesabınız geçici olarak pasifleştirilmiştir!", type="error")
+                        return rx.toast("❌ Hesabınız geçici olarak pasifleştirilmiştir!")
                         
                     self.user_logged_in = True
-                    return rx.toast(f"🎉 Hoş geldin, {self.user_data['isim']}!", type="success")
+                    return rx.toast(f"🎉 Hoş geldin, {self.user_data['isim']}!")
                 else:
                     err_msg = resp.json().get("error", {}).get("message", "INVALID_LOGIN_CREDENTIALS")
-                    return rx.toast(f"❌ Giriş Başarısız: {err_msg}", type="error")
+                    return rx.toast(f"❌ Giriş Başarısız: {err_msg}")
             else:
                 # API Key olmadığında güvenli local geliştirici girişi
                 if email_clean and len(self.password) >= 6:
@@ -3994,11 +3994,11 @@ class TepeEditorStatePart10(rx.State):
                         "durum": "Aktif"
                     }
                     self.user_logged_in = True
-                    return rx.toast(f"🎉 Geliştirici Modunda Giriş Başarılı: {self.user_data['isim']}", type="success")
+                    return rx.toast(f"🎉 Geliştirici Modunda Giriş Başarılı: {self.user_data['isim']}")
                 else:
-                    return rx.toast("❌ Şifre en az 6 karakter olmalıdır!", type="error")
+                    return rx.toast("❌ Şifre en az 6 karakter olmalıdır!")
         except Exception as e:
-            return rx.toast(f"🔌 Bağlantı Hatası: {str(e)}", type="error")
+            return rx.toast(f"🔌 Bağlantı Hatası: {str(e)}")
 
     def register_user(self):
         """Sisteme yeni bir Kaplan kullanıcısı kaydeder"""
@@ -4006,10 +4006,10 @@ class TepeEditorStatePart10(rx.State):
         name_clean = self.register_name.strip()
         
         if not email_clean or not self.password or not name_clean:
-            return rx.toast("⚠️ Lütfen kayıt için tüm alanları doldurun!", type="warning")
+            return rx.toast("⚠️ Lütfen kayıt için tüm alanları doldurun!")
             
         if len(name_clean) < 3 or len(name_clean) > 25:
-            return rx.toast("⚠️ İsim 3 ile 25 karakter arasında olmalıdır!", type="warning")
+            return rx.toast("⚠️ İsim 3 ile 25 karakter arasında olmalıdır!")
             
         # Kayıt simülasyonu
         try:
@@ -4019,15 +4019,15 @@ class TepeEditorStatePart10(rx.State):
                 payload = {"email": email_clean, "password": self.password, "returnSecureToken": True}
                 resp = requests.post(url, json=payload, timeout=10)
                 if resp.status_code == 200:
-                    return rx.toast("✅ Kayıt başarıyla tamamlandı! Giriş yapabilirsiniz.", type="success")
+                    return rx.toast("✅ Kayıt başarıyla tamamlandı! Giriş yapabilirsiniz.")
                 else:
                     err_msg = resp.json().get("error", {}).get("message", "EMAIL_EXISTS")
-                    return rx.toast(f"❌ Kayıt Hatası: {err_msg}", type="error")
+                    return rx.toast(f"❌ Kayıt Hatası: {err_msg}")
             else:
                 # Geliştirici kayıt simülasyonu
-                return rx.toast(f"✅ Geliştirici Modu: '{name_clean}' başarıyla simüle edilerek kaydedildi!", type="success")
+                return rx.toast(f"✅ Geliştirici Modu: '{name_clean}' başarıyla simüle edilerek kaydedildi!")
         except Exception as e:
-            return rx.toast(f"❌ İşlem Sırasında Hata: {str(e)}", type="error")
+            return rx.toast(f"❌ İşlem Sırasında Hata: {str(e)}")
 
     def request_password_reset(self):
         """Kullanıcının e-posta ve adı uyuşuyorsa 15 dakikalık şifre sıfırlama bağlantısı üretir"""
@@ -4035,28 +4035,28 @@ class TepeEditorStatePart10(rx.State):
         username_clean = self.reset_username.strip()
         
         if not email_clean or not username_clean:
-            return rx.toast("⚠️ Doğrulama için hem e-posta hem de kullanıcı adını girmelisiniz!", type="warning")
+            return rx.toast("⚠️ Doğrulama için hem e-posta hem de kullanıcı adını girmelisiniz!")
             
         # Şifre sıfırlama token oluşturma (app.py satır 4940-4960)
         generated_token = str(uuid.uuid4())[:18]
         self.generated_reset_link = f"reset_token={generated_token}"
         
-        return rx.toast("✅ Şifre sıfırlama talebiniz doğrulandı. Aşağıdaki bağlantıyı kullanabilirsiniz!", type="success")
+        return rx.toast("✅ Şifre sıfırlama talebiniz doğrulandı. Aşağıdaki bağlantıyı kullanabilirsiniz!")
 
     def apply_password_reset(self):
         """Üretilen sıfırlama tokenı ile kullanıcının şifresini günceller"""
         if len(self.reset_new_password) < 6:
-            return rx.toast("❌ Yeni şifre en az 6 karakter olmalıdır!", type="error")
+            return rx.toast("❌ Yeni şifre en az 6 karakter olmalıdır!")
             
         if self.reset_new_password != self.reset_new_password_confirm:
-            return rx.toast("❌ Şifreler eşleşmiyor!", type="error")
+            return rx.toast("❌ Şifreler eşleşmiyor!")
             
         # Şifre başarıyla güncellendi
         self.show_reset_view = False
         self.active_reset_token = ""
         self.reset_new_password = ""
         self.reset_new_password_confirm = ""
-        return rx.toast("✅ Şifreniz başarıyla güncellendi! Giriş yapabilirsiniz.", type="success")
+        return rx.toast("✅ Şifreniz başarıyla güncellendi! Giriş yapabilirsiniz.")
 
 
 # =========================================================================
@@ -4402,7 +4402,7 @@ class TepeEditorStatePart11(rx.State):
     def cancel_delete_account(self):
         """Hesap silme işleminden vazgeçer"""
         self.confirm_delete_self = False
-        rx.toast("ℹ️ Hesap silme işleminden vazgeçildi.", type="info")
+        rx.toast("ℹ️ Hesap silme işleminden vazgeçildi.")
 
     def delete_own_account_permanently(self):
         """Kullanıcının kendi hesabını veritabanından kalıcı olarak siler ve oturumu kapatır"""
@@ -4410,7 +4410,7 @@ class TepeEditorStatePart11(rx.State):
         self.sidebar_settings_open = False
         
         # Temizleme Lojikleri
-        rx.toast("🗑️ Hesabınız ve tüm verileriniz başarıyla kalıcı olarak silindi!", type="success")
+        rx.toast("🗑️ Hesabınız ve tüm verileriniz başarıyla kalıcı olarak silindi!")
         return rx.redirect("/") # Başlangıç ekranına yönlendir
 
     def check_user_ban_status_instant(self):
@@ -4422,9 +4422,9 @@ class TepeEditorStatePart11(rx.State):
             if time.time() >= ban_bitis_epoch:
                 # Ban kaldır ve hesabı aktifleştir
                 self.user_durum = "Aktif"
-                rx.toast("🔓 Engellemeniz sona erdi! Hesabınız başarıyla aktifleştirildi.", type="success")
+                rx.toast("🔓 Engellemeniz sona erdi! Hesabınız başarıyla aktifleştirildi.")
             else:
-                rx.toast("⚠️ Hesabınız hala pasif durumdadır. Lütfen sürenin dolmasını bekleyin.", type="error")
+                rx.toast("⚠️ Hesabınız hala pasif durumdadır. Lütfen sürenin dolmasını bekleyin.")
 
 
 # =========================================================================
@@ -4463,7 +4463,7 @@ def render_sidebar_settings_panel_reflex() -> rx.Component:
         # Çıkış Yap Butonu
         rx.button(
             "Çıkış Yap 🚪",
-            on_click=lambda: rx.toast("👋 Oturum başarıyla sonlandırıldı!", type="info"),
+            on_click=lambda: rx.toast("👋 Oturum başarıyla sonlandırıldı!"),
             background_color="#e74c3c",
             color="#ffffff",
             _hover={"background_color": "#c0392b"},
@@ -4551,7 +4551,7 @@ def render_sidebar_accounts_submenu_reflex() -> rx.Component:
         # Arkadaş Ara Butonu
         rx.button(
             "👥 Arkadaş Bul & Ara",
-            on_click=lambda: rx.toast("🔍 Arkadaş Arama sayfası aktif edildi!", type="info"),
+            on_click=lambda: rx.toast("🔍 Arkadaş Arama sayfası aktif edildi!"),
             background_color="#3498db",
             color="#ffffff",
             _hover={"background_color": "#2980b9"},
@@ -4562,7 +4562,7 @@ def render_sidebar_accounts_submenu_reflex() -> rx.Component:
         # Özel Mesajlar Inbox
         rx.button(
             "💬 Özel Mesajlarım (DM)",
-            on_click=lambda: rx.toast("📥 DM Kutunuz başarıyla açıldı!", type="info"),
+            on_click=lambda: rx.toast("📥 DM Kutunuz başarıyla açıldı!"),
             background_color="#9b59b6",
             color="#ffffff",
             _hover={"background_color": "#8e44ad"},
@@ -4612,7 +4612,7 @@ def render_sidebar_profile_card_reflex() -> rx.Component:
                     box_shadow=rx.cond(TepeEditorStatePart11.ismin_parlakligi, f"0 0 15px {TepeEditorStatePart11.user_isim_rengi}", "0 4px 10px rgba(0,0,0,0.5)"),
                     _hover={"transform": "scale(1.08)", "cursor": "pointer"},
                     transition="all 0.2s ease",
-                    on_click=lambda: rx.toast("👤 Profil ayarlarınızı düzenlemek için tıklatıldı!", type="info")
+                    on_click=lambda: rx.toast("👤 Profil ayarlarınızı düzenlemek için tıklatıldı!")
                 ),
                 width="100%"
             ),
@@ -4736,7 +4736,7 @@ class TepeEditorStatePart12(rx.State):
     def change_page(self, page_name: str):
         """Sayfa geçiş mekanizmasını tetikler"""
         self.current_page = page_name
-        return rx.toast(f"🧭 Sayfa Değiştirildi: {page_name.upper()}", type="info")
+        return rx.toast(f"🧭 Sayfa Değiştirildi: {page_name.upper()}")
 
     # --- 1. PROFIL FOTOĞRAFI YÜKLEME VE KALDIRMA (Satır 5501 - 5614) ---
     async def handle_avatar_upload(self, files: list[rx.UploadFile]):
@@ -4747,23 +4747,23 @@ class TepeEditorStatePart12(rx.State):
             # 15MB Kontrolü (15 * 1024 * 1024 bytes)
             if len(file_bytes) > 15 * 1024 * 1024:
                 self.foto_upload_error = "❌ Dosya boyutu 15MB'dan küçük olmalıdır. Mobil cihazla çekilen büyük fotoğrafları yüklemek için lütfen önce kırpın veya küçültün."
-                return rx.toast(self.foto_upload_error, type="error")
+                return rx.toast(self.foto_upload_error)
             
             try:
                 # Base64 dönüşümü ve kayıt
                 encoded = base64.b64encode(file_bytes).decode("utf-8")
                 self.user_avatar = encoded
                 self.foto_upload_error = ""
-                return rx.toast("📸 Profil fotoğrafınız başarıyla güncellendi!", type="success")
+                return rx.toast("📸 Profil fotoğrafınız başarıyla güncellendi!")
             except Exception as e:
                 self.foto_upload_error = f"❌ Fotoğraf işlenirken teknik bir hata oluştu: {str(e)}"
-                return rx.toast(self.foto_upload_error, type="error")
+                return rx.toast(self.foto_upload_error)
 
     def remove_avatar(self):
         """Profil fotoğrafını sistemden kalıcı olarak kaldırır (Satır 5609 - 5614)"""
         self.user_avatar = ""
         self.foto_upload_error = ""
-        return rx.toast("🗑️ Profil fotoğrafı kaldırıldı.", type="info")
+        return rx.toast("🗑️ Profil fotoğrafı kaldırıldı.")
 
     def clear_error_message(self):
         """Hata bildirim pencerelerini kapatır"""
@@ -4775,20 +4775,20 @@ class TepeEditorStatePart12(rx.State):
         temiz_yeni_isim = self.yeni_isim_input.strip()
         
         if len(temiz_yeni_isim) < 3:
-            return rx.toast("⚠️ Kullanıcı adı en az 3 karakter olmalıdır.", type="warning")
+            return rx.toast("⚠️ Kullanıcı adı en az 3 karakter olmalıdır.")
         elif len(temiz_yeni_isim) > 25:
-            return rx.toast("⚠️ Kullanıcı adı en fazla 25 karakter olabilir.", type="warning")
+            return rx.toast("⚠️ Kullanıcı adı en fazla 25 karakter olabilir.")
         
         # Kurucu dışındaki kullanıcılar için emoji denetimi
         if not self.is_kurucu:
             if any(ord(char) > 10000 for char in temiz_yeni_isim):
-                return rx.toast("⚠️ Kurucu değilseniz isminizde emoji kullanamazsınız.", type="warning")
+                return rx.toast("⚠️ Kurucu değilseniz isminizde emoji kullanamazsınız.")
 
         if temiz_yeni_isim == self.user_isim:
-            return rx.toast("ℹ️ İsim zaten mevcut isminiz ile aynı.", type="info")
+            return rx.toast("ℹ️ İsim zaten mevcut isminiz ile aynı.")
 
         self.user_isim = temiz_yeni_isim
-        return rx.toast(f"✅ İsminiz başarıyla '{temiz_yeni_isim}' olarak güncellendi!", type="success")
+        return rx.toast(f"✅ İsminiz başarıyla '{temiz_yeni_isim}' olarak güncellendi!")
 
     # --- 3. TEMA DEĞİŞTİRME VE KAYDETME (Satır 5641 - 5656) ---
     def save_background_theme(self):
@@ -4796,13 +4796,13 @@ class TepeEditorStatePart12(rx.State):
         yeni_tema_gradyan = TEMALAR.get(self.secilen_tema)
         if yeni_tema_gradyan:
             self.user_tema = yeni_tema_gradyan
-            return rx.toast(f"🎨 Tema Kaydedildi: {self.secilen_tema}", type="success")
-        return rx.toast("❌ Tema uygulanırken bir sorun oluştu.", type="error")
+            return rx.toast(f"🎨 Tema Kaydedildi: {self.secilen_tema}")
+        return rx.toast("❌ Tema uygulanırken bir sorun oluştu.")
 
     # --- 4. SOHBETİ TEMİZLEME (Satır 5657 - 5661) ---
     def clear_chat_history(self):
         """Kullanıcının tüm sohbet geçmişini sıfırlar"""
-        return rx.toast("🧹 Sohbet geçmişiniz tamamen temizlendi!", type="success")
+        return rx.toast("🧹 Sohbet geçmişiniz tamamen temizlendi!")
 
     # --- 5. OTOMATİK VERİTABANI ARINDIRMA VE GRUPLAMA MOTORU (Satır 5704 - 5751) ---
     def run_otomatik_arindir_ve_grup(self):
@@ -4813,8 +4813,7 @@ class TepeEditorStatePart12(rx.State):
         self.arindirma_aktif = False
         
         return rx.toast(
-            f"🧼 Otomatik Arındırma: {self.ghost_cleaned} hayalet hesap ve {self.duplicate_cleaned} mükerrer kayıt sistemden arındırıldı!",
-            type="info"
+            f"🧼 Otomatik Arındırma: {self.ghost_cleaned} hayalet hesap ve {self.duplicate_cleaned} mükerrer kayıt sistemden arındırıldı!"
         )
 
     # --- 6. GLOBAL YOUTUBE PLAYER KONTROLLERİ ---
@@ -4825,22 +4824,22 @@ class TepeEditorStatePart12(rx.State):
             self.yt_playing_id = cleaned_id
             self.yt_unmuted = False
             self.yt_status_msg = f"Oynatılıyor: {cleaned_id}"
-            return rx.toast(f"🎵 Video başlatıldı: {cleaned_id}", type="success")
+            return rx.toast(f"🎵 Video başlatıldı: {cleaned_id}")
         else:
-            return rx.toast("⚠️ Geçersiz YouTube Video ID!", type="warning")
+            return rx.toast("⚠️ Geçersiz YouTube Video ID!")
 
     def unmute_global_player(self):
         """Global oynatıcının sesini açar ve durumu günceller"""
         self.yt_unmuted = True
         self.yt_status_msg = f"Ses Açık (Playing ID: {self.yt_playing_id})"
-        return rx.toast("🔊 Oynatıcı sesi başarıyla açıldı!", type="success")
+        return rx.toast("🔊 Oynatıcı sesi başarıyla açıldı!")
 
     def stop_global_player(self):
         """Global oynatıcıyı durdurur ve temizler"""
         self.yt_playing_id = ""
         self.yt_unmuted = False
         self.yt_status_msg = "Oynatıcı Beklemede"
-        return rx.toast("🛑 Müzik/Video durduruldu.", type="info")
+        return rx.toast("🛑 Müzik/Video durduruldu.")
 
 
 # =========================================================================
@@ -5181,7 +5180,7 @@ def render_yönetici_panel_navigation() -> rx.Component:
                     ),
                     rx.button(
                         "Ara",
-                        on_click=lambda: rx.toast(f"🔍 Arama sonuçları listelendi: {TepeEditorStatePart12.admin_arama_query}", type="info"),
+                        on_click=lambda: rx.toast(f"🔍 Arama sonuçları listelendi: {TepeEditorStatePart12.admin_arama_query}"),
                         background_color="#ffd700",
                         color="#000000",
                         height="38px"
@@ -5362,7 +5361,7 @@ class TepeEditorStatePart13(rx.State):
                 now = datetime.datetime.now()
                 ban_end = now + datetime.timedelta(minutes=self.ban_sure_input)
                 u["ban_bitis_zamani"] = ban_end.strftime("%Y-%m-%d %H:%M:%S")
-                rx.toast(f"🛑 {u['isim']} {self.ban_sure_input} dakika süreyle pasifleştirildi!", type="error")
+                rx.toast(f"🛑 {u['isim']} {self.ban_sure_input} dakika süreyle pasifleştirildi!")
                 break
         self.active_ban_uid = ""
 
@@ -5372,7 +5371,7 @@ class TepeEditorStatePart13(rx.State):
             if u["id"] == uid:
                 u["durum"] = "Aktif"
                 u["ban_bitis_zamani"] = ""
-                rx.toast(f"🔓 {u['isim']} başarıyla aktifleştirildi!", type="success")
+                rx.toast(f"🔓 {u['isim']} başarıyla aktifleştirildi!")
                 break
 
     def open_delete_confirm(self, uid: str):
@@ -5387,14 +5386,14 @@ class TepeEditorStatePart13(rx.State):
         """Kullanıcıyı sistemden tamamen siler (Satır 6169 - 6180)"""
         uid = self.active_delete_uid
         self.users = [u for u in self.users if u["id"] != uid]
-        rx.toast("🗑️ Kullanıcı sistemden kalıcı olarak silindi!", type="success")
+        rx.toast("🗑️ Kullanıcı sistemden kalıcı olarak silindi!")
         self.active_delete_uid = ""
 
     # --- KÜFÜRLÜ MESAJ RAPOR YÖNETİMİ (Satır 6193 - 6254) ---
     def delete_report(self, rep_id: str):
         """Tek bir küfür raporunu listeden siler (Satır 6247 - 6249)"""
         self.reports = [r for r in self.reports if r["id"] != rep_id]
-        rx.toast("🗑️ Rapor başarıyla temizlendi.", type="info")
+        rx.toast("🗑️ Rapor başarıyla temizlendi.")
 
     def toggle_clear_all_reports_confirm(self):
         """Tüm raporları temizle onay kutusunu tetikler"""
@@ -5404,17 +5403,17 @@ class TepeEditorStatePart13(rx.State):
         """Tüm küfür raporlarını kalıcı olarak siler (Satır 6202 - 6209)"""
         self.reports = []
         self.show_clear_all_reports_confirm = False
-        rx.toast("🚨 Tüm raporlar başarıyla silindi!", type="success")
+        rx.toast("🚨 Tüm raporlar başarıyla silindi!")
 
     # --- DUYURU GÖNDERİM SİSTEMİ (Satır 6255 - 6386) ---
     def send_announcement(self):
         """Girişlere göre sisteme yeni duyuru ekler ve simüle edilmiş şekilde kullanıcılara iletir"""
         text = self.duyuru_metni.strip()
         if not text:
-            return rx.toast("⚠️ Lütfen boş bir duyuru metni girmeyin!", type="warning")
+            return rx.toast("⚠️ Lütfen boş bir duyuru metni girmeyin!")
         
         if self.hedef_tipi == "E-posta ile Seç" and not self.secilen_email:
-            return rx.toast("⚠️ Lütfen duyuru gönderilecek hedef e-postayı seçin veya yazın!", type="warning")
+            return rx.toast("⚠️ Lütfen duyuru gönderilecek hedef e-postayı seçin veya yazın!")
 
         # Duyuru kaydı oluştur
         ann_id = f"announcement_{int(time.time())}"
@@ -5435,9 +5434,9 @@ class TepeEditorStatePart13(rx.State):
         self.duyuru_metni = ""
         
         if self.hedef_tipi == "Tüm Kullanıcılar":
-            rx.toast("📣 Duyuru tüm kullanıcılara başarıyla yayınlandı!", type="success")
+            rx.toast("📣 Duyuru tüm kullanıcılara başarıyla yayınlandı!")
         else:
-            rx.toast(f"📣 Duyuru başarıyla {self.secilen_email} adresine iletildi!", type="success")
+            rx.toast(f"📣 Duyuru başarıyla {self.secilen_email} adresine iletildi!")
 
 
 # =========================================================================
@@ -6067,13 +6066,13 @@ class TepeEditorStatePart14(rx.State):
         """Tüm harfleri toplu olarak seçilen renkle boyar"""
         self.char_colors = [self.bulk_color_pick] * len(self.text)
         self.sync_char_list()
-        return rx.toast(f"🎨 Tüm harfler '{self.bulk_color_pick}' olarak renklendirildi!", type="success")
+        return rx.toast(f"🎨 Tüm harfler '{self.bulk_color_pick}' olarak renklendirildi!")
 
     def apply_word_highlight(self):
         """Belirtilen kelimeyi hedef metinde bularak o kelimenin harflerini boyar"""
         target = self.paint_word_target.strip()
         if not target:
-            return rx.toast("⚠️ Boyanacak kelime boş olamaz!", type="warning")
+            return rx.toast("⚠️ Boyanacak kelime boş olamaz!")
         
         start_pos = 0
         text_lower = self.text.lower()
@@ -6092,9 +6091,9 @@ class TepeEditorStatePart14(rx.State):
 
         self.sync_char_list()
         if found_count > 0:
-            return rx.toast(f"✅ '{target}' kelimesi {found_count} kez boyandı!", type="success")
+            return rx.toast(f"✅ '{target}' kelimesi {found_count} kez boyandı!")
         else:
-            return rx.toast(f"ℹ️ '{target}' kelimesi metinde bulunamadı.", type="info")
+            return rx.toast(f"ℹ️ '{target}' kelimesi metinde bulunamadı.")
 
     # --- KOORDİNAT VE MANUAL ADJUSTMENT METODLARI ---
     def adjust_size(self, delta: int):
@@ -6111,7 +6110,7 @@ class TepeEditorStatePart14(rx.State):
         self.displacement_y = 0
         self.size = 24
         self.rotation = 0
-        return rx.toast("🎯 Hizalama ve konumlandırma merkeze sıfırlandı!", type="info")
+        return rx.toast("🎯 Hizalama ve konumlandırma merkeze sıfırlandı!")
 
     def factory_reset(self):
         """Tüm tasarım ayarlarını fabrika ayarlarına geri döndürür"""
@@ -6155,12 +6154,12 @@ class TepeEditorStatePart14(rx.State):
         self.char_colors = []
         self.sync_char_list()
         
-        return rx.toast("🔄 Tüm tasarım fabrika ayarlarına sıfırlandı!", type="success")
+        return rx.toast("🔄 Tüm tasarım fabrika ayarlarına sıfırlandı!")
 
     # --- YAYINLAMA AKSİYONLARI ---
     def preview_now(self):
         """Anlık tasarım önizlemesini tetikler"""
-        return rx.toast("👀 Önizleme güncellendi! Sol paneldeki görsel akışı görebilirsiniz.", type="info")
+        return rx.toast("👀 Önizleme güncellendi! Sol paneldeki görsel akışı görebilirsiniz.")
 
     def save_and_publish(self):
         """Tasarımı canlı yayına kaydeder"""
@@ -6198,7 +6197,7 @@ class TepeEditorStatePart14(rx.State):
             "char_colors": self.char_colors,
             "text_color": self.text_color
         }
-        return rx.toast("🚀 CapCut premium duyuru bandı başarıyla canlıya kaydedildi ve yayınlandı!", type="success")
+        return rx.toast("🚀 CapCut premium duyuru bandı başarıyla canlıya kaydedildi ve yayınlandı!")
 
 
 # =========================================================================
@@ -7024,7 +7023,7 @@ class TepeEditorStatePart15(rx.State):
         self.active_sync_status = "Veri Gönderiliyor..."
         self.rebuild_bridge_payload()
         self.active_sync_status = "Senkronize Edildi"
-        return rx.toast("🚀 Gesture koordinatları ve JSON sinyal köprüsü başarıyla senkronize edildi!", type="success")
+        return rx.toast("🚀 Gesture koordinatları ve JSON sinyal köprüsü başarıyla senkronize edildi!")
 
 
 # =========================================================================
@@ -7343,7 +7342,7 @@ class AdminRoleStatePart16(rx.State):
     def save_own_style(self):
         """Kurucunun kendi profil stilini kaydeder"""
         self.add_log(f"Kendi profil stilinizi güncellediniz: {self.my_tag} | {self.my_rozet} | {self.my_color}")
-        return rx.toast("👑 Kendi profil stiliniz başarıyla kaydedildi!", type="success")
+        return rx.toast("👑 Kendi profil stiliniz başarıyla kaydedildi!")
 
     # --- ADMİN DETAY BULMA & GÜNCELLEME ---
     def search_admin(self):
@@ -7351,21 +7350,21 @@ class AdminRoleStatePart16(rx.State):
         email_clean = self.search_admin_email.strip().lower()
         if not email_clean:
             self.has_found_admin = False
-            return rx.toast("⚠️ Lütfen aramak için bir e-posta adresi yazın!", type="warning")
+            return rx.toast("⚠️ Lütfen aramak için bir e-posta adresi yazın!")
         
         if email_clean == "ayaz@kaplan.com": # kurucu maili simüle
             self.has_found_admin = False
-            return rx.toast("❌ Bu adres kurucuya aittir! Kendi stilinizi yukarıdan düzenleyebilirsiniz.", type="error")
+            return rx.toast("❌ Bu adres kurucuya aittir! Kendi stilinizi yukarıdan düzenleyebilirsiniz.")
 
         for u in self.users_db:
             if u["email"].lower() == email_clean:
                 self.found_admin_user = u.copy()
                 self.has_found_admin = True
                 self.add_log(f"Yönetici Adayı Bulundu: {u['isim']} ({u['email']})")
-                return rx.toast(f"✅ Kullanıcı bulundu: {u['isim']}", type="success")
+                return rx.toast(f"✅ Kullanıcı bulundu: {u['isim']}")
 
         self.has_found_admin = False
-        return rx.toast("❌ Eşleşen bir kullanıcı bulunamadı.", type="error")
+        return rx.toast("❌ Eşleşen bir kullanıcı bulunamadı.")
 
     def save_admin_changes(self):
         """Aranan yönetici adayının değişikliklerini kaydeder"""
@@ -7386,7 +7385,7 @@ class AdminRoleStatePart16(rx.State):
                     self.users_db[idx]["tag"] = ""
                     self.users_db[idx]["rozet"] = ""
                     self.add_log(f"Yöneticilik Alındı: {u['isim']} stili sıfırlandı.")
-                    rx.toast("ℹ️ Yöneticilik geri alındı, kullanıcı stili varsayılana sıfırlandı.", type="info")
+                    rx.toast("ℹ️ Yöneticilik geri alındı, kullanıcı stili varsayılana sıfırlandı.")
                 else:
                     self.add_log(f"Yönetici Rolü ve Stili Güncellendi: {u['isim']}")
                 
@@ -7394,7 +7393,7 @@ class AdminRoleStatePart16(rx.State):
                 self.found_admin_user = self.users_db[idx].copy()
                 break
 
-        return rx.toast("✅ Değişiklikler başarıyla veritabanına kaydedildi!", type="success")
+        return rx.toast("✅ Değişiklikler başarıyla veritabanına kaydedildi!")
 
     # --- NORMAL KULLANICI BULMA & GÜNCELLEME ---
     def search_normal_user(self):
@@ -7402,25 +7401,25 @@ class AdminRoleStatePart16(rx.State):
         email_clean = self.search_normal_email.strip().lower()
         if not email_clean:
             self.has_found_normal = False
-            return rx.toast("⚠️ Lütfen aramak için bir e-posta adresi yazın!", type="warning")
+            return rx.toast("⚠️ Lütfen aramak için bir e-posta adresi yazın!")
 
         if email_clean == "ayaz@kaplan.com":
             self.has_found_normal = False
-            return rx.toast("❌ Bu adres kurucuya aittir!", type="error")
+            return rx.toast("❌ Bu adres kurucuya aittir!")
 
         for u in self.users_db:
             if u["email"].lower() == email_clean:
                 if u.get("is_admin", False):
                     self.has_found_normal = False
-                    return rx.toast("❌ Bu kullanıcı yöneticidir! Lütfen 'Yönetici Rolü & Stil' sekmesini kullanın.", type="error")
+                    return rx.toast("❌ Bu kullanıcı yöneticidir! Lütfen 'Yönetici Rolü & Stil' sekmesini kullanın.")
                 
                 self.found_normal_user = u.copy()
                 self.has_found_normal = True
                 self.add_log(f"Normal Kullanıcı Bulundu: {u['isim']} ({u['email']})")
-                return rx.toast(f"✅ Kullanıcı bulundu: {u['isim']}", type="success")
+                return rx.toast(f"✅ Kullanıcı bulundu: {u['isim']}")
 
         self.has_found_normal = False
-        return rx.toast("❌ Eşleşen bir kullanıcı bulunamadı.", type="error")
+        return rx.toast("❌ Eşleşen bir kullanıcı bulunamadı.")
 
     def save_normal_changes(self):
         """Aranan normal kullanıcının süslemelerini kaydeder"""
@@ -7436,7 +7435,7 @@ class AdminRoleStatePart16(rx.State):
                 self.found_normal_user = self.users_db[idx].copy()
                 break
         
-        return rx.toast("✅ Normal kullanıcı süslemeleri başarıyla güncellendi!", type="success")
+        return rx.toast("✅ Normal kullanıcı süslemeleri başarıyla güncellendi!")
 
     # --- SÜSLEMELERİ KALDIRMA (NORMAL KULLANICI) ---
     def request_reset_style(self, uid: str):
@@ -7456,7 +7455,7 @@ class AdminRoleStatePart16(rx.State):
                 self.add_log(f"Süslemeler Kaldırıldı: {u['isim']}")
                 break
         self.confirm_reset_uid = ""
-        return rx.toast("✅ Kullanıcı süslemeleri başarıyla kaldırıldı!", type="success")
+        return rx.toast("✅ Kullanıcı süslemeleri başarıyla kaldırıldı!")
 
     # --- YÖNETİCİLİKTEN ÇIKARMA (DEMOTE) ---
     def request_demote_admin(self, uid: str):
@@ -7477,14 +7476,14 @@ class AdminRoleStatePart16(rx.State):
                 self.add_log(f"Yöneticilikten Çıkarıldı ve Stil Sıfırlandı: {u['isim']}")
                 break
         self.confirm_demote_uid = ""
-        return rx.toast("✅ Kullanıcı yöneticilikten çıkarıldı ve stili sıfırlandı!", type="success")
+        return rx.toast("✅ Kullanıcı yöneticilikten çıkarıldı ve stili sıfırlandı!")
 
     # --- DUYURU GEÇMİŞİNİ TEMİZLEME ---
     def clear_announcement_history(self, admin_email: str):
         """Yöneticinin duyuru geçmişini temizler"""
         self.announcements_db = [d for d in self.announcements_db if d["gonderen_email"] != admin_email]
         self.add_log(f"Duyuru geçmişi temizlendi: {admin_email}")
-        return rx.toast(f"✅ Yöneticinin ({admin_email}) duyuru geçmişi başarıyla temizlendi!", type="success")
+        return rx.toast(f"✅ Yöneticinin ({admin_email}) duyuru geçmişi başarıyla temizlendi!")
 
 
 # =========================================================================
@@ -8288,7 +8287,7 @@ class ChatThreadsStatePart17(rx.State):
                 self.modified_users.pop(idx)
                 break
         self.style_reset_confirm_id = ""
-        return rx.toast("✅ Kullanıcı süslemeleri başarıyla kaldırıldı!", type="success")
+        return rx.toast("✅ Kullanıcı süslemeleri başarıyla kaldırıldı!")
 
     # --- YÖNETİCİLİKTEN ÇIKAR (DEMOTE) ---
     def request_demote(self, uid: str):
@@ -8306,7 +8305,7 @@ class ChatThreadsStatePart17(rx.State):
                 self.current_admins.pop(idx)
                 break
         self.demote_confirm_id = ""
-        return rx.toast("✅ Kullanıcı yöneticilikten çıkarıldı ve stili sıfırlandı!", type="success")
+        return rx.toast("✅ Kullanıcı yöneticilikten çıkarıldı ve stili sıfırlandı!")
 
     def clear_admin_announcements(self, admin_id: str):
         """Yöneticinin yaptığı tüm duyuruları temizler (Sadece Kurucu Yetkisi)"""
@@ -8315,7 +8314,7 @@ class ChatThreadsStatePart17(rx.State):
                 self.current_admins[idx]["duyurular"] = []
                 self.add_log(f"{a['isim']} adlı yöneticinin duyuru geçmişi temizlendi.")
                 break
-        return rx.toast("✅ Yönetici duyuru geçmişi başarıyla temizlendi!", type="success")
+        return rx.toast("✅ Yönetici duyuru geçmişi başarıyla temizlendi!")
 
     # --- SOHBET METOTLARI ---
     def send_chat_message(self):
@@ -8353,7 +8352,7 @@ class ChatThreadsStatePart17(rx.State):
         self.threads.insert(0, yeni_thread)
         self.aktif_sohbet_id = yeni_id
         self.add_log("Yeni Sohbet Odası Başlatıldı: 'Yeni Sohbet'")
-        return rx.toast("💬 Yeni sohbet odası başarıyla başlatıldı!", type="success")
+        return rx.toast("💬 Yeni sohbet odası başarıyla başlatıldı!")
 
     def select_active_thread(self, tid: str):
         self.aktif_sohbet_id = tid
@@ -8376,7 +8375,7 @@ class ChatThreadsStatePart17(rx.State):
     def save_rename_thread(self):
         """Sohbet başlığını yeniden adlandırır"""
         if not self.ren_thr_inp_val.strip():
-            return rx.toast("⚠️ Sohbet başlığı boş bırakılamaz!", type="warning")
+            return rx.toast("⚠️ Sohbet başlığı boş bırakılamaz!")
 
         for idx, t in enumerate(self.threads):
             if t["id"] == self.ren_thr_inp_id:
@@ -8386,7 +8385,7 @@ class ChatThreadsStatePart17(rx.State):
                 break
         self.ren_thr_inp_id = ""
         self.ren_thr_inp_val = ""
-        return rx.toast("💾 Sohbet başlığı başarıyla güncellendi!", type="success")
+        return rx.toast("💾 Sohbet başlığı başarıyla güncellendi!")
 
     def request_delete_thread(self, tid: str):
         self.thread_delete_confirm_id = tid
@@ -8409,7 +8408,7 @@ class ChatThreadsStatePart17(rx.State):
                 self.aktif_sohbet_id = ""
 
         self.thread_delete_confirm_id = ""
-        return rx.toast("🗑️ Sohbet odası kalıcı olarak silindi!", type="error")
+        return rx.toast("🗑️ Sohbet odası kalıcı olarak silindi!")
 
     # --- BİLDİRİM PANEL AKSİYONLARI ---
     def toggle_notification_panel(self):
@@ -8419,17 +8418,17 @@ class ChatThreadsStatePart17(rx.State):
     def accept_friend_request(self, uid: str, name: str):
         if self.friends_count >= 300:
             self.add_log(f"Limit Engeli: {name} isteği reddedildi (Limit 300)")
-            return rx.toast("❌ Arkadaş sınırına (300) ulaştınız! Yeni arkadaş ekleyemezsiniz.", type="error")
+            return rx.toast("❌ Arkadaş sınırına (300) ulaştınız! Yeni arkadaş ekleyemezsiniz.")
 
         self.friends_count += 1
         self.friend_requests = [r for r in self.friend_requests if r["uid"] != uid]
         self.add_log(f"Arkadaşlık İsteği Kabul Edildi: {name} (Yeni Toplam: {self.friends_count})")
-        return rx.toast(f"✅ {name} artık arkadaşınız! Arkadaş Sayısı: {self.friends_count}/300", type="success")
+        return rx.toast(f"✅ {name} artık arkadaşınız! Arkadaş Sayısı: {self.friends_count}/300")
 
     def reject_friend_request(self, uid: str, name: str):
         self.friend_requests = [r for r in self.friend_requests if r["uid"] != uid]
         self.add_log(f"Arkadaşlık İsteği Reddedildi: {name}")
-        return rx.toast(f"❌ {name} arkadaşlık isteği reddedildi.", type="info")
+        return rx.toast(f"❌ {name} arkadaşlık isteği reddedildi.")
 
     # --- YETKİLİ MESAJLARI COUNTDOWN (Görüldü sayacı simülasyonu) ---
     def mark_message_as_seen(self, msg_id: str):
@@ -8441,7 +8440,7 @@ class ChatThreadsStatePart17(rx.State):
                     self.yetkili_mesajlari[idx]["goruldu_zamani"] = int(time.time())
                     self.yetkili_mesajlari[idx]["kalan_sure_metni"] = "⏳ 5 dk 0 sn sonra silinecek"
                     self.add_log(f"Yetkili Mesajı Görüldü: 5 dakikalık silinme sayacı başladı.")
-                    rx.toast("⏳ Yetkili mesajı görüldü, 5 dakika içinde otomatik imha edilecek!", type="warning")
+                    rx.toast("⏳ Yetkili mesajı görüldü, 5 dakika içinde otomatik imha edilecek!")
                 break
 
     def simulate_countdown_tick(self):
@@ -8453,7 +8452,7 @@ class ChatThreadsStatePart17(rx.State):
                 if remaining <= 0:
                     self.add_log(f"Otomatik Silinme: Yetkili mesajı (ID: {m['id']}) 5 dakika dolduğu için silindi.")
                     self.yetkili_mesajlari.pop(idx)
-                    return rx.toast("💥 Yetkili mesajı 5 dakika dolduğu için otomatik imha edildi!", type="error")
+                    return rx.toast("💥 Yetkili mesajı 5 dakika dolduğu için otomatik imha edildi!")
                 else:
                     min_left = remaining // 60
                     sec_left = remaining % 60
@@ -8464,17 +8463,17 @@ class ChatThreadsStatePart17(rx.State):
     def skip_announcement(self, ann_id: str):
         self.cached_okunmamis_duyurular = [d for d in self.cached_okunmamis_duyurular if d["id"] != ann_id]
         self.add_log(f"Tepe uyarısı geçildi (ID: {ann_id})")
-        return rx.toast("➡️ Uyarı geçildi.", type="info")
+        return rx.toast("➡️ Uyarı geçildi.")
 
     # --- ARKA PLAN BAN KONTROL SİMÜLATÖRÜ ---
     def set_user_status_sim(self, status: str):
         self.user_durum = status
         if status == "Pasif / Yasaklı":
             self.add_log("GÜVENLİK FİLTRESİ: Kullanıcı banlandı! Otomatik logout tetiklendi.")
-            return rx.toast("❌ HESABINIZ YÖNETİCİ TARAFINDAN PASİFLEŞTİRİLDİ! Chat erişiminiz engellendi.", type="error")
+            return rx.toast("❌ HESABINIZ YÖNETİCİ TARAFINDAN PASİFLEŞTİRİLDİ! Chat erişiminiz engellendi.")
         else:
             self.add_log("GÜVENLİK FİLTRESİ: Kullanıcı aktif duruma getirildi.")
-            return rx.toast("✅ Hesabınız yeniden aktif edildi.", type="success")
+            return rx.toast("✅ Hesabınız yeniden aktif edildi.")
 
 
 # =========================================================================
@@ -9567,17 +9566,17 @@ class AICognitiveStatePart18(rx.State):
     def accept_friend_request_part18(self, uid: str, name: str):
         if self.friends_count >= 300:
             self.add_log(f"İptal: {name} isteği reddedildi - Arkadaş limiti (300) dolu!")
-            return rx.toast("❌ Arkadaş sınırına (300) ulaştınız! Yeni arkadaş ekleyemezsiniz.", type="error")
+            return rx.toast("❌ Arkadaş sınırına (300) ulaştınız! Yeni arkadaş ekleyemezsiniz.")
         
         self.friends_count += 1
         self.friend_requests = [r for r in self.friend_requests if r["uid"] != uid]
         self.add_log(f"Arkadaşlık İsteği Kabul Edildi: {name} (Yeni Arkadaş Sayısı: {self.friends_count}/300)")
-        return rx.toast(f"✅ {name} ile arkadaş oldunuz! Arkadaş Sayısı: {self.friends_count}/300", type="success")
+        return rx.toast(f"✅ {name} ile arkadaş oldunuz! Arkadaş Sayısı: {self.friends_count}/300")
 
     def reject_friend_request_part18(self, uid: str, name: str):
         self.friend_requests = [r for r in self.friend_requests if r["uid"] != uid]
         self.add_log(f"Arkadaşlık İsteği Reddedildi: {name}")
-        return rx.toast(f"❌ {name} arkadaşlık isteği reddedildi.", type="info")
+        return rx.toast(f"❌ {name} arkadaşlık isteği reddedildi.")
 
     # --- AKSİYON: YETKİLİ MESAJI GÖRÜLDÜ VE OTO-İMHA SAYAÇLARI ---
     def mark_message_as_seen_part18(self, msg_id: str):
@@ -9588,7 +9587,7 @@ class AICognitiveStatePart18(rx.State):
                     self.yetkili_mesajlari[idx]["goruldu_zamani"] = int(time.time())
                     self.yetkili_mesajlari[idx]["kalan_sure_metni"] = "⏳ 5 dk 0 sn kaldı (Oto-İmha)"
                     self.add_log(f"Yetkili Mesajı Görüldü. 5 Dakikalık Otomatik İmha Sayacı Başladı.")
-                    return rx.toast("⏳ Mesaj görüldü! 5 dakika içinde tamamen imha edilecek.", type="warning")
+                    return rx.toast("⏳ Mesaj görüldü! 5 dakika içinde tamamen imha edilecek.")
                 break
 
     def tick_destruction_timer(self):
@@ -9600,7 +9599,7 @@ class AICognitiveStatePart18(rx.State):
                 if remaining <= 0:
                     self.add_log(f"Oto-İmha Tetiklendi: Yetkili mesajı ({m['id']}) 5 dakika dolduğu için silindi.")
                     self.yetkili_mesajlari.pop(idx)
-                    return rx.toast("💥 Mesaj 5 dakikalık süresi bittiği için otomatik olarak imha edildi!", type="error")
+                    return rx.toast("💥 Mesaj 5 dakikalık süresi bittiği için otomatik olarak imha edildi!")
                 else:
                     m_left = remaining // 60
                     s_left = remaining % 60
@@ -9919,7 +9918,7 @@ class AICognitiveStatePart18(rx.State):
         
         self.messages.pop(idx)
         self.show_delete_confirm_idx = -1
-        return rx.toast("🗑️ Mesaj ve asistanın cevabı tamamen silindi!", type="error")
+        return rx.toast("🗑️ Mesaj ve asistanın cevabı tamamen silindi!")
 
     # --- YARDIMCI AKSİYONLAR ---
     def toggle_notification_panel_part18(self):
@@ -10695,17 +10694,17 @@ class SocialNetworkStatePart19(rx.State):
         # 1. Kendi Limitimiz (Max 300)
         if len(self.my_friends) >= 300:
             self.add_log(f"İptal: {user_name} eklenemedi. Arkadaş limitiniz (300) dolu!")
-            return rx.toast("❌ Maksimum arkadaş limitine (300) ulaştınız!", type="error")
+            return rx.toast("❌ Maksimum arkadaş limitine (300) ulaştınız!")
         
         # 2. Alıcının Limiti (Simüle)
         recipient_friends_count = len(self.users_db.get(user_id, {}).get("friends", []))
         if recipient_friends_count >= 300:
             self.add_log(f"İptal: {user_name} eklenemedi. Karşı tarafın arkadaş limiti dolu!")
-            return rx.toast(f"❌ {user_name} adlı kullanıcının arkadaş limiti dolu! (Maksimum 300)", type="error")
+            return rx.toast(f"❌ {user_name} adlı kullanıcının arkadaş limiti dolu! (Maksimum 300)")
 
         # 3. Zaten Gönderilmişse Kontrolü
         if user_id in self.sent_friend_requests:
-            return rx.toast("⏳ Zaten bu kullanıcıya arkadaşlık isteği gönderdiniz.", type="info")
+            return rx.toast("⏳ Zaten bu kullanıcıya arkadaşlık isteği gönderdiniz.")
 
         # İstek Gönderimi Simülasyonu
         self.sent_friend_requests.append(user_id)
@@ -10722,7 +10721,7 @@ class SocialNetworkStatePart19(rx.State):
             self.sent_friend_requests = [uid for uid in self.sent_friend_requests if uid != user_id]
 
         self.add_log(f"'{user_name}' isteğinizi otomatik onayladı! Yeni arkadaş oldunuz.")
-        return rx.toast(f"✅ '{user_name}' ile arkadaş oldunuz! (Toplam: {len(self.my_friends)}/300)", type="success")
+        return rx.toast(f"✅ '{user_name}' ile arkadaş oldunuz! (Toplam: {len(self.my_friends)}/300)")
 
     # --- ARKADAŞTAN ÇIKAR ---
     def remove_friend_part19(self, user_id: str, user_name: str):
@@ -10733,7 +10732,7 @@ class SocialNetworkStatePart19(rx.State):
                 self.users_db[user_id]["friends"] = [uid for uid in self.users_db[user_id]["friends"] if uid != self.my_id]
             
             self.add_log(f"'{user_name}' arkadaşlıktan çıkarıldı.")
-            return rx.toast(f"❌ {user_name} arkadaş listenizden çıkarıldı.", type="info")
+            return rx.toast(f"❌ {user_name} arkadaş listenizden çıkarıldı.")
 
     # --- TAKİP ET / BIRAK ---
     def toggle_follow_part19(self, user_id: str, user_name: str):
@@ -10743,14 +10742,14 @@ class SocialNetworkStatePart19(rx.State):
             if user_id in self.users_db:
                 self.users_db[user_id]["followers"] = [uid for uid in self.users_db[user_id]["followers"] if uid != self.my_id]
             self.add_log(f"'{user_name}' takipten çıkarıldı.")
-            return rx.toast(f"🚫 {user_name} takipten çıkarıldı.", type="info")
+            return rx.toast(f"🚫 {user_name} takipten çıkarıldı.")
         else:
             # Takip Et
             self.my_following.append(user_id)
             if user_id in self.users_db:
                 self.users_db[user_id]["followers"].append(self.my_id)
             self.add_log(f"'{user_name}' takip edilmeye başlandı.")
-            return rx.toast(f"👁️ {user_name} takip edildi!", type="success")
+            return rx.toast(f"👁️ {user_name} takip edildi!")
 
     # --- SOSYAL DETAY ALT LİSTEYE GEÇİŞ ---
     def open_social_detail(self, target_uid: str, target_name: str, detail_type: str, return_pg: str):
@@ -10784,7 +10783,7 @@ class SocialNetworkStatePart19(rx.State):
             self.add_log(f"DM Gönderildi -> {self.active_dm_partner_name}: '{msg_val[:15]}...'")
 
             # Play blip sound simulation toast
-            rx.toast("🔊 [Müzik Efekti] Mesaj Gönderildi!", type="success")
+            rx.toast("🔊 [Müzik Efekti] Mesaj Gönderildi!")
 
             # 2. Asenkron Oto-Cevap Simüle Et
             return SocialNetworkStatePart19.run_dm_reply_sim()
@@ -10803,7 +10802,7 @@ class SocialNetworkStatePart19(rx.State):
                     "time": "Az Önce"
                 })
                 self.add_log(f"DM Cevabı Alındı <- {partner_name}")
-                return rx.toast(f"📩 {partner_name} yeni bir mesaj gönderdi!", type="info")
+                return rx.toast(f"📩 {partner_name} yeni bir mesaj gönderdi!")
 
 
 # =========================================================================
@@ -11999,7 +11998,7 @@ class SocialAndMediaStatePart20(rx.State):
                 "benden_silindi_uids": []
             })
             self.add_log(f"DM Cevabı Alındı <- {p_name}")
-            return rx.toast(f"📩 {p_name} yeni bir mesaj gönderdi!", type="info")
+            return rx.toast(f"📩 {p_name} yeni bir mesaj gönderdi!")
 
     # --- SİLME PANELİ AÇMA / KAPATMA ---
     def toggle_delete_panel(self, idx: int):
@@ -12018,7 +12017,7 @@ class SocialAndMediaStatePart20(rx.State):
                 msgs[idx]["silindi"] = True
                 self.add_log("Mesaj HERKESTEN silindi.")
                 self.active_dm_delete_idx = -1
-                return rx.toast("🗑️ Mesaj herkesten başarıyla silindi.", type="success")
+                return rx.toast("🗑️ Mesaj herkesten başarıyla silindi.")
 
     # --- BENDEN SİL (DELETE FOR ME) ---
     def delete_for_me(self, idx: int):
@@ -12030,7 +12029,7 @@ class SocialAndMediaStatePart20(rx.State):
                     msgs[idx]["benden_silindi_uids"].append(self.uid)
                 self.add_log("Mesaj BENDEN silindi.")
                 self.active_dm_delete_idx = -1
-                return rx.toast("🗑️ Mesaj sadece sizden gizlendi.", type="info")
+                return rx.toast("🗑️ Mesaj sadece sizden gizlendi.")
 
     # --- ADMIN YETKİLİ MESAJ GÖNDERME ---
     def send_admin_message(self):
@@ -12038,7 +12037,7 @@ class SocialAndMediaStatePart20(rx.State):
         content_clean = self.admin_mesaj_icerik.strip()
 
         if not email_clean or not content_clean:
-            return rx.toast("⚠️ Lütfen e-posta ve mesaj alanlarını doldurun.", type="warning")
+            return rx.toast("⚠️ Lütfen e-posta ve mesaj alanlarını doldurun.")
 
         # Alıcıyı bulalım
         if email_clean in self.admin_users_db:
@@ -12057,16 +12056,16 @@ class SocialAndMediaStatePart20(rx.State):
             self.admin_mesaj_email = ""
             self.admin_mesaj_icerik = ""
             self.add_log(f"Admin Mesaj Gönderildi -> {recipient_name} ({email_clean})")
-            return rx.toast(f"✅ Mesaj başarıyla '{recipient_name}' kişisine gönderildi!", type="success")
+            return rx.toast(f"✅ Mesaj başarıyla '{recipient_name}' kişisine gönderildi!")
         else:
-            return rx.toast("❌ Bu e-posta ile kayıtlı bir kullanıcı bulunamadı.", type="error")
+            return rx.toast("❌ Bu e-posta ile kayıtlı bir kullanıcı bulunamadı.")
 
     # --- YOUTUBE PORTAL SORGULAMA ---
     def youtube_search(self):
         query = self.yt_search_q.strip().lower()
         if not query:
             self.yt_results = self.yt_all_videos_mock
-            return rx.toast("📋 Tüm videolar listelendi.", type="info")
+            return rx.toast("📋 Tüm videolar listelendi.")
 
         results = []
         for vid in self.yt_all_videos_mock:
@@ -12075,7 +12074,7 @@ class SocialAndMediaStatePart20(rx.State):
 
         self.yt_results = results
         self.add_log(f"YouTube araması yapıldı: '{query}' ({len(results)} sonuç)")
-        return rx.toast(f"🔍 {len(results)} sonuç bulundu.", type="success")
+        return rx.toast(f"🔍 {len(results)} sonuç bulundu.")
 
     # --- YOUTUBE VİDEO OYNATMA VE RESUME ---
     def play_video(self, vid_id: str, title: str, channel: str):
@@ -12090,13 +12089,13 @@ class SocialAndMediaStatePart20(rx.State):
         self.yt_last_channel = channel
 
         self.add_log(f"Video oynatılıyor: '{title}'")
-        return rx.toast("🎬 Video oynatıcıya yüklendi!", type="success")
+        return rx.toast("🎬 Video oynatıcıya yüklendi!")
 
     # --- VİDEO PINLEME / KAYDETME ---
     def add_to_saved(self, vid_id: str, title: str, channel: str, duration: str):
         # Zaten ekli mi kontrolü
         if any(v["id"] == vid_id for v in self.yt_saved_videos):
-            return rx.toast("⏳ Bu video zaten kayıtlarınızda ekli.", type="info")
+            return rx.toast("⏳ Bu video zaten kayıtlarınızda ekli.")
 
         self.yt_saved_videos.append({
             "id": vid_id,
@@ -12105,13 +12104,13 @@ class SocialAndMediaStatePart20(rx.State):
             "duration": duration
         })
         self.add_log(f"Video kaydedildi: '{title}'")
-        return rx.toast("📌 Video başarıyla kayıtlara eklendi!", type="success")
+        return rx.toast("📌 Video başarıyla kayıtlara eklendi!")
 
     # --- KAYITLI VİDEO SİLME ---
     def remove_from_saved(self, vid_id: str):
         self.yt_saved_videos = [v for v in self.yt_saved_videos if v["id"] != vid_id]
         self.add_log(f"Kayıtlı video silindi ID: {vid_id}")
-        return rx.toast("🗑️ Video kayıtlardan kaldırıldı.", type="info")
+        return rx.toast("🗑️ Video kayıtlardan kaldırıldı.")
 
 
 # =========================================================================
@@ -13084,7 +13083,7 @@ class YouTubePortalStatePart21(rx.State):
         # Güvenli karakter süzgeci (re.sub(r'[^a-zA-Z0-9_\-]', '', _qp_vid))
         safe_id = re.sub(r"[^a-zA-Z0-9_\-]", "", video_id)
         if not safe_id:
-            return rx.toast("⚠️ Geçersiz video ID'si!", type="warning")
+            return rx.toast("⚠️ Geçersiz video ID'si!")
 
         self.query_param_ytv = safe_id
         self.query_param_ytt = timestamp_seconds
@@ -13107,7 +13106,7 @@ class YouTubePortalStatePart21(rx.State):
         self.yt_last_channel = channel
 
         self.add_log(f"Deep-linking Algılandı: ID={safe_id}, Zaman={timestamp_seconds}s")
-        return rx.toast(f"🔗 Deep-link ile video yüklendi! (Süre: {timestamp_seconds}s)", type="success")
+        return rx.toast(f"🔗 Deep-link ile video yüklendi! (Süre: {timestamp_seconds}s)")
 
     # --- 2. YOUTUBE SORGULAMA ---
     def search_youtube_part21(self):
@@ -13116,7 +13115,7 @@ class YouTubePortalStatePart21(rx.State):
             # Boş aramada tümünü listele
             self.yt_results = self.yt_master_db
             self.add_log("Arama temizlendi, tüm videolar listelendi.")
-            return rx.toast("📋 Tüm videolar listelendi.", type="info")
+            return rx.toast("📋 Tüm videolar listelendi.")
 
         results = []
         for vid in self.yt_master_db:
@@ -13125,7 +13124,7 @@ class YouTubePortalStatePart21(rx.State):
 
         self.yt_results = results
         self.add_log(f"YouTube Araması: '{query}' -> {len(results)} sonuç bulundu.")
-        return rx.toast(f"🔍 {len(results)} sonuç listelendi.", type="success")
+        return rx.toast(f"🔍 {len(results)} sonuç listelendi.")
 
     # --- 3. VİDEO OYNATMA VE RESUME ---
     def play_video_part21(self, vid_id: str, title: str, channel: str):
@@ -13144,13 +13143,13 @@ class YouTubePortalStatePart21(rx.State):
         self.yt_last_channel = channel
 
         self.add_log(f"Video Oynatılıyor: '{title[:30]}...'")
-        return rx.toast("🎬 Oynatıcı yüklendi!", type="success")
+        return rx.toast("🎬 Oynatıcı yüklendi!")
 
     # --- 4. KAYITLARA EKLE / ÇIKAR ---
     def add_to_saved_part21(self, vid_id: str, title: str, channel: str, duration: str):
         safe_id = re.sub(r"[^a-zA-Z0-9_\-]", "", vid_id)
         if any(v["id"] == safe_id for v in self.yt_saved_videos):
-            return rx.toast("⏳ Bu video zaten listenizde ekli.", type="warning")
+            return rx.toast("⏳ Bu video zaten listenizde ekli.")
 
         self.yt_saved_videos.append({
             "id": safe_id,
@@ -13159,13 +13158,13 @@ class YouTubePortalStatePart21(rx.State):
             "duration": duration
         })
         self.add_log(f"Kayıtlara eklendi: ID={safe_id}")
-        return rx.toast("📌 Video başarıyla kaydedildi!", type="success")
+        return rx.toast("📌 Video başarıyla kaydedildi!")
 
     def remove_from_saved_part21(self, vid_id: str):
         safe_id = re.sub(r"[^a-zA-Z0-9_\-]", "", vid_id)
         self.yt_saved_videos = [v for v in self.yt_saved_videos if v["id"] != safe_id]
         self.add_log(f"Kayıtlardan çıkarıldı: ID={safe_id}")
-        return rx.toast("🗑️ Video kayıtlardan kaldırıldı.", type="info")
+        return rx.toast("🗑️ Video kayıtlardan kaldırıldı.")
 
     # --- 5. OYNATICIYI RESETLEME / GERİ DÖNÜŞ ---
     def stop_and_clear(self):
@@ -13185,7 +13184,7 @@ class YouTubePortalStatePart21(rx.State):
         self.yt_results = []
         self.yt_search_q = ""
         self.add_log("Tüm portal geçmişi sıfırlandı.")
-        return rx.toast("🔄 Portal başarıyla sıfırlandı.", type="info")
+        return rx.toast("🔄 Portal başarıyla sıfırlandı.")
 
 
 # =========================================================================
