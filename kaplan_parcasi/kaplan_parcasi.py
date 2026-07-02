@@ -7310,6 +7310,30 @@ class AdminRoleStatePart16(rx.State):
     ]
 
     # --- AKSİYON METODLARI ---
+    def set_my_color(self, value: str):
+        """Renk setter."""
+        self.my_color = value
+
+    def set_my_glow(self, value: bool):
+        """Glow toggle setter."""
+        self.my_glow = value
+
+    def set_my_tag(self, value: str):
+        """Tag setter."""
+        self.my_tag = value
+
+    def set_my_rozet(self, value: str):
+        """Rozet setter."""
+        self.my_rozet = value
+
+    def set_search_admin_email(self, value: str):
+        """Admin email arama setter."""
+        self.search_admin_email = value
+
+    def set_search_normal_email(self, value: str):
+        """Normal kullanıcı email arama setter."""
+        self.search_normal_email = value
+
     def add_log(self, text: str):
         self.operation_logs.insert(0, f"⏱️ {text}")
         if len(self.operation_logs) > 6:
