@@ -5544,15 +5544,22 @@ def render_single_user_card(u: dict) -> rx.Component:
                             rx.cond(
                                 u["sohbet_gecmisi"].length() > 0,
                                 rx.vstack(
-                                    *[
-                                        rx.text(
-                                            f"[{msg['role'].upper()}]: {msg['content']}" if msg["role"] != "separator" else f"--- {msg['content']} ---",
+                                    rx.foreach(
+                                        u["sohbet_gecmisi"],
+                                        lambda msg: rx.text(
+                                            rx.cond(
+                                                msg["role"] != "separator",
+                                                "[" + msg["role"].upper() + "]: " + msg["content"],
+                                                "--- " + msg["content"] + " ---"
+                                            ),
                                             font_size="0.75rem",
-                                            color="#e2e8f0" if msg["role"] == "user" else "#ffd700" if msg["role"] == "assistant" else "#e74c3c",
+                                            color=rx.cond(
+                                                msg["role"] == "user", "#e2e8f0",
+                                                rx.cond(msg["role"] == "assistant", "#ffd700", "#e74c3c")
+                                            ),
                                             font_family="monospace"
                                         )
-                                        for msg in u["sohbet_gecmisi"]
-                                    ],
+                                    ),
                                     align_items="flex-start",
                                     spacing="1"
                                 ),
@@ -5708,8 +5715,9 @@ def render_banned_reports_log_panel() -> rx.Component:
             rx.cond(
                 TepeEditorStatePart13.reports.length() > 0,
                 rx.vstack(
-                    *[
-                        rx.box(
+                    rx.foreach(
+                        TepeEditorStatePart13.reports,
+                        lambda rep: rx.box(
                             rx.vstack(
                                 rx.hstack(
                                     rx.text(rep["rozet"], font_size="1rem"),
@@ -5717,23 +5725,23 @@ def render_banned_reports_log_panel() -> rx.Component:
                                         rep["isim"],
                                         font_weight="bold",
                                         color=rep["isim_rengi"],
-                                        style={"text_shadow": rx.cond(rep["ismin_parlakligi"], f"0 0 10px {rep['isim_rengi']}", "none")}
+                                        style={"text_shadow": rx.cond(rep["ismin_parlakligi"], "0 0 10px " + rep["isim_rengi"], "none")}
                                     ),
-                                    rx.text(f"({rep['email']})", font_size="0.75rem", color="#94a3b8"),
+                                    rx.text("(" + rep["email"] + ")", font_size="0.75rem", color="#94a3b8"),
                                     rx.spacer(),
-                                    rx.button("Raporu Sil 🗑️", on_click=lambda r_id=rep["id"]: TepeEditorStatePart13.delete_report(r_id), color_scheme="gray", size="1"),
+                                    rx.button("Raporu Sil 🗑️", on_click=TepeEditorStatePart13.delete_report(rep["id"]), color_scheme="gray", size="1"),
                                     width="100%",
                                     align_items="center",
                                     spacing="2"
                                 ),
                                 rx.grid(
-                                    rx.text(f"🔐 Şifre: {rep['gizli_bilgi']}", font_size="0.72rem", color="#ffd700", font_family="monospace"),
-                                    rx.text(f"📅 Tarih: {rep['tarih']}", font_size="0.72rem", color="#94a3b8", text_align="right"),
+                                    rx.text("🔐 Şifre: " + rep["gizli_bilgi"], font_size="0.72rem", color="#ffd700", font_family="monospace"),
+                                    rx.text("📅 Tarih: " + rep["tarih"], font_size="0.72rem", color="#94a3b8", text_align="right"),
                                     columns="2",
                                     width="100%"
                                 ),
                                 rx.box(
-                                    rx.text(f"💬 Engellenen Mesaj: {rep['metin']}", font_size="0.82rem", color="#ff4d4d", font_weight="medium"),
+                                    rx.text("💬 Engellenen Mesaj: " + rep["metin"], font_size="0.82rem", color="#ff4d4d", font_weight="medium"),
                                     padding="8px",
                                     background_color="rgba(231,76,60,0.08)",
                                     border="1px solid rgba(231,76,60,0.2)",
@@ -5749,8 +5757,7 @@ def render_banned_reports_log_panel() -> rx.Component:
                             border="1px solid rgba(231, 76, 60, 0.15)",
                             width="100%"
                         )
-                        for rep in TepeEditorStatePart13.reports
-                    ],
+                    ),
                     width="100%",
                     spacing="3"
                 ),
@@ -5871,13 +5878,14 @@ def render_universal_announcement_console() -> rx.Component:
                 TepeEditorStatePart13.pushed_announcements.length() > 0,
                 rx.vstack(
                     rx.text("📋 Gönderilen Son Duyurular (Yönetici Logu)", font_size="0.8rem", font_weight="semibold", color="#ffffff"),
-                    *[
-                        rx.box(
+                    rx.foreach(
+                        TepeEditorStatePart13.pushed_announcements,
+                        lambda ann: rx.box(
                             rx.vstack(
                                 rx.hstack(
-                                    rx.text(f"🎯 Hedef: {ann['hedef']}", font_size="0.72rem", color="#ffd700", font_weight="semibold"),
+                                    rx.text("🎯 Hedef: " + ann["hedef"], font_size="0.72rem", color="#ffd700", font_weight="semibold"),
                                     rx.spacer(),
-                                    rx.text(f"📅 {ann['tarih']}", font_size="0.72rem", color="#94a3b8"),
+                                    rx.text("📅 " + ann["tarih"], font_size="0.72rem", color="#94a3b8"),
                                     width="100%"
                                 ),
                                 rx.text(ann["metin"], font_size="0.78rem", color="#e2e8f0"),
@@ -5890,8 +5898,7 @@ def render_universal_announcement_console() -> rx.Component:
                             border="1px solid rgba(255,255,255,0.04)",
                             width="100%"
                         )
-                        for ann in TepeEditorStatePart13.pushed_announcements
-                    ],
+                    ),
                     width="100%",
                     spacing="2"
                 )
