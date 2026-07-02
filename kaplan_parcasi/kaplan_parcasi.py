@@ -5604,7 +5604,8 @@ def render_single_user_card(u: dict) -> rx.Component:
                         rx.vstack(
                             rx.hstack(
                                 rx.text("Süre (Dk):", font_size="0.75rem", color="#ffffff"),
-                                rx.number_input(
+                                rx.input(
+                                    type="number",
                                     value=TepeEditorStatePart13.ban_sure_input,
                                     on_change=TepeEditorStatePart13.set_ban_sure_input,
                                     size="1",
@@ -6682,12 +6683,12 @@ def render_properties_tab_sheet() -> rx.Component:
                     rx.grid(
                         rx.vstack(
                             rx.text("İç Düşey Boşluk (Padding Y)", font_size="0.7rem", color="#94a3b8"),
-                            rx.number_input(value=TepeEditorStatePart14.padding_vertical, on_change=TepeEditorStatePart14.set_padding_vertical, background_color="#0f0f1e"),
+                            rx.input(type="number", value=TepeEditorStatePart14.padding_vertical, on_change=TepeEditorStatePart14.set_padding_vertical, background_color="#0f0f1e"),
                             align_items="flex-start"
                         ),
                         rx.vstack(
                             rx.text("İç Yatay Boşluk (Padding X)", font_size="0.7rem", color="#94a3b8"),
-                            rx.number_input(value=TepeEditorStatePart14.padding_horizontal, on_change=TepeEditorStatePart14.set_padding_horizontal, background_color="#0f0f1e"),
+                            rx.input(type="number", value=TepeEditorStatePart14.padding_horizontal, on_change=TepeEditorStatePart14.set_padding_horizontal, background_color="#0f0f1e"),
                             align_items="flex-start"
                         ),
                         columns="2",
@@ -6697,7 +6698,7 @@ def render_properties_tab_sheet() -> rx.Component:
                     
                     rx.vstack(
                         rx.text("Köşe Ovalleşmesi (Border Radius px)", font_size="0.75rem", color="#94a3b8"),
-                        rx.number_input(value=TepeEditorStatePart14.border_radius, on_change=TepeEditorStatePart14.set_border_radius, background_color="#0f0f1e", width="100%"),
+                        rx.input(type="number", value=TepeEditorStatePart14.border_radius, on_change=TepeEditorStatePart14.set_border_radius, background_color="#0f0f1e", width="100%"),
                         align_items="flex-start",
                         width="100%"
                     ),
