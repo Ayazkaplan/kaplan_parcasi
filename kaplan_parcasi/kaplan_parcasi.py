@@ -603,7 +603,7 @@ class TepeEditorStatePart2(rx.State):
     media_size: int = 150
 
     # Ek Yazı Kutuları Listesi (Dinamik Sürüklenebilir Yazılar)
-    additional_texts: list[dict[str, Any]] = []
+    additional_texts: list[dict[str, str]] = []
 
     def toggle_glow(self, checked: bool):
         self.glow_enabled = checked
@@ -2257,7 +2257,7 @@ class TepeEditorStatePart6(rx.State):
     drag_unlocked: bool = True
     
     # Taslak / Şablon Kütüphanesi Durumları
-    saved_templates: list[dict[str, Any]] = [
+    saved_templates: list[dict[str, str]] = [
         {
             "id": "draft_1",
             "name": "💥 Çılgın Cuma Manşeti",
@@ -2508,7 +2508,7 @@ class TepeEditorStatePart7(rx.State):
     
     # 1. Taslak Veritabanı State Yapısı
     new_taslak_title: str = ""
-    saved_drafts: list[dict[str, Any]] = [
+    saved_drafts: list[dict[str, str]] = [
         {
             "id": "taslak_1",
             "taslak_adi": "🔥 Hafta Sonu Derbi Coşkusu",
@@ -2883,7 +2883,7 @@ class TepeEditorStatePart8(rx.State):
     char_colors: list[str] = []
 
     # Ekstra Metin Katmanları
-    additional_texts: list[dict[str, Any]] = [
+    additional_texts: list[dict[str, str]] = [
         {"text": "CANLI YAYINDA!", "size": 11, "color": "#2ecc71", "x": 120, "y": -10, "rotation": 5}
     ]
 
@@ -3471,7 +3471,7 @@ class TepeEditorStatePart9(rx.State):
     search_query: str = ""
     is_searching: bool = False
     web_results: str = ""
-    youtube_results: list[dict[str, Any]] = []
+    youtube_results: list[dict[str, str]] = []
     
     # Matematik motoru
     math_query: str = ""
@@ -5228,7 +5228,7 @@ class TepeEditorStatePart13(rx.State):
     """Reflex Kullanıcı Yönetimi, Ban Süzgeci, Raporlar ve Duyuru Konsolu State Sınıfı"""
 
     # --- KULLANICI LİSTESİ VE DURUM BELİRTECİ ---
-    users: list[dict[str, Any]] = [
+    users: list[dict[str, str]] = [
         {
             "id": "u_98231",
             "email": "eren@tepe.com",
@@ -5296,7 +5296,7 @@ class TepeEditorStatePart13(rx.State):
     active_delete_uid: str = ""
 
     # --- KÜFÜRLÜ MESAJ BİLDİRİMLERİ STATE (Satır 6188 - 6254) ---
-    reports: list[dict[str, Any]] = [
+    reports: list[dict[str, str]] = [
         {
             "id": "rep_101",
             "email": "kemal@tepe.com",
@@ -5328,7 +5328,7 @@ class TepeEditorStatePart13(rx.State):
     hedef_tipi: str = "Tüm Kullanıcılar"  # "Tüm Kullanıcılar" veya "E-posta ile Seç"
     secilen_email: str = ""
     duyuru_metni: str = ""
-    pushed_announcements: list[dict[str, Any]] = []
+    pushed_announcements: list[dict[str, str]] = []
 
     def set_ban_sure_input(self, val: int):
         self.ban_sure_input = val
@@ -5973,7 +5973,7 @@ class TepeEditorStatePart14(rx.State):
 
     # --- 6. HARF BOYAMA STATE ---
     char_colors: list[str] = []
-    char_list: list[dict[str, Any]] = []  # dict format: {"char": str, "color": str, "index": int}
+    char_list: list[dict[str, str]] = []  # dict format: {"char": str, "color": str, "index": int}
 
     bulk_color_pick: str = "#FFFFFF"
     paint_word_target: str = ""
@@ -7282,7 +7282,7 @@ class AdminRoleStatePart16(rx.State):
     has_found_normal: bool = False
 
     # --- 3. DİNAMİK MODEL KULLANICI VERİ TABANI (MOCK) ---
-    users_db: list[dict[str, Any]] = [
+    users_db: list[dict[str, str]] = [
         {"id": "u_1", "email": "ali@kaplan.com", "isim": "Ali Vural", "is_admin": False, "isim_rengi": "#3498db", "ismin_parlakligi": True, "tag": "Vip Kaplan", "rozet": "💎"},
         {"id": "u_2", "email": "ayse@kaplan.com", "isim": "Ayşe Çelik", "is_admin": False, "isim_rengi": "#FFFFFF", "ismin_parlakligi": False, "tag": "", "rozet": ""},
         {"id": "u_3", "email": "hasan@kaplan.com", "isim": "Hasan Saygılı", "is_admin": True, "isim_rengi": "#9b59b6", "ismin_parlakligi": True, "tag": "Moderatör", "rozet": "🛡️"},
@@ -7291,7 +7291,7 @@ class AdminRoleStatePart16(rx.State):
     ]
 
     # --- DUYURULAR GEÇMİŞİ (MOCK) ---
-    announcements_db: list[dict[str, Any]] = [
+    announcements_db: list[dict[str, str]] = [
         {"id": "d_101", "gonderen_email": "hasan@kaplan.com", "metin": "Sohbet odasında spam yapmak kesinlikle yasaktır!", "hedef": "Tümü", "tarih": "2026-06-29 11:30:00"},
         {"id": "d_102", "gonderen_email": "hasan@kaplan.com", "metin": "Akşam saat 21:00'da topluluk etkinliği yapılacaktır.", "hedef": "Tümü", "tarih": "2026-06-29 10:15:00"},
         {"id": "d_103", "gonderen_email": "fatma@kaplan.com", "metin": "Kullanıcı profilleri güncellendi, yeni rozetleri inceleyin.", "hedef": "Tümü", "tarih": "2026-06-29 09:00:00"}
@@ -8129,12 +8129,12 @@ class ChatThreadsStatePart17(rx.State):
     # --- 1. SÜSLEMELİ VE YÖNETİCİ KULLANICILAR VERİ TABANI (MOCK) ---
     is_kurucu: bool = True
 
-    modified_users: list[dict[str, Any]] = [
+    modified_users: list[dict[str, str]] = [
         {"id": "u_10", "isim": "Ahmet Kaplan", "email": "ahmet@kaplan.com", "isim_rengi": "#3498db", "ismin_parlakligi": True, "tag": "Kaplan Dostu", "rozet": "🦁", "is_admin": False},
         {"id": "u_11", "isim": "Selin Kaya", "email": "selin@kaplan.com", "isim_rengi": "#e74c3c", "ismin_parlakligi": False, "tag": "Tasarımcı", "rozet": "🎨", "is_admin": False}
     ]
 
-    current_admins: list[dict[str, Any]] = [
+    current_admins: list[dict[str, str]] = [
         {
             "id": "u_3",
             "isim": "Hasan Saygılı",
@@ -8169,7 +8169,7 @@ class ChatThreadsStatePart17(rx.State):
     demote_confirm_id: str = ""
 
     # --- 2. CHATGPT BENZERİ SOHBET THREADLERİ VERİ MODELİ ---
-    threads: list[dict[str, Any]] = [
+    threads: list[dict[str, str]] = [
         {
             "id": "t_1",
             "baslik": "Genel Sohbet",
@@ -8205,13 +8205,13 @@ class ChatThreadsStatePart17(rx.State):
     notification_panel_open: bool = False
     active_tab: str = "tab-arkadaslik"  # "tab-arkadaslik", "tab-yetkili"
 
-    friend_requests: list[dict[str, Any]] = [
+    friend_requests: list[dict[str, str]] = [
         {"uid": "req_101", "name": "Ali Vural", "email": "ali@kaplan.com", "color": "#3498db", "tag": "Vip Kaplan", "rozet": "💎"},
         {"uid": "req_102", "name": "Zeynep Sür", "email": "zeynep@sur.com", "color": "#e74c3c", "tag": "Tasarımcı", "rozet": "🎨"}
     ]
 
     # --- 4. YETKİLİ MESAJLARI (Seen Auto-Deletion Timer) ---
-    yetkili_mesajlari: list[dict[str, Any]] = [
+    yetkili_mesajlari: list[dict[str, str]] = [
         {
             "id": "ym_1",
             "gonderen_uid": "u_3",
@@ -8230,7 +8230,7 @@ class ChatThreadsStatePart17(rx.State):
 
     # --- 5. ARKA PLAN KONTROL & DUYURULAR (UNREAD) ---
     user_durum: str = "Aktif"  # "Aktif", "Pasif / Yasaklı"
-    cached_okunmamis_duyurular: list[dict[str, Any]] = [
+    cached_okunmamis_duyurular: list[dict[str, str]] = [
         {
             "id": "ann_999",
             "metin": "Sistem genelinde veritabanı optimizasyon çalışması yapılacaktır. Lütfen çalışmalar süresince aktif sohbetlerinizde değişiklik yaparken bekleyin.",
@@ -9453,13 +9453,13 @@ class AICognitiveStatePart18(rx.State):
     
     # Arkadaşlık Sınırları (Max 300)
     friends_count: int = 299  # Sınırı (300) zorlamayı test etmek için varsayılan 299
-    friend_requests: list[dict[str, Any]] = [
+    friend_requests: list[dict[str, str]] = [
         {"uid": "req_201", "name": "Buse Çelik", "email": "buse@kaplan.com", "color": "#e74c3c", "tag": "Tasarımcı", "rozet": "🎨"},
         {"uid": "req_202", "name": "Ayaz Kaplan (Kurucu Taklitçi)", "email": "fake_ayaz@gmail.com", "color": "#FF0000", "tag": "Şüpheli", "rozet": "⚠️"}
     ]
 
     # --- 2. YETKİLİ MESAJLARI (Seen Auto-Deletion Timer) ---
-    yetkili_mesajlari: list[dict[str, Any]] = [
+    yetkili_mesajlari: list[dict[str, str]] = [
         {
             "id": "ym_18_1",
             "gonderen_isim": "Hasan Saygılı",
@@ -9475,7 +9475,7 @@ class AICognitiveStatePart18(rx.State):
     ]
 
     # --- 3. AKILLI SOHBET VE YAPAY ZEKA BELLEĞİ (MESSAGES) ---
-    messages: list[dict[str, Any]] = [
+    messages: list[dict[str, str]] = [
         {
             "role": "assistant",
             "isim": "Kaplan Parçası",
@@ -10527,7 +10527,7 @@ class SocialNetworkStatePart19(rx.State):
     search_query: str = ""
 
     # --- SİMÜLE VERİTABANI (Tüm Kullanıcılar) ---
-    users_db: dict[str, dict[str, Any]] = {
+    users_db: dict[str, dict[str, str]] = {
         "u_ayaz": {
             "id": "u_ayaz",
             "name": "Ayaz Kaplan",
@@ -11797,13 +11797,13 @@ class SocialAndMediaStatePart20(rx.State):
     }
     
     # Gönderilen yetkili mesajlarının simüle listesi
-    sent_yetkili_mesajlari: list[dict[str, Any]] = []
+    sent_yetkili_mesajlari: list[dict[str, str]] = []
 
     # --- YOUTUBE PORTAL DEĞİŞKENLERİ ---
     yt_search_q: str = ""
     
     # Ön Tanımlı Büyük YouTube Veritabanı
-    yt_all_videos_mock: list[dict[str, Any]] = [
+    yt_all_videos_mock: list[dict[str, str]] = [
         {
             "id": "dQw4w9WgXcQ",
             "title": "Mehmet Kaplan - Kaplan Parçası Motivasyon Müziği (Remix)",
@@ -11855,7 +11855,7 @@ class SocialAndMediaStatePart20(rx.State):
     ]
 
     # Aktif arama sonuçları listesi
-    yt_results: list[dict[str, Any]] = []
+    yt_results: list[dict[str, str]] = []
     
     # Şu an çalan video bilgileri
     yt_playing_id: str = ""
@@ -11868,7 +11868,7 @@ class SocialAndMediaStatePart20(rx.State):
     yt_last_channel: str = "Kaplan Medya"
 
     # Kayıtlı/Pinned Videolar Listesi
-    yt_saved_videos: list[dict[str, Any]] = [
+    yt_saved_videos: list[dict[str, str]] = [
         {
             "id": "dQw4w9WgXcQ",
             "title": "Mehmet Kaplan - Kaplan Parçası Motivasyon Müziği (Remix)",
@@ -12989,7 +12989,7 @@ class YouTubePortalStatePart21(rx.State):
 
     # Arama motoru girdileri ve sonuçları
     yt_search_q: str = ""
-    yt_results: list[dict[str, Any]] = []
+    yt_results: list[dict[str, str]] = []
 
     # Son oynatılan video ("Kaldığın Yerden Devam Et" localStorage simülasyonu)
     yt_last_id: str = "dQw4w9WgXcQ"
@@ -12997,7 +12997,7 @@ class YouTubePortalStatePart21(rx.State):
     yt_last_channel: str = "Kaplan Medya"
 
     # Kayıtlı/Pinned Videolar Listesi (FireStore simülasyonu)
-    yt_saved_videos: list[dict[str, Any]] = [
+    yt_saved_videos: list[dict[str, str]] = [
         {
             "id": "dQw4w9WgXcQ",
             "title": "Mehmet Kaplan - Kaplan Parçası Motivasyon Müziği (Remix)",
@@ -13019,7 +13019,7 @@ class YouTubePortalStatePart21(rx.State):
     ]
 
     # Mock Büyük YouTube Video Veritabanı (Detaylı Bilgilerle)
-    yt_master_db: list[dict[str, Any]] = [
+    yt_master_db: list[dict[str, str]] = [
         {
             "id": "dQw4w9WgXcQ",
             "title": "Mehmet Kaplan - Kaplan Parçası Motivasyon Müziği (Remix)",
