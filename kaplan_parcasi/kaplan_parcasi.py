@@ -8225,6 +8225,18 @@ class ChatThreadsStatePart17(rx.State):
     ]
 
     # --- AKSİYON METODLARI ---
+    def set_ren_thr_inp_val(self, value: str):
+        """Thread yeniden adlandırma giriş alanı setter."""
+        self.ren_thr_inp_val = value
+
+    def set_sohbet_arama_inp(self, value: str):
+        """Sohbet arama giriş alanı setter."""
+        self.sohbet_arama_inp = value
+
+    def set_chat_message_input(self, value: str):
+        """Chat mesaj giriş alanı setter."""
+        self.chat_message_input = value
+
     def add_log(self, text: str):
         self.operation_logs.insert(0, f"⏱️ {text}")
         if len(self.operation_logs) > 6:
@@ -9488,6 +9500,14 @@ class AICognitiveStatePart18(rx.State):
         "Matematiksel süzgeç ve Sistem Hesaplayıcı hazır."
     ]
 
+    def set_edit_input_val(self, value: str):
+        """Mesaj düzenleme giriş alanı setter."""
+        self.edit_input_val = value
+
+    def set_chat_input(self, value: str):
+        """Chat giriş alanı setter."""
+        self.chat_input = value
+
     def add_log(self, text: str):
         self.operation_logs.insert(0, f"⚡ {text}")
         if len(self.operation_logs) > 6:
@@ -10621,6 +10641,10 @@ class SocialNetworkStatePart19(rx.State):
         "Sosyal Ağ Modülü başlatıldı.",
         "Mevcut Arkadaş Limit Denetimi: 3/300 Aktif."
     ]
+
+    def set_dm_input(self, value: str):
+        """DM giriş alanı setter."""
+        self.dm_input = value
 
     def add_log(self, text: str):
         self.social_logs.insert(0, f"👥 {text}")
@@ -11840,6 +11864,26 @@ class SocialAndMediaStatePart20(rx.State):
         "Portallar yükleniyor... Ses sistemi hazır."
     ]
 
+    def set_dm_input(self, value: str):
+        """DM giriş alanı setter."""
+        self.dm_input = value
+
+    def set_admin_mesaj_email(self, value: str):
+        """Admin mesaj email giriş alanı setter."""
+        self.admin_mesaj_email = value
+
+    def set_admin_mesaj_icerik(self, value: str):
+        """Admin mesaj içerik giriş alanı setter."""
+        self.admin_mesaj_icerik = value
+
+    def set_yt_search_q(self, value: str):
+        """YouTube arama sorgusu setter."""
+        self.yt_search_q = value
+
+    def toggle_is_kurucu(self):
+        """Kurucu modunu aç/kapat."""
+        self.is_kurucu = not self.is_kurucu
+
     def add_log(self, text: str):
         self.media_logs.insert(0, f"📻 {text}")
         if len(self.media_logs) > 6:
@@ -13000,6 +13044,10 @@ class YouTubePortalStatePart21(rx.State):
             "thumbnail": "https://img.youtube.com/vi/V-_O7nl0Ii0/mqdefault.jpg"
         }
     ]
+
+    def set_yt_search_q(self, value: str):
+        """YouTube arama sorgusu setter."""
+        self.yt_search_q = value
 
     def add_log(self, msg: str):
         self.portal_logs.insert(0, f"📺 {msg}")
