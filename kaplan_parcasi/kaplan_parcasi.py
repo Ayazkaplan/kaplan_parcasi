@@ -5545,7 +5545,7 @@ def render_single_user_card(u: dict) -> rx.Component:
                                 u["sohbet_gecmisi"].length() > 0,
                                 rx.vstack(
                                     rx.foreach(
-                                        u["sohbet_gecmisi"],
+                                        u["sohbet_gecmisi"].to(list[dict[str, str]]),
                                         lambda msg: rx.text(
                                             rx.cond(
                                                 msg["role"] != "separator",
@@ -8678,7 +8678,7 @@ def render_current_admins_list() -> rx.Component:
                                 a["duyurular"].length() > 0,
                                 rx.scroll_area(
                                     rx.vstack(
-                                        rx.foreach(a["duyurular"], make_announcement_row),
+                                        rx.foreach(a["duyurular"].to(list[dict[str, str]]), make_announcement_row),
                                         width="100%"
                                     ),
                                     style={"max_height": "120px"},
@@ -9006,7 +9006,7 @@ def render_active_chat_viewport() -> rx.Component:
                                 t["id"] == ChatThreadsStatePart17.aktif_sohbet_id,
                                 rx.vstack(
                                     rx.foreach(
-                                        t["mesajlar"],
+                                        t["mesajlar"].to(list[dict[str, str]]),
                                         make_single_msg
                                     ),
                                     spacing="3",
